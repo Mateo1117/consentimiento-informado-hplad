@@ -171,7 +171,7 @@ export default function Auth() {
               <FileHeart className="h-6 w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-medical-blue">Hospital Santa Matilde</h1>
+              <h1 className="text-2xl font-bold text-medical-blue">Hospital Pedro Leon Alvarez Diaz de la Mesa</h1>
               <p className="text-sm text-medical-gray">Sistema de Consentimientos</p>
             </div>
           </div>
