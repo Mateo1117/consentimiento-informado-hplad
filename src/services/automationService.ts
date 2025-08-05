@@ -173,7 +173,7 @@ class AutomationService {
     try {
       const testData = {
         test: true,
-        message: 'Prueba de conexión desde Hospital Santa Matilde',
+        message: 'Prueba de conexión desde Hospital Pedro Leon Alvarez Diaz de la Mesa',
         timestamp: new Date().toISOString(),
         platform,
         patient: {

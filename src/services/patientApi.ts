@@ -246,7 +246,7 @@ class PatientApiService {
       eps: data.NO_NOMB_EPS || data.eps_paciente || data.eps || 'Sin EPS',
       telefono: data.telefono_paciente || 'No disponible',
       direccion: data.direccion_paciente || 'No disponible',
-      centroSalud: 'HOSPITAL SANTA MATILDE DE MADRID'
+      centroSalud: 'HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA'
     };
 
     console.log('Datos mapeados del paciente:', mappedData);
@@ -311,7 +311,7 @@ class PatientApiService {
       eps: patientInfo.eps!,
       telefono: patientInfo.telefono!,
       direccion: patientInfo.direccion!,
-      centroSalud: 'HOSPITAL SANTA MATILDE DE MADRID'
+      centroSalud: 'HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA'
     };
   }
 }

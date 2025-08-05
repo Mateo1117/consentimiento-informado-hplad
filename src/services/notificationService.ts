@@ -163,7 +163,7 @@ class NotificationService {
   private generateSMSMessage(data: ConsentNotificationData): string {
     const status = data.consentData.decision === 'aprobar' ? 'APROBADO' : 'DENEGADO';
     
-    return `🏥 HOSPITAL SANTA MATILDE
+    return `🏥 HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA
     
 Estimado/a ${data.patientData.nombre},
 
@@ -209,7 +209,7 @@ Gracias por confiar en nosotros.`;
         tipoDocumento: 'CC',
         numeroDocumento: '12345678',
         telefono: '+573001234567',
-        centroSalud: 'Hospital Santa Matilde',
+        centroSalud: 'Hospital Pedro Leon Alvarez Diaz de la Mesa',
         eps: 'test@email.com'
       },
       consentData: {

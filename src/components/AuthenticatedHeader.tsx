@@ -44,7 +44,7 @@ export function AuthenticatedHeader() {
             <FileHeart className="h-8 w-8" />
             <div>
               <h1 className="text-xl font-bold">Sistema de Consentimientos Informados</h1>
-              <p className="text-blue-100 text-sm">Hospital Santa Matilde - Laboratorio</p>
+              <p className="text-blue-100 text-sm">Hospital Pedro Leon Alvarez Diaz de la Mesa - Laboratorio</p>
             </div>
           </div>
           

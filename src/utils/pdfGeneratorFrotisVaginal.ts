@@ -42,8 +42,8 @@ export class PDFGeneratorFrotisVaginal {
     this.pdf.setFontSize(12);
     this.pdf.setFont('helvetica', 'bold');
     this.pdf.text('E.S.E', this.margin + 32, this.currentY + 8);
-    this.pdf.text('HOSPITAL', this.margin + 32, this.currentY + 12);
-    this.pdf.text('LA MESA', this.margin + 32, this.currentY + 16);
+    this.pdf.text('HOSPITAL PEDRO LEON', this.margin + 32, this.currentY + 12);
+    this.pdf.text('ALVAREZ DIAZ DE LA MESA', this.margin + 32, this.currentY + 16);
     
     // Form title
     this.pdf.setFontSize(10);
@@ -336,7 +336,7 @@ En manifestación de aceptación firmo/pongo mi huella en este documento a los _
     this.pdf.setFontSize(7);
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.text('🏥 SERSALUD', this.margin, this.currentY);
-    this.pdf.text('La Mesa - Cundinamarca. Calle 8 No. 25 – 34 Call Center: 3172001556 Email: atencionusuario@hospitallamesa.gov.co   www.hospitallamesa.gov.co', this.margin + 15, this.currentY);
+    this.pdf.text('La Mesa - Cundinamarca. Calle 8 No. 25 – 34 Call Center: 3172001556 Email: atencionusuario@hospitalpedroleondias.gov.co   www.hospitalpedroleondias.gov.co', this.margin + 15, this.currentY);
   }
 }
 

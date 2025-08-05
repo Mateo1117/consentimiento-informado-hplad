@@ -151,7 +151,7 @@ export class PDFStorageService {
 
     pdf.setFontSize(12);
     pdf.setFont('helvetica', 'normal');
-    pdf.text('E.S.E. HOSPITAL SANTA MATILDE', 105, currentY, { align: 'center' });
+    pdf.text('E.S.E. HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA', 105, currentY, { align: 'center' });
     currentY += 20;
 
     // Patient data

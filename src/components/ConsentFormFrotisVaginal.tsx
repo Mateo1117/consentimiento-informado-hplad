@@ -405,7 +405,7 @@ export const ConsentFormFrotisVaginal = () => {
                 <FileText className="h-6 w-6 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-medical-blue">E.S.E. HOSPITAL LA MESA</h1>
+                <h1 className="text-2xl font-bold text-medical-blue">E.S.E. HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA</h1>
                 <p className="text-medical-gray">Consentimiento Informado - Toma de Muestras Frotis Vaginal</p>
               </div>
             </div>
@@ -441,7 +441,7 @@ export const ConsentFormFrotisVaginal = () => {
 
         {/* Footer */}
         <div className="text-center mt-8 text-sm text-medical-gray">
-          <p>© 2025 E.S.E. Hospital La Mesa - Sistema de Consentimientos Informados</p>
+          <p>© 2025 E.S.E. Hospital Pedro Leon Alvarez Diaz de la Mesa - Sistema de Consentimientos Informados</p>
           <p className="mt-1">Desarrollado con tecnología segura para la gestión hospitalaria</p>
         </div>
       </div>

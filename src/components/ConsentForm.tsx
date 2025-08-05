@@ -899,7 +899,7 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
           {/* Header */}
           <div style={{ textAlign: 'center', marginBottom: '20px', borderBottom: '2px solid #1e40af', paddingBottom: '10px' }}>
             <h1 style={{ fontSize: '18px', fontWeight: 'bold', margin: '0', color: '#1e40af' }}>
-              E.S.E. HOSPITAL SANTA MATILDE
+              E.S.E. HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA
             </h1>
             <p style={{ margin: '5px 0', fontSize: '12px' }}>Nit. 860.009.555-7</p>
             <h2 style={{ fontSize: '14px', fontWeight: 'bold', margin: '10px 0', color: '#1e40af' }}>

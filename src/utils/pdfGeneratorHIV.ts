@@ -84,7 +84,7 @@ export class ConsentPDFGenerator {
     this.pdf.text('HSM', this.margin + 20, this.currentY + 12, { align: 'center' });
     this.pdf.setFontSize(8);
     this.pdf.setTextColor(0, 0, 0);
-    this.pdf.text('E.S.E. Hospital Santa Matilde', this.margin + 20, this.currentY + 18, { align: 'center' });
+    this.pdf.text('E.S.E. Hospital Pedro Leon Alvarez Diaz de la Mesa', this.margin + 20, this.currentY + 18, { align: 'center' });
     
     // Central section
     const centerX = this.margin + 42;
@@ -93,7 +93,7 @@ export class ConsentPDFGenerator {
     
     this.pdf.setFontSize(12);
     this.pdf.setFont("helvetica", "bold");
-    this.pdf.text('E.S.E. HOSPITAL SANTA MATILDE', centerX + centerWidth/2, this.currentY + 8, { align: 'center' });
+    this.pdf.text('E.S.E. HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA', centerX + centerWidth/2, this.currentY + 8, { align: 'center' });
     this.pdf.setFontSize(9);
     this.pdf.text('Nit: 860.009.555-7', centerX + centerWidth/2, this.currentY + 13, { align: 'center' });
     this.pdf.setFontSize(10);
@@ -183,10 +183,10 @@ export class ConsentPDFGenerator {
     this.currentY += 15;
     
     // Hospital selection - moved down to avoid overlap
-    const isHospital = data.patientData.centroSalud === "Hospital Santa Matilde de Madrid";
+    const isHospital = data.patientData.centroSalud === "Hospital Pedro Leon Alvarez Diaz de la Mesa";
     this.pdf.circle(this.margin + 3, this.currentY, 2);
     if (isHospital) this.pdf.circle(this.margin + 3, this.currentY, 1, 'F');
-    this.pdf.text('HOSPITAL SANTA MATILDE DE MADRID', this.margin + 8, this.currentY + 1);
+    this.pdf.text('HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA', this.margin + 8, this.currentY + 1);
     
     this.pdf.circle(this.margin + 100, this.currentY, 2);
     if (!isHospital) this.pdf.circle(this.margin + 100, this.currentY, 1, 'F');

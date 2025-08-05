@@ -60,7 +60,7 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
   };
 
   const sedes = [
-    "Hospital Santa Matilde de Madrid",
+    "Hospital Pedro Leon Alvarez Diaz de la Mesa",
     "Centro de salud Bojaca",
     "Centro de salud el Rosal",
     "Centro de salud el Sociego",

@@ -48,7 +48,7 @@ export function NotificationConfig() {
     enabled: false,
     provider: 'resend',
     fromEmail: 'notificaciones@hospital.com',
-    fromName: 'Hospital Santa Matilde',
+    fromName: 'Hospital Pedro Leon Alvarez Diaz de la Mesa',
     templates: {
       consentCreated: 'Se ha creado un nuevo consentimiento para el paciente {{patientName}}. Documento: {{documentNumber}}',
       consentApproved: 'El consentimiento del paciente {{patientName}} ha sido aprobado para: {{procedures}}',
@@ -230,7 +230,7 @@ export function NotificationConfig() {
                         id="from-name"
                         value={emailConfig.fromName}
                         onChange={(e) => setEmailConfig(prev => ({ ...prev, fromName: e.target.value }))}
-                        placeholder="Hospital Santa Matilde"
+                        placeholder="Hospital Pedro Leon Alvarez Diaz de la Mesa"
                       />
                     </div>
                   </div>

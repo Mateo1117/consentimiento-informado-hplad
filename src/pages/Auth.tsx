@@ -264,7 +264,7 @@ export default function Auth() {
                     <span className="text-sm font-medium">Solo Personal Autorizado</span>
                   </div>
                   <p className="text-xs text-amber-700 mt-1">
-                    El registro está limitado al personal médico autorizado del Hospital Santa Matilde.
+                    El registro está limitado al personal médico autorizado del Hospital Pedro Leon Alvarez Diaz de la Mesa.
                   </p>
                 </div>
 
@@ -363,7 +363,7 @@ export default function Auth() {
 
         {/* Footer */}
         <div className="text-center mt-6 text-sm text-medical-gray">
-          <p>© 2025 Hospital Santa Matilde</p>
+          <p>© 2025 Hospital Pedro Leon Alvarez Diaz de la Mesa</p>
           <p>Sistema Seguro de Consentimientos Informados</p>
         </div>
       </div>

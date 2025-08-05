@@ -15,7 +15,7 @@ const InformedConsentApp = () => {
     isMinor: false,
     representanteName: '',
     representanteId: '',
-    location: 'HOSPITAL SANTA MATILDE DE MADRID'
+    location: 'HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA'
   });
   
   const [selectedProcedures, setSelectedProcedures] = useState([]);
@@ -191,7 +191,7 @@ const InformedConsentApp = () => {
                     </div>
                   </td>
                   <td className="p-2 text-center">
-                    <div className="font-bold">E.S.E. HOSPITAL LA MESA</div>
+                    <div className="font-bold">E.S.E. HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA</div>
                     <div>Nit: 860.009.555-7</div>
                     <div className="font-bold mt-2">CONSENTIMIENTO INFORMADO {consentData.name.toUpperCase()}</div>
                   </td>
@@ -408,7 +408,7 @@ const InformedConsentApp = () => {
               <FileText className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">E.S.E. HOSPITAL LA MESA</h1>
+              <h1 className="text-2xl font-bold text-gray-800">E.S.E. HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA</h1>
               <p className="text-gray-600">Sistema de Consentimientos Informados</p>
               <p className="text-sm text-gray-500">Nit: 860.009.555-7</p>
             </div>

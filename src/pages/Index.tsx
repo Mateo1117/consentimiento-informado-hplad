@@ -152,7 +152,7 @@ const Index = () => {
       <footer className="bg-medical-blue/5 border-t border-medical-blue/20 mt-12">
         <div className="container mx-auto px-4 py-6">
           <div className="text-center text-sm text-medical-gray">
-            <p>© 2025 Hospital Santa Matilde - Sistema de Consentimientos Informados</p>
+            <p>© 2025 Hospital Pedro Leon Alvarez Diaz de la Mesa - Sistema de Consentimientos Informados</p>
             <p className="mt-1">Desarrollado con tecnología segura para la gestión hospitalaria</p>
           </div>
         </div>
