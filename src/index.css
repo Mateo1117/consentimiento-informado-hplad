@@ -1,0 +1,252 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Medical Informed Consent Design System - Professional Healthcare Colors */
+
+@layer base {
+  :root {
+    --background: 210 20% 98%;
+    --foreground: 215 25% 27%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 215 25% 27%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 215 25% 27%;
+
+    --primary: 210 100% 40%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 20% 95%;
+    --secondary-foreground: 215 25% 27%;
+
+    --muted: 210 20% 95%;
+    --muted-foreground: 215 13% 50%;
+
+    --accent: 160 84% 39%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 215 20% 88%;
+    --input: 215 20% 88%;
+    --ring: 210 100% 40%;
+
+    /* Medical theme specific colors */
+    --medical-blue: 210 100% 40%;
+    --medical-blue-light: 210 100% 95%;
+    --medical-blue-dark: 210 100% 30%;
+    --medical-green: 160 84% 39%;
+    --medical-green-light: 160 84% 95%;
+    --medical-red: 0 84% 60%;
+    --medical-red-light: 0 84% 95%;
+    --medical-yellow: 45 95% 50%;
+    --medical-yellow-light: 45 95% 95%;
+    --medical-purple: 270 95% 50%;
+    --medical-purple-light: 270 95% 95%;
+    --medical-orange: 25 95% 53%;
+    --medical-orange-light: 25 95% 95%;
+    --medical-gray: 215 13% 50%;
+    --medical-gray-light: 215 13% 95%;
+    --signature-area: 210 50% 97%;
+    
+    /* Consistent typography scale */
+    --text-xs: 0.75rem;
+    --text-sm: 0.875rem;
+    --text-base: 1rem;
+    --text-lg: 1.125rem;
+    --text-xl: 1.25rem;
+    --text-2xl: 1.5rem;
+    
+    /* Consistent spacing scale */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    
+    /* Gradients for medical interface */
+    --gradient-medical: linear-gradient(135deg, hsl(var(--medical-blue)), hsl(var(--accent)));
+    --gradient-header: linear-gradient(90deg, hsl(var(--medical-blue)), hsl(210 80% 50%));
+    --gradient-card: linear-gradient(145deg, hsl(0 0% 100%), hsl(210 20% 98%));
+
+    --radius: 0.5rem;
+
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 212.7 26.8% 83.9%;
+    --sidebar-background: 240 5.9% 10%;
+    --sidebar-foreground: 240 4.8% 95.9%;
+    --sidebar-primary: 224.3 76.3% 48%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent-foreground: 240 4.8% 95.9%;
+    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-ring: 217.2 91.2% 59.8%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /* Medical form header component */
+  .medical-header {
+    @apply border-medical-blue/20 bg-gradient-to-r from-white to-medical-blue-light/30;
+  }
+  
+  .medical-header-content {
+    @apply p-6 flex items-center justify-between;
+  }
+  
+  .medical-header-icon {
+    @apply w-12 h-12 bg-medical-blue/10 rounded-full flex items-center justify-center;
+  }
+  
+  .medical-header-title {
+    @apply text-xl font-semibold text-medical-blue;
+  }
+  
+  .medical-header-subtitle {
+    @apply text-medical-gray;
+  }
+  
+  /* Medical card component */
+  .medical-card {
+    @apply border-medical-blue/20;
+  }
+  
+  .medical-card-header {
+    @apply flex items-center gap-2 text-medical-blue;
+  }
+  
+  .medical-card-title {
+    @apply text-lg font-semibold;
+  }
+  
+  /* Medical form sections */
+  .medical-section-grid {
+    @apply grid grid-cols-1 md:grid-cols-3 gap-4;
+  }
+  
+  .medical-field-label {
+    @apply text-sm font-medium text-medical-gray;
+  }
+  
+  .medical-field-value {
+    @apply text-lg font-semibold text-foreground;
+  }
+  
+  /* Medical procedure cards */
+  .medical-procedure-card {
+    @apply border rounded-lg p-4 border-medical-blue/20 hover:border-medical-blue/40 transition-colors;
+  }
+  
+  .medical-procedure-title {
+    @apply text-base font-semibold text-medical-blue cursor-pointer;
+  }
+  
+  .medical-procedure-description {
+    @apply text-sm text-medical-gray mt-1;
+  }
+  
+  /* Information boxes with consistent colors */
+  .medical-info-box {
+    @apply p-3 rounded border-l-4;
+  }
+  
+  .medical-info-description {
+    @apply bg-medical-blue-light border-medical-blue;
+  }
+  
+  .medical-info-risks {
+    @apply bg-medical-red-light border-medical-red;
+  }
+  
+  .medical-info-benefits {
+    @apply bg-medical-green-light border-medical-green;
+  }
+  
+  .medical-info-alternatives {
+    @apply bg-medical-purple-light border-medical-purple;
+  }
+  
+  .medical-info-implications {
+    @apply bg-medical-orange-light border-medical-orange;
+  }
+  
+  .medical-info-warning {
+    @apply bg-medical-yellow-light border-medical-yellow;
+  }
+  
+  /* Medical form buttons */
+  .medical-button-primary {
+    @apply bg-medical-blue hover:bg-medical-blue-dark text-white;
+  }
+  
+  .medical-button-outline {
+    @apply border-medical-blue/30 text-medical-blue hover:bg-medical-blue/5;
+  }
+  
+  /* Consent decision styles */
+  .medical-consent-section {
+    @apply mt-6 pt-4 border-t border-medical-blue/20 bg-medical-blue-light/10 p-4 rounded;
+  }
+  
+  .medical-consent-text {
+    @apply text-sm leading-relaxed cursor-pointer text-foreground;
+  }
+  
+  /* Minor/Guardian warning styles */
+  .medical-guardian-warning {
+    @apply border-medical-yellow bg-medical-yellow-light;
+  }
+  
+  .medical-guardian-title {
+    @apply flex items-center gap-2 text-yellow-700;
+  }
+}
