@@ -132,7 +132,10 @@ const Index = () => {
               </TabsContent>
               
               <TabsContent value="frotis_vaginal" className="mt-6">
-                <ConsentFormFrotisVaginal />
+                <ConsentFormFrotisVaginal 
+                  patientData={selectedPatient}
+                  onBack={handleBack}
+                />
               </TabsContent>
               
               <TabsContent value="hemocomponentes" className="mt-6">
