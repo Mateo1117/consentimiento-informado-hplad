@@ -19,6 +19,52 @@ import { supabase } from "@/integrations/supabase/client";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+// Temporary type definitions until Supabase types are regenerated
+interface Database {
+  public: {
+    Tables: {
+      webhook_logs: {
+        Row: {
+          id: number;
+          source: string;
+          event_type: string;
+          payload: any;
+          headers: any;
+          processed: boolean;
+          error_message?: string;
+          processing_attempts: number;
+          created_at: string;
+          processed_at?: string;
+        };
+        Insert: {
+          id?: number;
+          source: string;
+          event_type: string;
+          payload: any;
+          headers: any;
+          processed?: boolean;
+          error_message?: string;
+          processing_attempts?: number;
+          created_at?: string;
+          processed_at?: string;
+        };
+        Update: {
+          id?: number;
+          source?: string;
+          event_type?: string;
+          payload?: any;
+          headers?: any;
+          processed?: boolean;
+          error_message?: string;
+          processing_attempts?: number;
+          created_at?: string;
+          processed_at?: string;
+        };
+      };
+    };
+  };
+}
+
 interface WebhookLog {
   id: number;
   source: string;

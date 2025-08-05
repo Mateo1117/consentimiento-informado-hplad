@@ -14,7 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      professional_signatures: {
+        Row: {
+          created_at: string
+          id: string
+          professional_document: string
+          professional_name: string
+          signature_data: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          professional_document: string
+          professional_name: string
+          signature_data: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          professional_document?: string
+          professional_name?: string
+          signature_data?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      webhook_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          event_type: string
+          headers: Json
+          id: number
+          payload: Json
+          processed: boolean
+          processed_at: string | null
+          processing_attempts: number
+          source: string
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          event_type: string
+          headers: Json
+          id?: number
+          payload: Json
+          processed?: boolean
+          processed_at?: string | null
+          processing_attempts?: number
+          source: string
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          event_type?: string
+          headers?: Json
+          id?: number
+          payload?: Json
+          processed?: boolean
+          processed_at?: string | null
+          processing_attempts?: number
+          source?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

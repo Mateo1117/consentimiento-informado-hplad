@@ -1,5 +1,39 @@
 import { supabase } from "@/integrations/supabase/client";
 
+// Temporary type definitions until Supabase types are regenerated
+interface Database {
+  public: {
+    Tables: {
+      professional_signatures: {
+        Row: {
+          id: string;
+          professional_name: string;
+          professional_document: string;
+          signature_data: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          professional_name: string;
+          professional_document: string;
+          signature_data: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          professional_name?: string;
+          professional_document?: string;
+          signature_data?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+    };
+  };
+}
+
 export interface ProfessionalSignature {
   id?: string;
   professional_name: string;
