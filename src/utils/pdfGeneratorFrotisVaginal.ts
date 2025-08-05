@@ -468,7 +468,7 @@ En manifestación de aceptación firmo/pongo mi huella en este documento a los _
     this.pdf.setFontSize(6);
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.text('🏥 SECSALUD', this.margin, this.currentY);
-    this.pdf.text('La Mesa – Cundinamarca. Calle 8 No. 25 – 34 Call Center: 3172001556 Email: atencionusuario@hospitalpedroleondias.gov.co   www.hospitalpedroleondias.gov.co', this.margin + 15, this.currentY);
+    this.pdf.text('La Mesa – Cundinamarca. Calle 8 No. 25 – 34 Call Center: 3172001556 Email: atencionusuario@hospitallamesa.gov.co   www.hospitallamesa.gov.co', this.margin + 15, this.currentY);
   }
 }
 

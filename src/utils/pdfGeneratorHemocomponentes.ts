@@ -90,17 +90,17 @@ export class ConsentPDFGenerator {
     this.doc.setTextColor(14, 116, 178);
     this.doc.setFontSize(8);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.text('E.S.E. HOSPITAL PEDRO LEON', 7, 12);
-    this.doc.text('ALVAREZ DIAZ DE LA MESA', 7, 16);
+    this.doc.text('E.S.E. HOSPITAL', 7, 12);
+    this.doc.text('LA MESA', 7, 16);
     this.doc.setFontSize(6);
-    this.doc.text('Nit: 860.009.555-7', 7, 20);
+    this.doc.text('PEDRO LEON ALVAREZ DIAZ', 7, 20);
 
     // Title
     this.doc.setTextColor(255, 255, 255);
     this.doc.setFontSize(14);
     this.doc.setFont('helvetica', 'bold');
-    this.doc.text('E.S.E. HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA', this.pageWidth / 2, 12, { align: 'center' });
-    this.doc.text('Nit: 860.009.555-7', this.pageWidth / 2, 16, { align: 'center' });
+    this.doc.text('E.S.E. HOSPITAL LA MESA', this.pageWidth / 2, 12, { align: 'center' });
+    this.doc.text('PEDRO LEON ALVAREZ DIAZ', this.pageWidth / 2, 16, { align: 'center' });
     this.doc.setFontSize(12);
     this.doc.text('CONSENTIMIENTO INFORMADO PARA', this.pageWidth / 2, 20, { align: 'center' });
     this.doc.text('TRANSFUSIÓN DE HEMOCOMPONENTES', this.pageWidth / 2, 24, { align: 'center' });
@@ -180,7 +180,7 @@ export class ConsentPDFGenerator {
     this.yPosition += 10;
 
     // Hospital and center
-    this.doc.text('HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA', this.leftMargin, this.yPosition);
+    this.doc.text('HOSPITAL LA MESA PEDRO LEON ALVAREZ DIAZ', this.leftMargin, this.yPosition);
     this.doc.circle(this.leftMargin + 75, this.yPosition - 1, 2, 'F');
     this.doc.text('CENTRO DE SALUD', this.leftMargin + 85, this.yPosition);
     this.doc.circle(this.leftMargin + 125, this.yPosition - 1, 2, 'S');

@@ -2,13 +2,14 @@ import { useState } from "react";
 import { PatientForm } from "@/components/PatientForm";
 import { ConsentForm } from "@/components/ConsentForm";
 import { ConsentFormHIV } from "@/components/ConsentFormHIV";
-import { ConsentFormHisopado } from "@/components/ConsentFormHisopado";
+
 import { ConsentFormHemocomponentes } from "@/components/ConsentFormHemocomponentes";
+import { ConsentFormFrotisVaginal } from "@/components/ConsentFormFrotisVaginal";
 import { AuthenticatedHeader } from "@/components/AuthenticatedHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileHeart, CheckCircle, Plus, Search, FileText, BarChart, TestTube, Microscope, Stethoscope, Droplets } from "lucide-react";
+import { FileHeart, CheckCircle, Plus, Search, FileText, BarChart, TestTube, Microscope, Heart, Droplets } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface PatientData {
@@ -29,7 +30,7 @@ const Index = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<'search' | 'consent'>('search');
   const [selectedPatient, setSelectedPatient] = useState<PatientData | null>(null);
-  const [consentType, setConsentType] = useState<'laboratorio' | 'hiv' | 'hisopado' | 'hemocomponentes'>('laboratorio');
+  const [consentType, setConsentType] = useState<'laboratorio' | 'hiv' | 'frotis_vaginal' | 'hemocomponentes'>('laboratorio');
 
   const handlePatientSelect = (patient: PatientData) => {
     setSelectedPatient(patient);
@@ -96,7 +97,7 @@ const Index = () => {
 
         {currentStep === 'consent' && selectedPatient && (
           <div className="max-w-7xl mx-auto">
-            <Tabs value={consentType} onValueChange={(value) => setConsentType(value as 'laboratorio' | 'hiv' | 'hisopado' | 'hemocomponentes')} className="w-full">
+            <Tabs value={consentType} onValueChange={(value) => setConsentType(value as 'laboratorio' | 'hiv' | 'frotis_vaginal' | 'hemocomponentes')} className="w-full">
               <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="laboratorio" className="flex items-center gap-2">
                   <Microscope className="h-4 w-4" />
@@ -106,9 +107,9 @@ const Index = () => {
                   <TestTube className="h-4 w-4" />
                   VIH
                 </TabsTrigger>
-                <TabsTrigger value="hisopado" className="flex items-center gap-2">
-                  <Stethoscope className="h-4 w-4" />
-                  Hisopado
+                <TabsTrigger value="frotis_vaginal" className="flex items-center gap-2">
+                  <Heart className="h-4 w-4" />
+                  Frotis Vaginal
                 </TabsTrigger>
                 <TabsTrigger value="hemocomponentes" className="flex items-center gap-2">
                   <Droplets className="h-4 w-4" />
@@ -130,11 +131,8 @@ const Index = () => {
                 />
               </TabsContent>
               
-              <TabsContent value="hisopado" className="mt-6">
-                <ConsentFormHisopado 
-                  patientData={selectedPatient} 
-                  onBack={handleBack}
-                />
+              <TabsContent value="frotis_vaginal" className="mt-6">
+                <ConsentFormFrotisVaginal />
               </TabsContent>
               
               <TabsContent value="hemocomponentes" className="mt-6">
@@ -152,7 +150,7 @@ const Index = () => {
       <footer className="bg-medical-blue/5 border-t border-medical-blue/20 mt-12">
         <div className="container mx-auto px-4 py-6">
           <div className="text-center text-sm text-medical-gray">
-            <p>© 2025 Hospital Pedro Leon Alvarez Diaz de la Mesa - Sistema de Consentimientos Informados</p>
+            <p>© 2025 Hospital La Mesa Pedro Leon Alvarez Diaz - Sistema de Consentimientos Informados</p>
             <p className="mt-1">Desarrollado con tecnología segura para la gestión hospitalaria</p>
           </div>
         </div>

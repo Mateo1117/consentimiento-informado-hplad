@@ -15,7 +15,7 @@ const InformedConsentApp = () => {
     isMinor: false,
     representanteName: '',
     representanteId: '',
-    location: 'HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA'
+    location: 'HOSPITAL LA MESA PEDRO LEON ALVAREZ DIAZ'
   });
   
   const [selectedProcedures, setSelectedProcedures] = useState([]);
@@ -32,46 +32,6 @@ const InformedConsentApp = () => {
   });
 
   const consentTypes = [
-    {
-      id: 'transfusion',
-      name: 'Transfusión de Hemocomponentes',
-      code: '1200AD01-F038',
-      version: '08',
-      procedures: [
-        {
-          name: 'Transfusión Sanguínea',
-          description: 'Es el trasplante de un tejido líquido, la sangre. Se realiza a través de la administración de cualquiera de sus componentes (glóbulos rojos, plasma, plaquetas, crioprecipitado) con el fin de reponer su pérdida o el déficit en su producción.',
-          risks: 'Reacciones alérgicas, fiebre, infecciones, sobrecarga de volumen, reacciones hemolíticas, hipocalcemia.',
-          benefits: 'Mejora de la oxigenación, reposición de componentes sanguíneos, estabilización hemodinámica.',
-          alternatives: 'Eritropoyetina, soluciones cristaloides/coloides, hierro intravenoso u oral, autotransfusión.',
-          implications: 'Requiere pruebas de compatibilidad, consentimiento informado, monitoreo continuo y disponibilidad de unidades seguras.'
-        }
-      ]
-    },
-    {
-      id: 'hisopado',
-      name: 'Hisopado Nasofaríngeo/Orofaríngeo',
-      code: '1200AD01-F050',
-      version: '09',
-      procedures: [
-        {
-          name: 'Hisopado Nasofaríngeo',
-          description: 'Introducción de un hisopo estéril en la cavidad nasal hasta la nasofaringe para recolectar una muestra de secreciones. Se usa para detectar infecciones virales o bacterianas, como influenza, COVID-19 y faringitis estreptocócica.',
-          risks: 'Molestia, lagrimeo, estornudos, irritación, sangrado nasal (raro), reflejo nauseoso.',
-          benefits: 'Diagnóstico rápido y preciso de infecciones respiratorias, facilitando el tratamiento oportuno.',
-          alternatives: 'Hisopado orofaríngeo, pruebas de saliva, aspirado nasofaríngeo, pruebas serológicas o de antígenos.',
-          implications: 'Requiere técnica estéril, personal capacitado y transporte adecuado de la muestra para evitar falsos negativos.'
-        },
-        {
-          name: 'Hisopado Orofaríngeo',
-          description: 'Introducción de un hisopo estéril en la boca hasta la orofaringe para recolectar una muestra de secreciones, utilizada en el diagnóstico de infecciones virales o bacterianas como estreptococo, COVID-19 e influenza.',
-          risks: 'Molestia, reflejo de náuseas, irritación, tos, ligero malestar en la garganta.',
-          benefits: 'Diagnóstico rápido y preciso de infecciones respiratorias y faríngeas, facilitando el tratamiento oportuno.',
-          alternatives: 'Hisopado nasofaríngeo, pruebas de saliva, aspirado faríngeo, pruebas serológicas o de antígenos.',
-          implications: 'Requiere técnica adecuada para evitar la contaminación de la muestra, personal capacitado y transporte adecuado al laboratorio.'
-        }
-      ]
-    },
     {
       id: 'laboratorio',
       name: 'Toma de Muestras Laboratorio',
@@ -121,18 +81,50 @@ const InformedConsentApp = () => {
       ]
     },
     {
-      id: 'hiv',
-      name: 'Toma de Muestras HIV',
-      code: '1203SUBCIE-F65',
-      version: '09',
+      id: 'frotis_vaginal',
+      name: 'Toma de Muestras Frotis Vaginal',
+      code: 'SC-M-09.118',
+      version: '01',
       procedures: [
         {
-          name: 'Toma de muestra sanguínea para detección de VIH',
-          description: 'Extracción de sangre venosa o recolección de fluido oral para detectar la presencia de anticuerpos, antígenos o material genético del VIH mediante pruebas rápidas, ELISA o PCR.',
-          risks: 'Mínimos: dolor en el sitio de punción, hematoma, mareo; en prueba oral, posible irritación en encías.',
-          benefits: 'Diagnóstico temprano, acceso oportuno a tratamiento y consejería, reducción del riesgo de transmisión.',
-          alternatives: 'Autopruebas de VIH, pruebas de cuarta generación, pruebas de detección de carga viral',
-          implications: 'Requiere consentimiento informado, asesoría pre y post prueba, confidencialidad y seguimiento en caso de resultado positivo.'
+          name: 'Frotis Vaginal - Cultivo Recto-Vaginal',
+          description: 'Se toma una muestra de secreción de flujo del área vaginal o rectal, utilizando aplicadores, solución salina, tubo de ensayo, medio de cultivo, laminillas, espéculo. Este material utilizado es totalmente desechable. En el caso de ser menor de edad o no haber tenido relaciones sexuales no se utilizará espéculo para la toma de la muestra.',
+          risks: 'Frotis vaginal: Ardor, dolor, picazón o incomodidad al momento de introducir el espéculo y el aplicador.',
+          benefits: 'Orientar y/o confirmar un diagnóstico y realizar seguimiento oportuno de una condición en salud, que permita dar pautas de tratamiento oportuno.',
+          alternatives: 'Ninguna',
+          implications: 'Sangrado, dolor pélvico, laceración cervicouterina.'
+        }
+      ]
+    },
+    {
+      id: 'hiv',
+      name: 'Prueba Presuntiva de VIH',
+      code: 'SC-M-09.39',
+      version: '01',
+      procedures: [
+        {
+          name: 'Prueba Presuntiva de VIH',
+          description: 'Por medio de una muestra de sangre, se procesa y se identifica o descarta la presencia activa de Virus de la Inmunodeficiencia Humana (VIH), el cual puede infectar y destruir las células del sistema de defensa del cuerpo (Sistema Inmune), originando una baja resistencia a las infecciones.',
+          risks: 'Sangrado excesivo, Desmayo o sensación de mareo, Hematoma (acumulación de sangre debajo de la piel), Infección (el riesgo es bajo, debido que se usaron materiales para punción múltiples para recoger las muestras), Punción venosa en muchas ocasiones.',
+          benefits: 'Detección oportuna del VIH.',
+          alternatives: 'Ninguna.',
+          implications: 'A algunas personas cuando se les informa que tiene anticuerpos contra VIH (resultado reactivo) pueden llegar a presentar fuertes reacciones emocionales, tristeza, ansiedad, depresión. También puede ser objeto de discriminación o rechazo por otras personas o instituciones.'
+        }
+      ]
+    },
+    {
+      id: 'transfusion',
+      name: 'Transfusión de Hemocomponentes',
+      code: '1200AD01-F038',
+      version: '08',
+      procedures: [
+        {
+          name: 'Transfusión Sanguínea',
+          description: 'Es el trasplante de un tejido líquido, la sangre. Se realiza a través de la administración de cualquiera de sus componentes (glóbulos rojos, plasma, plaquetas, crioprecipitado) con el fin de reponer su pérdida o el déficit en su producción.',
+          risks: 'Reacciones alérgicas, fiebre, infecciones, sobrecarga de volumen, reacciones hemolíticas, hipocalcemia.',
+          benefits: 'Mejora de la oxigenación, reposición de componentes sanguíneos, estabilización hemodinámica.',
+          alternatives: 'Eritropoyetina, soluciones cristaloides/coloides, hierro intravenoso u oral, autotransfusión.',
+          implications: 'Requiere pruebas de compatibilidad, consentimiento informado, monitoreo continuo y disponibilidad de unidades seguras.'
         }
       ]
     }
@@ -191,7 +183,7 @@ const InformedConsentApp = () => {
                     </div>
                   </td>
                   <td className="p-2 text-center">
-                    <div className="font-bold">E.S.E. HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA</div>
+                    <div className="font-bold">E.S.E. HOSPITAL LA MESA PEDRO LEON ALVAREZ DIAZ</div>
                     <div>Nit: 860.009.555-7</div>
                     <div className="font-bold mt-2">CONSENTIMIENTO INFORMADO {consentData.name.toUpperCase()}</div>
                   </td>
@@ -408,7 +400,7 @@ const InformedConsentApp = () => {
               <FileText className="h-8 w-8 text-white" />
             </div>
             <div>
-              <h1 className="text-2xl font-bold text-gray-800">E.S.E. HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA</h1>
+              <h1 className="text-2xl font-bold text-gray-800">E.S.E. HOSPITAL LA MESA PEDRO LEON ALVAREZ DIAZ</h1>
               <p className="text-gray-600">Sistema de Consentimientos Informados</p>
               <p className="text-sm text-gray-500">Nit: 860.009.555-7</p>
             </div>
