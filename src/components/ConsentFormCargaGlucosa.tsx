@@ -331,100 +331,90 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         {isProcedureInfoExpanded && (
           <CardContent className="space-y-4 animate-accordion-down">
             <div className="bg-medical-blue-light/10 p-6 rounded-lg border border-medical-blue-light/20">
-              <h3 className="font-semibold text-medical-blue mb-4 text-center">DATOS DEL PROCEDIMIENTO</h3>
+              <h3 className="font-semibold text-medical-blue mb-6 text-center">ADMINISTRACIÓN ORAL DE CARGA DE GLUCOSA (DEXTROSA ANHIDRA)</h3>
               
               <div className="space-y-4">
-                {/* Procedimiento */}
-                <div className="border border-gray-300">
-                  <div className="bg-gray-100 p-2 border-b border-gray-300">
-                    <h4 className="font-bold text-center">PROCEDIMIENTO</h4>
+                {/* Descripción Completa */}
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <h4 className="font-semibold text-blue-700">Descripción Completa:</h4>
                   </div>
-                  <div className="p-2 text-center font-semibold">
-                    ADMINISTRACIÓN ORAL DE CARGA DE GLUCOSA (DEXTROSA ANHIDRA)
-                  </div>
-                </div>
-
-                {/* Descripción */}
-                <div className="border border-gray-300">
-                  <div className="bg-gray-100 p-2 border-b border-gray-300">
-                    <h4 className="font-bold text-center">DESCRIPCIÓN DEL PROCEDIMIENTO</h4>
-                  </div>
-                  <div className="p-3 text-sm">
+                  <p className="text-blue-700 text-sm">
                     Consiste en suministrar vía oral una bebida que contiene una cantidad estandarizada de glucosa (dextrosa anhidra) que servirá para la evaluación de su diagnóstico. No se debe realizar este procedimiento si el paciente está indispuesto, o ha presentado episodios de fiebre, vómito o diarrea en las 24 horas anteriores a la toma de la muestra.
-                  </div>
-                </div>
-
-                {/* Propósito */}
-                <div className="border border-gray-300">
-                  <div className="bg-gray-100 p-2 border-b border-gray-300">
-                    <h4 className="font-bold text-center">PROPÓSITO</h4>
-                  </div>
-                  <div className="p-3 text-sm">
-                    Analizar los niveles de azúcar en sangre y la reacción del organismo a la ingesta de la carga de glucosa.
-                  </div>
-                </div>
-
-                {/* Beneficios */}
-                <div className="border border-gray-300">
-                  <div className="bg-gray-100 p-2 border-b border-gray-300">
-                    <h4 className="font-bold text-center">BENEFICIOS ESPERADOS</h4>
-                  </div>
-                  <div className="p-3 text-sm">
-                    Orientar y/o confirmar un diagnóstico frente a los niveles de glucosa en el paciente o cómo la está procesando el organismo. Seguimiento de una enfermedad o condición en salud.
+                  </p>
+                  <div className="mt-3 bg-blue-100 p-3 rounded">
+                    <p className="text-sm text-blue-800">
+                      <strong>Propósito:</strong> Analizar los niveles de azúcar en sangre y la reacción del organismo a la ingesta de la carga de glucosa.
+                    </p>
                   </div>
                 </div>
 
                 {/* Riesgos */}
-                <div className="border border-gray-300">
-                  <div className="bg-gray-100 p-2 border-b border-gray-300">
-                    <h4 className="font-bold text-center">RIESGOS Y POSIBLES COMPLICACIONES</h4>
+                <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="h-4 w-4 text-red-600" />
+                    <h4 className="font-semibold text-red-700">Riesgos:</h4>
                   </div>
-                  <div className="p-3 text-sm">
+                  <p className="text-red-700 text-sm">
                     Malestar, náuseas, vómito, diarrea, mareo o reacciones alérgicas, urticaria o asma. <strong>Si el paciente es diabético, debe informar previamente y sólo se administrará bajo prescripción médica.</strong>
-                  </div>
+                  </p>
                 </div>
 
-                {/* Implicaciones */}
-                <div className="border border-gray-300">
-                  <div className="bg-gray-100 p-2 border-b border-gray-300">
-                    <h4 className="font-bold text-center">IMPLICACIONES</h4>
+                {/* Beneficios */}
+                <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <CheckCircle className="h-4 w-4 text-green-600" />
+                    <h4 className="font-semibold text-green-700">Beneficios:</h4>
                   </div>
-                  <div className="p-3 text-sm">
-                    Tiempo de permanencia en el laboratorio es de dos (2) a tres (3) horas dependiendo el examen solicitado (curva o glicemia pre y pos carga), múltiples punciones por el número de muestras requeridas.
-                  </div>
-                </div>
-
-                {/* Efectos Inevitables */}
-                <div className="border border-gray-300">
-                  <div className="bg-gray-100 p-2 border-b border-gray-300">
-                    <h4 className="font-bold text-center">EFECTOS INEVITABLES</h4>
-                  </div>
-                  <div className="p-3 text-sm">
-                    Náuseas o molestia por el sabor azucarado
-                  </div>
+                  <p className="text-green-700 text-sm">
+                    Orientar y/o confirmar un diagnóstico frente a los niveles de glucosa en el paciente o cómo la está procesando el organismo. Seguimiento de una enfermedad o condición en salud.
+                  </p>
                 </div>
 
                 {/* Alternativas */}
-                <div className="border border-gray-300">
-                  <div className="grid grid-cols-2">
-                    <div className="bg-gray-100 p-2 border-r border-gray-300">
-                      <h4 className="font-bold text-center">ALTERNATIVAS RAZONABLES A ESTE PROCEDIMIENTO</h4>
-                    </div>
-                    <div className="p-3 text-sm">
-                      Ninguna
-                    </div>
+                <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Shield className="h-4 w-4 text-purple-600" />
+                    <h4 className="font-semibold text-purple-700">Alternativas:</h4>
+                  </div>
+                  <p className="text-purple-700 text-sm">
+                    Ninguna
+                  </p>
+                </div>
+
+                {/* Implicaciones */}
+                <div className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-r-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <TestTube2 className="h-4 w-4 text-orange-600" />
+                    <h4 className="font-semibold text-orange-700">Implicaciones:</h4>
+                  </div>
+                  <div className="space-y-2 text-orange-700 text-sm">
+                    <p>
+                      Tiempo de permanencia en el laboratorio es de dos (2) a tres (3) horas dependiendo el examen solicitado (curva o glicemia pre y pos carga), múltiples punciones por el número de muestras requeridas.
+                    </p>
+                    <p>
+                      <strong>Efectos inevitables:</strong> Náuseas o molestia por el sabor azucarado
+                    </p>
                   </div>
                 </div>
 
-                {/* Consecuencias */}
-                <div className="border border-gray-300">
-                  <div className="grid grid-cols-2">
-                    <div className="bg-gray-100 p-2 border-r border-gray-300">
-                      <h4 className="font-bold text-center">POSIBLES CONSECUENCIAS EN CASO QUE DECIDA NO ACEPTAR EL PROCEDIMIENTO</h4>
-                    </div>
-                    <div className="p-3 text-sm">
-                      Impide a los médicos tratantes tener información valiosa para determinar, confirmar o ajustar el diagnóstico y tratamiento médico
-                    </div>
+                {/* Consecuencias de no aceptar */}
+                <div className="bg-gray-50 border-l-4 border-gray-500 p-4 rounded-r-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="h-4 w-4 text-gray-600" />
+                    <h4 className="font-semibold text-gray-700">Posibles consecuencias en caso que decida no aceptar el procedimiento:</h4>
+                  </div>
+                  <p className="text-gray-700 text-sm">
+                    Impide a los médicos tratantes tener información valiosa para determinar, confirmar o ajustar el diagnóstico y tratamiento médico
+                  </p>
+                </div>
+
+                {/* Declaración */}
+                <div className="bg-blue-100 border border-blue-300 p-4 rounded-lg">
+                  <div className="flex items-center gap-2 mb-2">
+                    <FileText className="h-4 w-4 text-blue-600" />
+                    <span className="text-blue-700 font-medium text-sm">Al seleccionar este procedimiento, usted declara haber leído y comprendido toda la información anterior.</span>
                   </div>
                 </div>
               </div>
