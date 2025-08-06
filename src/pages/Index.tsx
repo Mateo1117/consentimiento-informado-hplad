@@ -21,6 +21,7 @@ interface PatientData {
   numeroDocumento: string;
   fechaNacimiento: string;
   edad: number;
+  sexo: string; // Added missing property
   eps: string;
   telefono: string;
   direccion: string;

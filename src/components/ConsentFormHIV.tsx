@@ -7,8 +7,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Download, ArrowLeft } from 'lucide-react';
 import { toast } from 'sonner';
-import SignaturePad from './SignaturePad';
-import CameraCapture from './CameraCapture';
+import { SignaturePad } from './SignaturePad';
+import { CameraCapture } from './CameraCapture';
 import { generateHIVPDF } from '@/utils/pdfGeneratorHIV';
 
 interface PatientData {
@@ -19,6 +19,7 @@ interface PatientData {
   numeroDocumento: string;
   fechaNacimiento: string;
   edad: number;
+  sexo: string; // Added missing property
   eps: string;
   telefono: string;
   direccion: string;
@@ -175,7 +176,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
                 <CardTitle className="text-lg text-red-700">Firma del Paciente/Acudiente</CardTitle>
               </CardHeader>
               <CardContent>
-                <SignaturePad onSignatureChange={setPatientSignature} clearButtonText="Limpiar Firma" />
+                <SignaturePad title="Firma del Paciente/Acudiente" onSignatureChange={setPatientSignature} />
               </CardContent>
             </Card>
 
@@ -184,7 +185,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
                 <CardTitle className="text-lg text-red-700">Firma del Profesional</CardTitle>
               </CardHeader>
               <CardContent>
-                <SignaturePad onSignatureChange={setProfessionalSignature} clearButtonText="Limpiar Firma" />
+                <SignaturePad title="Firma del Profesional" onSignatureChange={setProfessionalSignature} />
               </CardContent>
             </Card>
           </div>
