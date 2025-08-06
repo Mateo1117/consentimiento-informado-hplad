@@ -258,34 +258,34 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
       {/* Decisión sobre el Consentimiento */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-4">
-          <div className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center">
-            <span className="text-xs text-orange-600">⚪</span>
+          <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center">
+            <span className="text-xs text-blue-600">⚪</span>
           </div>
-          <h3 className="text-lg font-semibold text-gray-700">Decisión sobre el Consentimiento</h3>
-          <span className="text-red-500">*</span>
+          <h3 className="text-lg font-semibold text-blue-700">Decisión sobre el Consentimiento</h3>
+          <span className="text-red-500 text-lg">*</span>
         </div>
         
         <div className="space-y-4">
           <RadioGroup 
             value={consentDecision} 
             onValueChange={(value: 'aprobar' | 'disentir') => setConsentDecision(value)}
-            className="space-y-3"
+            className="flex flex-row items-center gap-8"
           >
-            <div className="flex items-center space-x-3 p-3 border border-green-200 rounded-lg bg-green-50">
-              <RadioGroupItem value="aprobar" id="aprobar" className="text-green-600" />
-              <Label htmlFor="aprobar" className="text-green-700 font-medium">APROBAR el(los) procedimiento(s)</Label>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="aprobar" id="aprobar" className="w-5 h-5 text-green-600 border-green-600" />
+              <Label htmlFor="aprobar" className="text-green-600 font-medium text-base">APROBAR el(los) procedimiento(s)</Label>
             </div>
-            <div className="flex items-center space-x-3 p-3 border border-red-200 rounded-lg bg-red-50">
-              <RadioGroupItem value="disentir" id="disentir" className="text-red-600" />
-              <Label htmlFor="disentir" className="text-red-700 font-medium">DISENTIR el(los) procedimiento(s)</Label>
+            <div className="flex items-center space-x-2">
+              <RadioGroupItem value="disentir" id="disentir" className="w-5 h-5 text-red-600 border-red-600" />
+              <Label htmlFor="disentir" className="text-red-600 font-medium text-base">DISENTIR el(los) procedimiento(s)</Label>
             </div>
           </RadioGroup>
           
-          <div className="bg-gray-50 p-3 rounded-lg text-sm text-gray-600">
-            <div className="flex items-start gap-2">
-              <input type="checkbox" className="mt-1" defaultChecked />
-              <span>
-                Declaro que: He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+            <div className="flex items-start gap-3">
+              <input type="checkbox" className="mt-1 w-4 h-4 text-blue-600 border-blue-300 rounded" defaultChecked />
+              <span className="text-gray-700 text-sm leading-relaxed">
+                <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
               </span>
             </div>
           </div>
