@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Download, ArrowLeft, TestTube, Camera, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
@@ -164,18 +165,24 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
               className="flex items-start space-x-3 p-3 rounded-lg border border-medical-blue/20 bg-medical-blue/5 cursor-pointer hover:bg-medical-blue/10 transition-colors"
               onClick={() => setIsProcedureInfoExpanded(!isProcedureInfoExpanded)}
             >
-              <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center mt-1">
-                <span className="text-white text-xs">✓</span>
-              </div>
+              <Checkbox
+                id="procedimiento-hiv"
+                checked={isProcedureInfoExpanded}
+                onCheckedChange={(checked) => setIsProcedureInfoExpanded(checked as boolean)}
+                className="mt-1 data-[state=checked]:bg-medical-blue data-[state=checked]:border-medical-blue"
+              />
               <div className="flex-1">
-                <h4 className="cursor-pointer text-medical-blue font-semibold text-lg flex items-center gap-2">
+                <Label 
+                  htmlFor="procedimiento-hiv" 
+                  className="cursor-pointer text-medical-blue font-semibold text-lg flex items-center gap-2"
+                >
                   Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)
                   {isProcedureInfoExpanded ? (
                     <ChevronUp className="h-4 w-4 text-medical-blue" />
                   ) : (
                     <ChevronDown className="h-4 w-4 text-medical-blue" />
                   )}
-                </h4>
+                </Label>
                 <p className="text-sm text-medical-gray mt-1">
                   Consiste en tomar una muestra de sangre para identificar o descartar la presencia activa del virus de la inmunodeficiencia humana (VIH).
                 </p>
