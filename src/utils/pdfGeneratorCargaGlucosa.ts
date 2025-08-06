@@ -423,23 +423,26 @@ export class CargaGlucosaPDFGenerator {
     this.pdf.setFontSize(8);
     this.pdf.setFont('helvetica', 'normal');
     
-    // Patient signature box
-    this.pdf.rect(startX, this.currentY, boxWidth, boxHeight);
-    this.pdf.setFontSize(8);
-    this.pdf.setFont('helvetica', 'normal');
-    
-    // Add actual signature if available
-    if (data.patientSignature && data.patientSignature !== "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==") {
+    // Add actual signature if available - improved detection
+    if (data.patientSignature && 
+        data.patientSignature.length > 200 && 
+        data.patientSignature.startsWith('data:image/png;base64,')) {
       try {
+        console.log('📝 Agregando firma del paciente al PDF');
         this.pdf.addImage(data.patientSignature, 'PNG', startX + 2, this.currentY + 2, boxWidth - 4, 30);
+        console.log('✅ Firma del paciente agregada exitosamente');
       } catch (error) {
-        console.error('Error adding patient signature:', error);
-        this.pdf.setFillColor(255, 255, 0); // Yellow background for signature area
+        console.error('❌ Error adding patient signature:', error);
+        // White background if signature fails to load
+        this.pdf.setFillColor(255, 255, 255);
         this.pdf.rect(startX + 2, this.currentY + 2, boxWidth - 4, 30, 'F');
       }
     } else {
-      // Default yellow background if no signature
-      this.pdf.setFillColor(255, 255, 0);
+      console.log('⚠️ No se encontró firma válida del paciente');
+      console.log('Firma length:', data.patientSignature?.length);
+      console.log('Firma preview:', data.patientSignature?.substring(0, 50));
+      // White background when no signature
+      this.pdf.setFillColor(255, 255, 255);
       this.pdf.rect(startX + 2, this.currentY + 2, boxWidth - 4, 30, 'F');
     }
     

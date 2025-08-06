@@ -151,22 +151,23 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
       const date = currentDate.toLocaleDateString('es-CO');
       const time = currentDate.toLocaleTimeString('es-CO');
 
-      console.log("📋 Preparando datos básicos...");
+      console.log("📋 Verificando estado de las firmas...");
+      console.log("🖊️ Firma del paciente:", patientSignature ? "SÍ EXISTE" : "NO EXISTE");
+      console.log("👨‍⚕️ Firma del profesional:", professionalSignature ? "SÍ EXISTE" : "NO EXISTE");
       
-      // Datos mínimos para el PDF - siempre funciona
+      if (patientSignature) {
+        console.log("📏 Longitud firma paciente:", patientSignature.length);
+        console.log("🔍 Preview firma paciente:", patientSignature.substring(0, 100));
+      }
+      
+      if (professionalSignature) {
+        console.log("📏 Longitud firma profesional:", professionalSignature.length);
+        console.log("🔍 Preview firma profesional:", professionalSignature.substring(0, 100));
+      }
+      
+      // Datos para el PDF - usar datos reales si existen
       const pdfData = {
-        patientData: patientData || {
-          nombre: "PACIENTE",
-          apellidos: "DE PRUEBA", 
-          tipoDocumento: "CC",
-          numeroDocumento: "12345678",
-          fechaNacimiento: "1990-01-01",
-          edad: 30,
-          eps: "EPS TEST",
-          telefono: "3001234567",
-          direccion: "Dirección test",
-          centroSalud: "HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA"
-        },
+        patientData: patientData,
         guardianData: isMinor ? {
           name: guardianName || "ACUDIENTE TEST",
           document: guardianDocument || "87654321",
@@ -175,15 +176,21 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         } : null,
         professionalName: professionalName || "DR. PROFESIONAL DE PRUEBA",
         professionalDocument: professionalDocument || "12345678",
-        patientSignature: patientSignature || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
-        professionalSignature: professionalSignature || "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==",
+        patientSignature: patientSignature, // Usar firma real si existe
+        professionalSignature: professionalSignature, // Usar firma real si existe
         patientPhoto: patientPhoto,
         consentDecision: consentDecision || "aprobar",
         date,
         time
       };
 
-      console.log("🔧 Generando PDF...", pdfData);
+      console.log("🔧 Generando PDF con datos:", {
+        patientName: pdfData.patientData.nombre,
+        professionalName: pdfData.professionalName,
+        hasPatientSignature: !!pdfData.patientSignature,
+        hasProfessionalSignature: !!pdfData.professionalSignature,
+        consentDecision: pdfData.consentDecision
+      });
       
       const pdf = generateCargaGlucosaPDF(pdfData);
       
