@@ -47,6 +47,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
   const [professionalSignature, setProfessionalSignature] = useState<string | null>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [patientPhoto, setPatientPhoto] = useState<string | null>(null);
+  const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
 
   const patientSignatureRef = useRef<SignatureRef>(null);
   const professionalSignatureRef = useRef<SignatureRef>(null);
@@ -274,88 +275,136 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         </Card>
       )}
 
-      {/* Procedure Information */}
-      <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue flex items-center gap-2">
-            <TestTube className="h-5 w-5" />
-            Información del Procedimiento
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-            <h4 className="font-semibold text-blue-700 mb-2">Procedimiento: TOMA DE MUESTRAS POR VENOPUNCIÓN</h4>
-            <p className="text-blue-700 text-sm">
-              Consiste en la punción de una vena con el fin de extraer muestras de sangre para realizar exámenes de laboratorio.
-            </p>
+      {/* Procedure Information - Expandable */}
+      <Card className="medical-card">
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <TestTube className="h-5 w-5 text-medical-blue" />
+            <CardTitle className="medical-card-title">
+              Procedimientos para Venopunción
+            </CardTitle>
           </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Descripción */}
-            <div className="bg-gray-50 border-l-4 border-gray-500 p-4 rounded-r-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className="h-4 w-4 text-gray-600" />
-                <h4 className="font-semibold text-gray-700">Descripción:</h4>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div 
+              className="flex items-start space-x-3 p-3 rounded-lg border border-medical-blue/20 bg-medical-blue/5 cursor-pointer hover:bg-medical-blue/10 transition-colors"
+              onClick={() => setIsProcedureInfoExpanded(!isProcedureInfoExpanded)}
+            >
+              <Checkbox
+                id="procedimiento-venopuncion"
+                checked={isProcedureInfoExpanded}
+                onCheckedChange={(checked) => setIsProcedureInfoExpanded(checked as boolean)}
+                className="mt-1 data-[state=checked]:bg-medical-blue data-[state=checked]:border-medical-blue"
+              />
+              <div className="flex-1">
+                <Label 
+                  htmlFor="procedimiento-venopuncion" 
+                  className="cursor-pointer text-medical-blue font-semibold medical-text-lg flex items-center gap-2"
+                >
+                  Toma de Muestras por Venopunción
+                  {isProcedureInfoExpanded ? (
+                    <ChevronUp className="h-4 w-4 text-medical-blue" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-medical-blue" />
+                  )}
+                </Label>
+                <p className="medical-text-sm text-medical-gray mt-1">
+                  Extracción de muestras sanguíneas mediante punción venosa para análisis de laboratorio.
+                </p>
               </div>
-              <p className="text-gray-700 text-sm">
-                La venopunción es un procedimiento médico que consiste en la introducción de una aguja en una vena para extraer sangre que será analizada en el laboratorio.
-              </p>
             </div>
 
-            {/* Propósito */}
-            <div className="bg-blue-50 border-l-4 border-blue-500 p-4 rounded-r-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <TestTube className="h-4 w-4 text-blue-600" />
-                <h4 className="font-semibold text-blue-700">Propósito:</h4>
-              </div>
-              <p className="text-blue-700 text-sm">
-                Obtener muestras sanguíneas para la realización de análisis clínicos que permitan el diagnóstico, seguimiento o control de enfermedades.
-              </p>
-            </div>
+            {isProcedureInfoExpanded && (
+              <div className="ml-6 space-y-4 animate-accordion-down">
+                <div className="bg-medical-blue-light/10 p-6 rounded-lg border border-medical-blue-light/20">
+                  <div className="space-y-4">
+                    {/* Descripción Completa */}
+                    <div className="border-l-4 border-blue-500 bg-blue-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-4 w-4 text-blue-600" />
+                        <h5 className="font-semibold text-blue-800">Descripción del Procedimiento:</h5>
+                      </div>
+                      <p className="medical-text-sm text-gray-700 mb-3">
+                        La venopunción es un procedimiento médico que consiste en la introducción de una aguja en una vena para extraer sangre 
+                        que será analizada en el laboratorio. Se realiza con material estéril y desechable.
+                      </p>
+                      <div className="bg-blue-100 p-3 rounded">
+                        <p className="medical-text-sm font-medium text-blue-800">
+                          <strong>Propósito:</strong> Obtener muestras sanguíneas para análisis clínicos que permitan diagnóstico, seguimiento o control de enfermedades.
+                        </p>
+                      </div>
+                    </div>
 
-            {/* Beneficios */}
-            <div className="bg-green-50 border-l-4 border-green-500 p-4 rounded-r-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <CheckCircle className="h-4 w-4 text-green-600" />
-                <h4 className="font-semibold text-green-700">Beneficios:</h4>
-              </div>
-              <p className="text-green-700 text-sm">
-                Permite obtener información diagnóstica valiosa, detectar enfermedades tempranamente y hacer seguimiento a tratamientos médicos.
-              </p>
-            </div>
+                    {/* Beneficios */}
+                    <div className="border-l-4 border-green-500 bg-green-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <h5 className="font-semibold text-green-800">Beneficios:</h5>
+                      </div>
+                      <p className="medical-text-sm text-gray-700">
+                        Permite obtener información diagnóstica precisa y confiable para el manejo médico adecuado del paciente.
+                      </p>
+                    </div>
 
-            {/* Riesgos */}
-            <div className="bg-red-50 border-l-4 border-red-500 p-4 rounded-r-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <AlertCircle className="h-4 w-4 text-red-600" />
-                <h4 className="font-semibold text-red-700">Riesgos:</h4>
-              </div>
-              <p className="text-red-700 text-sm">
-                Dolor leve, formación de hematomas, sangrado prolongado, infección localizada (muy poco frecuente), reacciones vasovagales (mareo, desmayo).
-              </p>
-            </div>
+                    {/* Riesgos */}
+                    <div className="border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                        <h5 className="font-semibold text-red-800">Riesgos:</h5>
+                      </div>
+                      <p className="medical-text-sm text-gray-700">
+                        Dolor temporal en el sitio de punción, sangrado mínimo, hematoma (moretón), mareo o desmayo en personas sensibles, 
+                        infección local (muy raro con técnica estéril).
+                      </p>
+                    </div>
 
-            {/* Alternativas */}
-            <div className="bg-purple-50 border-l-4 border-purple-500 p-4 rounded-r-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <Shield className="h-4 w-4 text-purple-600" />
-                <h4 className="font-semibold text-purple-700">Alternativas:</h4>
-              </div>
-              <p className="text-purple-700 text-sm">
-                Según el examen solicitado, puede considerarse punción capilar (en dedo) para algunos análisis básicos.
-              </p>
-            </div>
+                    {/* Alternativas */}
+                    <div className="border-l-4 border-purple-500 bg-purple-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-purple-600">🔄</span>
+                        <h5 className="font-semibold text-purple-800">Alternativas:</h5>
+                      </div>
+                      <p className="medical-text-sm text-gray-700">
+                        En casos específicos, punción arterial o muestras de orina/saliva según el tipo de análisis requerido.
+                      </p>
+                    </div>
 
-            {/* Implicaciones */}
-            <div className="bg-orange-50 border-l-4 border-orange-500 p-4 rounded-r-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <FileText className="h-4 w-4 text-orange-600" />
-                <h4 className="font-semibold text-orange-700">Implicaciones:</h4>
+                    {/* Efectos Inevitables */}
+                    <div className="border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-yellow-600">⚠️</span>
+                        <h5 className="font-semibold text-yellow-800">Efectos Inevitables:</h5>
+                      </div>
+                      <p className="medical-text-sm text-gray-700">
+                        Molestia momentánea durante la punción, sensación de presión por el torniquete.
+                      </p>
+                    </div>
+
+                    {/* Posibles Consecuencias */}
+                    <div className="border-l-4 border-gray-500 bg-gray-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-gray-600">ℹ️</span>
+                        <h5 className="font-semibold text-gray-800">Posibles consecuencias en caso que decida no aceptar el procedimiento:</h5>
+                      </div>
+                      <p className="medical-text-sm text-gray-700">
+                        Imposibilidad de realizar los análisis solicitados, limitación en el diagnóstico y seguimiento médico.
+                      </p>
+                    </div>
+
+                    {/* Declaración final */}
+                    <div className="bg-blue-100 border border-blue-300 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-blue-600">📝</span>
+                        <p className="medical-text-sm font-medium text-blue-800">
+                          Al seleccionar este procedimiento, usted declara haber leído y comprendido toda la información anterior.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-              <p className="text-orange-700 text-sm">
-                Molestia temporal en el sitio de punción, posible formación de pequeño hematoma que se resuelve espontáneamente.
-              </p>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
