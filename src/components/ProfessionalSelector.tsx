@@ -97,17 +97,6 @@ export const ProfessionalSelector = ({ onProfessionalSelect, onNewProfessional, 
         </Select>
       </div>
 
-      <div className="flex gap-2">
-        <Button
-          variant="outline"
-          onClick={handleNewProfessional}
-          className="medical-button-outline flex-1"
-          size="sm"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Nuevo Profesional
-        </Button>
-      </div>
 
       {professionals.length === 0 && (
         <div className="text-center p-3 bg-medical-blue-light/30 rounded-lg">
