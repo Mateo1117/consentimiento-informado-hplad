@@ -679,29 +679,44 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
       </Card>
 
 
-      {/* Generate PDF Button */}
-      <Card className="border-medical-green/20 bg-medical-green/5">
+      {/* Action Buttons */}
+      <Card className="border-medical-blue/20">
         <CardContent className="p-6">
-          <div className="text-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button
+              onClick={onBack}
+              variant="outline"
+              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 text-lg"
+              size="lg"
+            >
+              Volver
+            </Button>
+            
             <Button
               onClick={generatePDF}
               disabled={isGeneratingPDF || !isFormComplete()}
-              className="bg-medical-green hover:bg-medical-green/90 text-white px-8 py-3 text-lg gap-2 disabled:opacity-50"
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               size="lg"
             >
               {isGeneratingPDF ? (
                 <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                   Generando PDF...
                 </>
               ) : (
                 <>
-                  <Download className="h-4 w-4 mr-2" />
-                  Generar PDF del Consentimiento
+                  <FileText className="h-4 w-4" />
+                  Guardar Consentimiento
                 </>
               )}
             </Button>
           </div>
+          
+          {!isFormComplete() && (
+            <p className="text-center text-sm text-gray-500 mt-3">
+              Complete todos los campos requeridos para generar el PDF
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
