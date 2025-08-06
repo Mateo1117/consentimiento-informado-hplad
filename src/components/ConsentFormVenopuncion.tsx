@@ -475,37 +475,9 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
                   ref={patientSignatureRef} 
                   title="Firma del Paciente"
                   onSignatureChange={handlePatientSignatureChange}
-              />
-            </div>
-          </div>
-
-          {/* Patient Photo - moved below patient signature */}
-          <div>
-            <Label className="text-medical-blue font-medium">Foto del Paciente (Opcional)</Label>
-            <div className="border rounded-lg p-4 bg-gray-50">
-              <CameraCapture ref={cameraCaptureRef} title="Captura de Foto del Paciente" />
-              <div className="mt-4 flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handlePhotoCapture}
-                  className="text-medical-blue border-medical-blue/20"
-                >
-                  Capturar Foto
-                </Button>
+                />
               </div>
-              {patientPhoto && (
-                <div className="mt-4">
-                  <p className="text-sm text-medical-green mb-2">✓ Foto capturada exitosamente</p>
-                  <img 
-                    src={patientPhoto} 
-                    alt="Foto del paciente" 
-                    className="max-w-xs h-auto border rounded"
-                  />
-                </div>
-              )}
             </div>
-          </div>
 
             <div>
               <div className="space-y-4">
@@ -556,6 +528,33 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
             </div>
           </div>
 
+          {/* Patient Photo */}
+          <div>
+            <Label className="text-medical-blue font-medium">Foto del Paciente (Opcional)</Label>
+            <div className="border rounded-lg p-4 bg-gray-50">
+              <CameraCapture ref={cameraCaptureRef} title="Captura de Foto del Paciente" />
+              <div className="mt-4 flex gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handlePhotoCapture}
+                  className="text-medical-blue border-medical-blue/20"
+                >
+                  Capturar Foto
+                </Button>
+              </div>
+              {patientPhoto && (
+                <div className="mt-4">
+                  <p className="text-sm text-medical-green mb-2">✓ Foto capturada exitosamente</p>
+                  <img 
+                    src={patientPhoto} 
+                    alt="Foto del paciente" 
+                    className="w-32 h-24 object-cover rounded border"
+                  />
+                </div>
+              )}
+            </div>
+          </div>
         </CardContent>
       </Card>
 
