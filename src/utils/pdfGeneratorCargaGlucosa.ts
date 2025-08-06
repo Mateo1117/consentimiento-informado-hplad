@@ -75,31 +75,51 @@ export class CargaGlucosaPDFGenerator {
     this.pdf.setFontSize(8);
     this.pdf.setFont('helvetica', 'bold');
     
-    // Draw border rectangle for header
+    // Draw main border rectangle for header
     this.pdf.rect(this.margin, this.margin, this.pageWidth - 2 * this.margin, 25);
     
-    // Hospital name and logo area
-    this.pdf.text('E.S.E', this.margin + 5, this.margin + 8);
-    this.pdf.text('HOSPITAL', this.margin + 5, this.margin + 12);
-    this.pdf.text('LA MESA', this.margin + 5, this.margin + 16);
-    this.pdf.text('PEDRO LEÓN ÁLVAREZ DÍAZ', this.margin + 5, this.margin + 20);
+    // Left section - Hospital info
+    const leftBoxWidth = 50;
+    this.pdf.rect(this.margin, this.margin, leftBoxWidth, 25);
     
-    // Format title
-    this.pdf.setFontSize(10);
-    this.pdf.text('FORMATO 119', this.pageWidth/2 - 15, this.margin + 8);
-    this.pdf.text('CONSENTIMIENTO INFORMADO', this.pageWidth/2 - 25, this.margin + 12);
-    this.pdf.text('PARA CARGA DE GLUCOSA', this.pageWidth/2 - 25, this.margin + 16);
+    this.pdf.setFontSize(9);
+    this.pdf.text('E.S.E', this.margin + 15, this.margin + 6);
+    this.pdf.text('HOSPITAL', this.margin + 10, this.margin + 10);
+    this.pdf.text('LA MESA', this.margin + 12, this.margin + 14);
+    this.pdf.setFontSize(7);
+    this.pdf.text('PEDRO LEÓN ÁLVAREZ DÍAZ', this.margin + 2, this.margin + 18);
     
-    // Code table
-    const codeStartX = this.pageWidth - 60;
-    this.pdf.rect(codeStartX, this.margin, 50, 25);
-    this.pdf.setFontSize(8);
-    this.pdf.text('Código', codeStartX + 2, this.margin + 5);
-    this.pdf.text('SC-M-09.119', codeStartX + 15, this.margin + 5);
-    this.pdf.text('Versión', codeStartX + 2, this.margin + 10);
-    this.pdf.text('01', codeStartX + 15, this.margin + 10);
-    this.pdf.text('Fecha', codeStartX + 2, this.margin + 15);
-    this.pdf.text('20-10-2024', codeStartX + 15, this.margin + 15);
+    // Center section - Format title
+    const centerX = this.margin + leftBoxWidth;
+    const centerWidth = this.pageWidth - 2 * this.margin - leftBoxWidth - 50;
+    this.pdf.rect(centerX, this.margin, centerWidth, 25);
+    
+    this.pdf.setFontSize(9);
+    this.pdf.setFont('helvetica', 'bold');
+    this.pdf.text('FORMATO 119', centerX + centerWidth/2 - 15, this.margin + 6);
+    this.pdf.text('CONSENTIMIENTO INFORMADO', centerX + centerWidth/2 - 25, this.margin + 10);
+    this.pdf.text('PARA CARGA DE GLUCOSA', centerX + centerWidth/2 - 25, this.margin + 14);
+    
+    // Right section - Code table
+    const rightX = this.pageWidth - this.margin - 50;
+    this.pdf.rect(rightX, this.margin, 50, 25);
+    
+    // Code sub-sections
+    this.pdf.rect(rightX, this.margin, 25, 8);
+    this.pdf.rect(rightX + 25, this.margin, 25, 8);
+    this.pdf.setFontSize(6);
+    this.pdf.text('Código', rightX + 2, this.margin + 5);
+    this.pdf.text('SC-M-09.119', rightX + 27, this.margin + 5);
+    
+    this.pdf.rect(rightX, this.margin + 8, 25, 8);
+    this.pdf.rect(rightX + 25, this.margin + 8, 25, 8);
+    this.pdf.text('Versión', rightX + 2, this.margin + 13);
+    this.pdf.text('01', rightX + 27, this.margin + 13);
+    
+    this.pdf.rect(rightX, this.margin + 16, 25, 9);
+    this.pdf.rect(rightX + 25, this.margin + 16, 25, 9);
+    this.pdf.text('Fecha', rightX + 2, this.margin + 21);
+    this.pdf.text('20-10-2024', rightX + 26, this.margin + 21);
     
     this.currentY = this.margin + 30;
   }
