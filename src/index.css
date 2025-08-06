@@ -134,7 +134,38 @@
 }
 
 @layer components {
-  /* Medical form header component */
+  /* Typography hierarchy for medical forms */
+  .medical-text-xs {
+    @apply text-xs;
+    font-size: var(--medical-text-xs);
+  }
+  
+  .medical-text-sm {
+    @apply text-sm;
+    font-size: var(--medical-text-sm);
+  }
+  
+  .medical-text-base {
+    @apply text-base;
+    font-size: var(--medical-text-base);
+  }
+  
+  .medical-text-lg {
+    @apply text-lg;
+    font-size: var(--medical-text-lg);
+  }
+  
+  .medical-title {
+    @apply font-semibold text-medical-blue;
+    font-size: var(--medical-title);
+  }
+  
+  .medical-heading {
+    @apply font-bold text-medical-blue;
+    font-size: var(--medical-heading);
+  }
+
+  /* Medical form components with consistent typography */
   .medical-header {
     @apply border-medical-blue/20 bg-gradient-to-r from-white to-medical-blue-light/30;
   }
@@ -144,18 +175,17 @@
   }
   
   .medical-header-icon {
-    @apply w-12 h-12 bg-medical-blue/10 rounded-full flex items-center justify-center;
+    @apply w-12 h-12 bg-medical-blue/10 rounded-lg flex items-center justify-center;
   }
   
   .medical-header-title {
-    @apply text-xl font-semibold text-medical-blue;
+    @apply medical-title;
   }
   
   .medical-header-subtitle {
-    @apply text-medical-gray;
+    @apply medical-text-sm text-medical-gray;
   }
   
-  /* Medical card component */
   .medical-card {
     @apply border-medical-blue/20;
   }
@@ -165,38 +195,35 @@
   }
   
   .medical-card-title {
-    @apply text-lg font-semibold;
+    @apply medical-title;
   }
   
-  /* Medical form sections */
   .medical-section-grid {
-    @apply grid grid-cols-1 md:grid-cols-3 gap-4;
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4;
   }
   
   .medical-field-label {
-    @apply text-sm font-medium text-medical-gray;
+    @apply medical-text-sm font-medium text-medical-gray;
   }
   
   .medical-field-value {
-    @apply text-lg font-semibold text-foreground;
+    @apply medical-text-base font-medium text-medical-blue;
   }
   
-  /* Medical procedure cards */
   .medical-procedure-card {
     @apply border rounded-lg p-4 border-medical-blue/20 hover:border-medical-blue/40 transition-colors;
   }
   
   .medical-procedure-title {
-    @apply text-base font-semibold text-medical-blue cursor-pointer;
+    @apply medical-text-lg font-semibold text-medical-blue cursor-pointer;
   }
   
   .medical-procedure-description {
-    @apply text-sm text-medical-gray mt-1;
+    @apply medical-text-sm text-medical-gray mt-1;
   }
   
-  /* Information boxes with consistent colors */
   .medical-info-box {
-    @apply p-3 rounded border-l-4;
+    @apply p-4 rounded border-l-4;
   }
   
   .medical-info-description {
@@ -223,30 +250,49 @@
     @apply bg-medical-yellow-light border-medical-yellow;
   }
   
-  /* Medical form buttons */
   .medical-button-primary {
-    @apply bg-medical-blue hover:bg-medical-blue-dark text-white;
+    @apply bg-medical-blue hover:bg-medical-blue-dark text-white medical-text-base font-medium px-8 py-3;
   }
   
   .medical-button-outline {
-    @apply border-medical-blue/30 text-medical-blue hover:bg-medical-blue/5;
+    @apply border-medical-blue/30 text-medical-blue hover:bg-medical-blue/5 medical-text-base font-medium px-8 py-3;
   }
   
-  /* Consent decision styles */
   .medical-consent-section {
     @apply mt-6 pt-4 border-t border-medical-blue/20 bg-medical-blue-light/10 p-4 rounded;
   }
   
   .medical-consent-text {
-    @apply text-sm leading-relaxed cursor-pointer text-foreground;
+    @apply medical-text-sm leading-relaxed cursor-pointer text-medical-gray;
   }
   
-  /* Minor/Guardian warning styles */
   .medical-guardian-warning {
     @apply border-medical-yellow bg-medical-yellow-light;
   }
   
   .medical-guardian-title {
-    @apply flex items-center gap-2 text-yellow-700;
+    @apply flex items-center gap-2 text-yellow-700 medical-text-lg font-semibold;
+  }
+  
+  /* Patient search and management styles */
+  .patient-card {
+    @apply p-4 border border-medical-blue/20 rounded-lg hover:border-medical-blue/40 transition-colors cursor-pointer;
+  }
+  
+  .patient-name {
+    @apply medical-text-lg font-semibold text-medical-blue;
+  }
+  
+  .patient-info {
+    @apply medical-text-sm text-medical-gray;
+  }
+  
+  /* Form input styles */
+  .medical-input {
+    @apply border-medical-blue/20 focus:border-medical-blue medical-text-base;
+  }
+  
+  .medical-label {
+    @apply medical-text-sm font-medium text-medical-gray;
   }
 }
