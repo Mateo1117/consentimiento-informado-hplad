@@ -146,23 +146,112 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
         </div>
       </div>
 
-      {/* Procedimientos para VIH */}
+      {/* Datos del Procedimiento */}
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-4">
           <div className="w-6 h-6 bg-red-100 rounded-full flex items-center justify-center">
             <TestTube className="w-3 h-3 text-red-600" />
           </div>
-          <h3 className="text-lg font-semibold text-red-700">Procedimientos para Prueba Presuntiva de VIH</h3>
+          <h3 className="text-lg font-semibold text-red-700">Datos del Procedimiento</h3>
         </div>
         
-        <div className="bg-red-50 p-4 rounded-lg border border-red-200">
-          <div className="flex items-center gap-2 mb-3">
-            <div className="w-4 h-4 bg-red-500 rounded-full"></div>
-            <h4 className="font-semibold text-red-800">Prueba Presuntiva de VIH</h4>
+        <div className="bg-red-50 border border-red-200 rounded-lg overflow-hidden">
+          <div className="bg-red-600 text-white p-3 text-center font-bold">
+            DATOS DEL PROCEDIMIENTO
           </div>
-          <p className="text-sm text-red-700 mb-4">
-            Por medio de una muestra de sangre, se procesa y se identifica o descarta la presencia activa del virus de la inmunodeficiencia Humana (VIH), el cual puede infectar y destruir las células del sistema de defensa del cuerpo (Sistema inmune), originando una falla progresiva y grave en las defensas del organismo, el cual queda expuesto a infecciones y ciertos tipos de tumores. La prueba inicial, es una prueba presuntiva, y debe ser interpretada por un médico. Ya que, el hecho de salir reactiva no implica que usted esté infectado por el virus. Lo que es muy importante, es consultar con un médico.
-          </p>
+          
+          {/* Tabla de datos del procedimiento */}
+          <div className="divide-y divide-red-200">
+            <div className="grid grid-cols-1 md:grid-cols-4">
+              <div className="bg-red-100 p-3 font-bold text-red-800 border-r border-red-200">
+                PROCEDIMIENTO
+              </div>
+              <div className="md:col-span-3 p-3 bg-white text-center font-bold">
+                PRUEBA PRESUNTIVA DE VIH
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4">
+              <div className="bg-red-100 p-3 font-bold text-red-800 border-r border-red-200">
+                DESCRIPCIÓN DEL PROCEDIMIENTO
+              </div>
+              <div className="md:col-span-3 p-3 bg-white text-sm">
+                Por medio de una muestra de sangre, se procesa y se identifica o descarta la presencia activa del virus de la inmunodeficiencia Humana (VIH), el cual puede infectar y destruir las células del sistema de defensa del cuerpo (Sistema inmune), originando una falla progresiva y grave en las defensas del organismo, el cual queda expuesto a infecciones y ciertos tipos de tumores. La prueba inicial, es una prueba presuntiva, y debe ser interpretada por un médico. Ya que, el hecho de salir reactiva no implica que usted esté infectado por el virus. Lo que es muy importante, es consultar con un médico.
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4">
+              <div className="bg-red-100 p-3 font-bold text-red-800 border-r border-red-200">
+                PROPÓSITO
+              </div>
+              <div className="md:col-span-3 p-3 bg-white text-sm">
+                Detectar a tiempo la infección por VIH para recibir tratamiento oportuno.
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4">
+              <div className="bg-red-100 p-3 font-bold text-red-800 border-r border-red-200">
+                BENEFICIOS ESPERADOS
+              </div>
+              <div className="md:col-span-3 p-3 bg-white text-sm">
+                Detección oportuna del VIH.
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4">
+              <div className="bg-red-100 p-3 font-bold text-red-800 border-r border-red-200">
+                RIESGOS
+              </div>
+              <div className="md:col-span-3 p-3 bg-white text-sm">
+                1. Sangrado excesivo, 2. Desmayo o sensación de mareo, 3. Hematoma (acumulación de sangre debajo de la piel, que se pone de color morado a negro), 4. Infección de la piel, 5. Necesidad de hacer punciones múltiples para localizar las venas, 6. Punción traumática, 7. Trauma posterior a la entrega del resultado por error de interpretación de los resultados o por no consultar con un médico.
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4">
+              <div className="bg-red-100 p-3 font-bold text-red-800 border-r border-red-200">
+                IMPLICACIONES
+              </div>
+              <div className="md:col-span-3 p-3 bg-white text-sm">
+                A algunas personas cuando se les informa que tiene anticuerpos contra VIH (resultado reactivo) pueden llegar a presentar fuertes reacciones emocionales, incluyendo ansiedad y depresión. También puede ser objeto de discriminación o rechazo por otras personas e instituciones.
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4">
+              <div className="bg-red-100 p-3 font-bold text-red-800 border-r border-red-200">
+                EFECTOS INEVITABLES
+              </div>
+              <div className="md:col-span-3 p-3 bg-white text-sm">
+                1. Dolor en el sitio de punción para toma de muestra, 2. Molestia por presión ejercida con el torniquete, 3. Impresión fuerte al observar la sangre en el tubo contenedor.
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4">
+              <div className="bg-red-100 p-3 font-bold text-red-800 border-r border-red-200">
+                ALTERNATIVAS RAZONABLES A ESTE PROCEDIMIENTO
+              </div>
+              <div className="md:col-span-3 p-3 bg-white text-sm">
+                Ninguna.
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4">
+              <div className="bg-red-100 p-3 font-bold text-red-800 border-r border-red-200">
+                POSIBLES CONSECUENCIAS EN CASO QUE DECIDA NO ACEPTAR EL PROCEDIMIENTO
+              </div>
+              <div className="md:col-span-3 p-3 bg-white text-sm">
+                Impedimento para que el personal médico pueda realizar un diagnóstico y generar un plan de tratamiento.
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-4">
+              <div className="bg-red-100 p-3 font-bold text-red-800 border-r border-red-200">
+                RIESGOS EN FUNCIÓN DE LA SITUACIÓN CLÍNICA DEL PACIENTE
+              </div>
+              <div className="md:col-span-3 p-3 bg-white text-sm text-gray-500">
+                [Campo a completar según situación específica del paciente]
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
