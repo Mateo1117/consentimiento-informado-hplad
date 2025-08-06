@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertTriangle, Download, ArrowLeft, TestTube, Camera, AlertCircle } from 'lucide-react';
+import { AlertTriangle, Download, ArrowLeft, TestTube, Camera, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { SignaturePad } from './SignaturePad';
 import { CameraCapture } from './CameraCapture';
@@ -50,6 +50,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
     name: '',
     document: ''
   });
+  const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
 
   const generatePDF = () => {
     if (!professionalData.name || !professionalData.document) {
@@ -159,111 +160,128 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {/* Título del procedimiento */}
-            <div className="flex items-center gap-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-              <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center">
+            <div 
+              className="flex items-start space-x-3 p-3 rounded-lg border border-medical-blue/20 bg-medical-blue/5 cursor-pointer hover:bg-medical-blue/10 transition-colors"
+              onClick={() => setIsProcedureInfoExpanded(!isProcedureInfoExpanded)}
+            >
+              <div className="w-5 h-5 bg-blue-600 rounded flex items-center justify-center mt-1">
                 <span className="text-white text-xs">✓</span>
               </div>
-              <div>
-                <h4 className="font-semibold text-blue-800">Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)</h4>
-                <p className="text-sm text-gray-600 mt-1">
+              <div className="flex-1">
+                <h4 className="cursor-pointer text-medical-blue font-semibold text-lg flex items-center gap-2">
+                  Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)
+                  {isProcedureInfoExpanded ? (
+                    <ChevronUp className="h-4 w-4 text-medical-blue" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-medical-blue" />
+                  )}
+                </h4>
+                <p className="text-sm text-medical-gray mt-1">
                   Consiste en tomar una muestra de sangre para identificar o descartar la presencia activa del virus de la inmunodeficiencia humana (VIH).
                 </p>
               </div>
             </div>
 
-            {/* Descripción Completa */}
-            <div className="border-l-4 border-blue-500 bg-blue-50 p-4 rounded-r-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-blue-600">📋</span>
-                <h5 className="font-semibold text-blue-800">Descripción Completa:</h5>
-              </div>
-              <p className="text-sm text-gray-700 mb-3">
-                Por medio de una muestra de sangre, se procesa y se identifica o descarta la presencia activa del virus de la inmunodeficiencia Humana (VIH), 
-                el cual puede infectar y destruir las células del sistema de defensa del cuerpo (Sistema inmune), originando una falla progresiva y grave 
-                en las defensas del organismo, el cual queda expuesto a infecciones y ciertos tipos de tumores. La prueba inicial, es una prueba presuntiva, 
-                y debe ser interpretada por un médico. Ya que, el hecho de salir reactiva no implica que usted esté infectado por el virus.
-              </p>
-              <div className="bg-blue-100 p-3 rounded">
-                <p className="text-sm font-medium text-blue-800">
-                  <strong>Propósito:</strong> Detectar a tiempo la infección por VIH para recibir tratamiento oportuno y prevenir la transmisión.
-                </p>
-              </div>
-            </div>
+            {isProcedureInfoExpanded && (
+              <div className="ml-6 space-y-4 animate-accordion-down">
+                <div className="bg-medical-blue-light/10 p-6 rounded-lg border border-medical-blue-light/20">
+                  <div className="space-y-4">
+                    {/* Descripción Completa */}
+                    <div className="border-l-4 border-blue-500 bg-blue-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-blue-600">📋</span>
+                        <h5 className="font-semibold text-blue-800">Descripción Completa:</h5>
+                      </div>
+                      <p className="text-sm text-gray-700 mb-3">
+                        Por medio de una muestra de sangre, se procesa y se identifica o descarta la presencia activa del virus de la inmunodeficiencia Humana (VIH), 
+                        el cual puede infectar y destruir las células del sistema de defensa del cuerpo (Sistema inmune), originando una falla progresiva y grave 
+                        en las defensas del organismo, el cual queda expuesto a infecciones y ciertos tipos de tumores. La prueba inicial, es una prueba presuntiva, 
+                        y debe ser interpretada por un médico. Ya que, el hecho de salir reactiva no implica que usted esté infectado por el virus.
+                      </p>
+                      <div className="bg-blue-100 p-3 rounded">
+                        <p className="text-sm font-medium text-blue-800">
+                          <strong>Propósito:</strong> Detectar a tiempo la infección por VIH para recibir tratamiento oportuno y prevenir la transmisión.
+                        </p>
+                      </div>
+                    </div>
 
-            {/* Riesgos */}
-            <div className="border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-red-600">⚠️</span>
-                <h5 className="font-semibold text-red-800">Riesgos:</h5>
-              </div>
-              <p className="text-sm text-gray-700">
-                Sangrado excesivo, desmayo o sensación de mareo, hematoma (acumulación de sangre debajo de la piel), infección del sitio de punción, 
-                necesidad de hacer punciones múltiples para localizar las venas, punción traumática, trauma posterior a la entrega del resultado 
-                por error de interpretación de los resultados o por no consultar con un médico. <strong className="text-red-700">
-                Si el paciente presenta condiciones especiales, debe informar previamente al profesional de salud.</strong>
-              </p>
-            </div>
+                    {/* Riesgos */}
+                    <div className="border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-red-600">⚠️</span>
+                        <h5 className="font-semibold text-red-800">Riesgos:</h5>
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        Sangrado excesivo, desmayo o sensación de mareo, hematoma (acumulación de sangre debajo de la piel), infección del sitio de punción, 
+                        necesidad de hacer punciones múltiples para localizar las venas, punción traumática, trauma posterior a la entrega del resultado 
+                        por error de interpretación de los resultados o por no consultar con un médico. <strong className="text-red-700">
+                        Si el paciente presenta condiciones especiales, debe informar previamente al profesional de salud.</strong>
+                      </p>
+                    </div>
 
-            {/* Beneficios */}
-            <div className="border-l-4 border-green-500 bg-green-50 p-4 rounded-r-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-green-600">✅</span>
-                <h5 className="font-semibold text-green-800">Beneficios:</h5>
-              </div>
-              <p className="text-sm text-gray-700">
-                Detección oportuna del VIH para iniciar tratamiento temprano, prevenir complicaciones y reducir el riesgo de transmisión. 
-                Permite el seguimiento médico adecuado y acceso a programas de apoyo y tratamiento antirretroviral cuando sea necesario.
-              </p>
-            </div>
+                    {/* Beneficios */}
+                    <div className="border-l-4 border-green-500 bg-green-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-green-600">✅</span>
+                        <h5 className="font-semibold text-green-800">Beneficios:</h5>
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        Detección oportuna del VIH para iniciar tratamiento temprano, prevenir complicaciones y reducir el riesgo de transmisión. 
+                        Permite el seguimiento médico adecuado y acceso a programas de apoyo y tratamiento antirretroviral cuando sea necesario.
+                      </p>
+                    </div>
 
-            {/* Alternativas */}
-            <div className="border-l-4 border-purple-500 bg-purple-50 p-4 rounded-r-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-purple-600">🔄</span>
-                <h5 className="font-semibold text-purple-800">Alternativas:</h5>
-              </div>
-              <p className="text-sm text-gray-700">
-                Ninguna alternativa disponible para la detección del VIH. Esta prueba es el método estándar para el diagnóstico presuntivo.
-              </p>
-            </div>
+                    {/* Alternativas */}
+                    <div className="border-l-4 border-purple-500 bg-purple-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-purple-600">🔄</span>
+                        <h5 className="font-semibold text-purple-800">Alternativas:</h5>
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        Ninguna alternativa disponible para la detección del VIH. Esta prueba es el método estándar para el diagnóstico presuntivo.
+                      </p>
+                    </div>
 
-            {/* Implicaciones */}
-            <div className="border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-orange-600">🕐</span>
-                <h5 className="font-semibold text-orange-800">Implicaciones:</h5>
-              </div>
-              <p className="text-sm text-gray-700 mb-2">
-                A algunas personas cuando se les informa que tiene anticuerpos contra VIH (resultado reactivo) pueden llegar a presentar fuertes 
-                reacciones emocionales, incluyendo ansiedad y depresión. También puede ser objeto de discriminación o rechazo por otras personas e instituciones.
-              </p>
-              <p className="text-sm font-medium text-orange-800">
-                <strong>Efectos inevitables:</strong> Dolor en el sitio de punción, molestia por presión del torniquete, impresión al observar la sangre.
-              </p>
-            </div>
+                    {/* Implicaciones */}
+                    <div className="border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-orange-600">🕐</span>
+                        <h5 className="font-semibold text-orange-800">Implicaciones:</h5>
+                      </div>
+                      <p className="text-sm text-gray-700 mb-2">
+                        A algunas personas cuando se les informa que tiene anticuerpos contra VIH (resultado reactivo) pueden llegar a presentar fuertes 
+                        reacciones emocionales, incluyendo ansiedad y depresión. También puede ser objeto de discriminación o rechazo por otras personas e instituciones.
+                      </p>
+                      <p className="text-sm font-medium text-orange-800">
+                        <strong>Efectos inevitables:</strong> Dolor en el sitio de punción, molestia por presión del torniquete, impresión al observar la sangre.
+                      </p>
+                    </div>
 
-            {/* Posibles consecuencias */}
-            <div className="border-l-4 border-gray-500 bg-gray-50 p-4 rounded-r-lg">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-gray-600">ℹ️</span>
-                <h5 className="font-semibold text-gray-800">Posibles consecuencias en caso que decida no aceptar el procedimiento:</h5>
-              </div>
-              <p className="text-sm text-gray-700">
-                Impedimento para que el personal médico pueda realizar un diagnóstico oportuno, generar un plan de tratamiento adecuado, 
-                y prevenir la transmisión del virus. Esto puede resultar en complicaciones de salud graves y riesgo para terceros.
-              </p>
-            </div>
+                    {/* Posibles consecuencias */}
+                    <div className="border-l-4 border-gray-500 bg-gray-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-gray-600">ℹ️</span>
+                        <h5 className="font-semibold text-gray-800">Posibles consecuencias en caso que decida no aceptar el procedimiento:</h5>
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        Impedimento para que el personal médico pueda realizar un diagnóstico oportuno, generar un plan de tratamiento adecuado, 
+                        y prevenir la transmisión del virus. Esto puede resultar en complicaciones de salud graves y riesgo para terceros.
+                      </p>
+                    </div>
 
-            {/* Declaración final */}
-            <div className="bg-blue-100 border border-blue-300 rounded-lg p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-blue-600">📝</span>
-                <p className="text-sm font-medium text-blue-800">
-                  Al seleccionar este procedimiento, usted declara haber leído y comprendido toda la información anterior.
-                </p>
+                    {/* Declaración final */}
+                    <div className="bg-blue-100 border border-blue-300 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-blue-600">📝</span>
+                        <p className="text-sm font-medium text-blue-800">
+                          Al seleccionar este procedimiento, usted declara haber leído y comprendido toda la información anterior.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>
