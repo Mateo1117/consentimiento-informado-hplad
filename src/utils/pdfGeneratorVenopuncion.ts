@@ -60,8 +60,8 @@ export class VenopuncionPDFGenerator {
     this.drawGuardianData(data);
     this.drawProcedureData();
     this.drawConsentText();
-    this.drawDissentSection();
     this.drawSignatures(data);
+    this.drawDissentSection();
     
     return this.pdf;
   }
