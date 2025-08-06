@@ -638,47 +638,57 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
             </div>
 
             <div>
-              <Label className="text-medical-blue font-medium">Firma del Profesional *</Label>
-              <div className="mb-3">
-                <ProfessionalSelector 
-                  onProfessionalSelect={handleProfessionalSelect}
-                  onNewProfessional={clearProfessional}
-                  selectedDocument={professionalDocument}
-                />
-              </div>
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <SignaturePad 
-                  ref={professionalSignatureRef} 
-                  title="Firma del Profesional"
-                  onSignatureChange={handleProfessionalSignatureChange}
-                  isProfessional={true}
-                  professionalDocument={professionalDocument}
-                  professionalName={professionalName}
-                />
-                <div className="flex gap-2 mt-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleProfessionalSignature}
-                    className="text-medical-blue border-medical-blue/20"
-                  >
-                    Capturar Firma
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => professionalSignatureRef.current?.clear()}
-                    className="text-gray-600"
-                  >
-                    Limpiar
-                  </Button>
+              <div className="space-y-4">
+                {/* Header Section exactly as shown in image */}
+                <div>
+                  <h3 className="text-blue-600 font-medium text-lg mb-1">Firma del Profesional *</h3>
+                  <p className="text-gray-500 text-sm mb-4">Profesional Registrado</p>
                 </div>
-                {professionalSignature && (
-                  <p className="text-sm text-medical-green mt-2 flex items-center gap-1">
-                    <CheckCircle className="h-4 w-4" />
-                    Firma capturada
-                  </p>
-                )}
+                
+                {/* Professional Selector */}
+                <div className="mb-4">
+                  <ProfessionalSelector 
+                    onProfessionalSelect={handleProfessionalSelect}
+                    onNewProfessional={clearProfessional}
+                    selectedDocument={professionalDocument}
+                  />
+                </div>
+                
+                {/* Signature Area */}
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <SignaturePad 
+                    ref={professionalSignatureRef} 
+                    title="Firma del Profesional"
+                    onSignatureChange={handleProfessionalSignatureChange}
+                    isProfessional={true}
+                    professionalDocument={professionalDocument}
+                    professionalName={professionalName}
+                  />
+                  <div className="flex gap-2 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleProfessionalSignature}
+                      className="text-medical-blue border-medical-blue/20"
+                    >
+                      Capturar Firma
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => professionalSignatureRef.current?.clear()}
+                      className="text-gray-600"
+                    >
+                      Limpiar
+                    </Button>
+                  </div>
+                  {professionalSignature && (
+                    <p className="text-sm text-medical-green mt-2 flex items-center gap-1">
+                      <CheckCircle className="h-4 w-4" />
+                      Firma capturada
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
           </div>

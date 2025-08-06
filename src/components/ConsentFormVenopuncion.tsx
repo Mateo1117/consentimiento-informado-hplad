@@ -480,25 +480,33 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
             </div>
 
             <div>
-              <Label className="text-medical-blue font-medium">
-                Firma del Profesional *
-              </Label>
-              <div className="mb-3">
-                <ProfessionalSelector
-                  onProfessionalSelect={handleProfessionalSelect}
-                  onNewProfessional={handleNewProfessional}
-                  selectedDocument={professionalDocument}
-                />
-              </div>
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <SignaturePad 
-                  ref={professionalSignatureRef} 
-                  title="Firma del Profesional"
-                  onSignatureChange={handleProfessionalSignatureChange}
-                  isProfessional={true}
-                  professionalDocument={professionalDocument}
-                  professionalName={professionalName}
-                />
+              <div className="space-y-4">
+                {/* Header Section exactly as shown in image */}
+                <div>
+                  <h3 className="text-blue-600 font-medium text-lg mb-1">Firma del Profesional *</h3>
+                  <p className="text-gray-500 text-sm mb-4">Profesional Registrado</p>
+                </div>
+                
+                {/* Professional Selector */}
+                <div className="mb-4">
+                  <ProfessionalSelector
+                    onProfessionalSelect={handleProfessionalSelect}
+                    onNewProfessional={handleNewProfessional}
+                    selectedDocument={professionalDocument}
+                  />
+                </div>
+                
+                {/* Signature Area */}
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <SignaturePad 
+                    ref={professionalSignatureRef} 
+                    title="Firma del Profesional"
+                    onSignatureChange={handleProfessionalSignatureChange}
+                    isProfessional={true}
+                    professionalDocument={professionalDocument}
+                    professionalName={professionalName}
+                  />
+                </div>
               </div>
             </div>
           </div>
