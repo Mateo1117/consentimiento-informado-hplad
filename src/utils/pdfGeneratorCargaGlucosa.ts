@@ -423,27 +423,29 @@ export class CargaGlucosaPDFGenerator {
     this.pdf.setFontSize(8);
     this.pdf.setFont('helvetica', 'normal');
     
-    // Add actual signature if available - improved detection
+    // Add actual signature if available - unified detection logic
     if (data.patientSignature && 
-        data.patientSignature.length > 200 && 
-        data.patientSignature.startsWith('data:image/png;base64,')) {
+        typeof data.patientSignature === 'string' &&
+        data.patientSignature.length > 50 && 
+        data.patientSignature.startsWith('data:image/png;base64,') &&
+        data.patientSignature !== "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==") {
       try {
         console.log('📝 Agregando firma del paciente al PDF');
+        console.log('📏 Longitud firma paciente:', data.patientSignature.length);
         this.pdf.addImage(data.patientSignature, 'PNG', startX + 2, this.currentY + 2, boxWidth - 4, 30);
         console.log('✅ Firma del paciente agregada exitosamente');
       } catch (error) {
         console.error('❌ Error adding patient signature:', error);
-        // White background if signature fails to load
-        this.pdf.setFillColor(255, 255, 255);
-        this.pdf.rect(startX + 2, this.currentY + 2, boxWidth - 4, 30, 'F');
       }
     } else {
       console.log('⚠️ No se encontró firma válida del paciente');
-      console.log('Firma length:', data.patientSignature?.length);
-      console.log('Firma preview:', data.patientSignature?.substring(0, 50));
-      // White background when no signature
-      this.pdf.setFillColor(255, 255, 255);
-      this.pdf.rect(startX + 2, this.currentY + 2, boxWidth - 4, 30, 'F');
+      console.log('📊 Datos de firma paciente:', {
+        exists: !!data.patientSignature,
+        type: typeof data.patientSignature,
+        length: data.patientSignature?.length,
+        startsWithDataUrl: data.patientSignature?.startsWith('data:image/png;base64,'),
+        preview: data.patientSignature?.substring(0, 50)
+      });
     }
     
     this.pdf.setFillColor(255, 255, 255); // Reset fill color
@@ -455,16 +457,29 @@ export class CargaGlucosaPDFGenerator {
     const profX = startX + boxWidth + spacing;
     this.pdf.rect(profX, this.currentY, boxWidth, boxHeight);
     
-    // Add professional signature if available
-    if (data.professionalSignature && data.professionalSignature !== "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==") {
+    // Add professional signature - same unified logic as patient
+    if (data.professionalSignature && 
+        typeof data.professionalSignature === 'string' &&
+        data.professionalSignature.length > 50 && 
+        data.professionalSignature.startsWith('data:image/png;base64,') &&
+        data.professionalSignature !== "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==") {
       try {
+        console.log('📝 Agregando firma del profesional al PDF');
+        console.log('📏 Longitud firma profesional:', data.professionalSignature.length);
         this.pdf.addImage(data.professionalSignature, 'PNG', profX + 2, this.currentY + 2, boxWidth - 4, 30);
+        console.log('✅ Firma del profesional agregada exitosamente');
       } catch (error) {
-        console.error('Error adding professional signature:', error);
-        // Empty box for professional signature
-        this.pdf.setFillColor(255, 255, 255);
-        this.pdf.rect(profX + 2, this.currentY + 2, boxWidth - 4, 30, 'F');
+        console.error('❌ Error adding professional signature:', error);
       }
+    } else {
+      console.log('⚠️ No se encontró firma válida del profesional');
+      console.log('📊 Datos de firma profesional:', {
+        exists: !!data.professionalSignature,
+        type: typeof data.professionalSignature,
+        length: data.professionalSignature?.length,
+        startsWithDataUrl: data.professionalSignature?.startsWith('data:image/png;base64,'),
+        preview: data.professionalSignature?.substring(0, 50)
+      });
     }
     
     this.pdf.text('_________________________', profX + 5, this.currentY + boxHeight - 5);
