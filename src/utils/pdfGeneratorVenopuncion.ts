@@ -67,42 +67,57 @@ export class VenopuncionPDFGenerator {
   }
 
   private drawHeader(data: VenopuncionPDFData) {
-    // Hospital header
-    this.pdf.setFontSize(10);
+    // Hospital logo and header with table format
+    this.pdf.setFontSize(8);
     this.pdf.setFont('helvetica', 'bold');
     
-    // Hospital name and logo area
-    this.pdf.text('E.S.E HOSPITAL LA MESA', this.pageWidth/2 - 30, this.margin + 8);
-    this.pdf.setFontSize(8);
-    this.pdf.text('PEDRO LEÓN ÁLVAREZ DÍAZ', this.pageWidth/2 - 25, this.margin + 12);
+    // Draw main border rectangle for header
+    this.pdf.rect(this.margin, this.margin, this.pageWidth - 2 * this.margin, 25);
     
-    // Format title
-    this.pdf.setFontSize(12);
-    this.pdf.text('FORMATO 37', this.pageWidth/2 - 15, this.margin + 20);
-    this.pdf.setFontSize(10);
-    this.pdf.text('CONSENTIMIENTO INFORMADO', this.pageWidth/2 - 30, this.margin + 25);
-    this.pdf.text('PARA TOMA DE MUESTRAS POR VENOPUNCIÓN', this.pageWidth/2 - 45, this.margin + 30);
+    // Left section - Hospital info
+    const leftBoxWidth = 50;
+    this.pdf.rect(this.margin, this.margin, leftBoxWidth, 25);
     
-    // Contact info
+    this.pdf.setFontSize(9);
+    this.pdf.text('E.S.E', this.margin + 15, this.margin + 6);
+    this.pdf.text('HOSPITAL', this.margin + 10, this.margin + 10);
+    this.pdf.text('LA MESA', this.margin + 12, this.margin + 14);
     this.pdf.setFontSize(7);
-    this.pdf.setFont('helvetica', 'normal');
-    this.pdf.text('La Mesa – Cundinamarca, Calle 8 No. 25 – 34', this.pageWidth/2 - 35, this.margin + 37);
-    this.pdf.text('Call Center: 3172601556 | Email: atencionalusuario@hospilamesa.gov.co', this.pageWidth/2 - 50, this.margin + 41);
+    this.pdf.text('PEDRO LEÓN ÁLVAREZ DÍAZ', this.margin + 2, this.margin + 18);
     
-    // Code table in top right
-    const codeBoxX = this.pageWidth - this.margin - 40;
-    const codeBoxY = this.margin;
-    this.pdf.rect(codeBoxX, codeBoxY, 40, 20);
+    // Center section - Format title
+    const centerX = this.margin + leftBoxWidth;
+    const centerWidth = this.pageWidth - 2 * this.margin - leftBoxWidth - 50;
+    this.pdf.rect(centerX, this.margin, centerWidth, 25);
     
+    this.pdf.setFontSize(9);
+    this.pdf.setFont('helvetica', 'bold');
+    this.pdf.text('FORMATO 37', centerX + centerWidth/2 - 15, this.margin + 6);
+    this.pdf.text('CONSENTIMIENTO INFORMADO', centerX + centerWidth/2 - 25, this.margin + 10);
+    this.pdf.text('PARA TOMA DE MUESTRAS POR VENOPUNCIÓN', centerX + centerWidth/2 - 35, this.margin + 14);
+    
+    // Right section - Code table
+    const rightX = this.pageWidth - this.margin - 50;
+    this.pdf.rect(rightX, this.margin, 50, 25);
+    
+    // Code sub-sections
+    this.pdf.rect(rightX, this.margin, 25, 8);
+    this.pdf.rect(rightX + 25, this.margin, 25, 8);
     this.pdf.setFontSize(6);
-    this.pdf.text('Código: SC-M-09.37', codeBoxX + 2, codeBoxY + 5);
-    this.pdf.text('Versión: 02', codeBoxX + 2, codeBoxY + 9);
-    this.pdf.text('Fecha: 28-12-2022', codeBoxX + 2, codeBoxY + 13);
+    this.pdf.text('Código', rightX + 2, this.margin + 5);
+    this.pdf.text('SC-M-09.37', rightX + 27, this.margin + 5);
     
-    // Separator line
-    this.pdf.line(this.margin, this.margin + 47, this.pageWidth - this.margin, this.margin + 47);
+    this.pdf.rect(rightX, this.margin + 8, 25, 8);
+    this.pdf.rect(rightX + 25, this.margin + 8, 25, 8);
+    this.pdf.text('Versión', rightX + 2, this.margin + 13);
+    this.pdf.text('02', rightX + 27, this.margin + 13);
     
-    this.currentY = this.margin + 52;
+    this.pdf.rect(rightX, this.margin + 16, 25, 9);
+    this.pdf.rect(rightX + 25, this.margin + 16, 25, 9);
+    this.pdf.text('Fecha', rightX + 2, this.margin + 21);
+    this.pdf.text('28-12-2022', rightX + 26, this.margin + 21);
+    
+    this.currentY = this.margin + 30;
   }
 
   private drawPatientData(data: VenopuncionPDFData) {
