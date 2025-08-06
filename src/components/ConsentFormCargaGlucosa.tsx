@@ -591,11 +591,6 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
 
           {(showProfessionalForm || !professionalName) && (
             <>
-              <ProfessionalSelector 
-                onProfessionalSelect={handleProfessionalSelect}
-                onNewProfessional={clearProfessional}
-              />
-              <Separator />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="professionalName">Nombre del Profesional *</Label>
@@ -692,6 +687,13 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
 
             <div>
               <Label className="text-medical-blue font-medium">Firma del Profesional *</Label>
+              <div className="mb-3">
+                <ProfessionalSelector 
+                  onProfessionalSelect={handleProfessionalSelect}
+                  onNewProfessional={clearProfessional}
+                  selectedDocument={professionalDocument}
+                />
+              </div>
               <div className="border rounded-lg p-4 bg-gray-50">
                 <SignaturePad 
                   ref={professionalSignatureRef} 
