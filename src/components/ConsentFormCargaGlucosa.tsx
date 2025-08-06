@@ -60,15 +60,24 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
 
   // Validar si el formulario está completo para habilitar el botón
   const isFormComplete = () => {
-    return (
-      professionalName.trim() &&
-      professionalDocument.trim() &&
-      patientSignature &&
-      professionalSignature &&
-      agreedToConsent &&
-      consentDecision &&
-      (!isMinor || (guardianName.trim() && guardianDocument.trim() && guardianRelationship.trim()))
-    );
+    const checks = {
+      professionalName: !!professionalName.trim(),
+      professionalDocument: !!professionalDocument.trim(),
+      patientSignature: !!patientSignature,
+      professionalSignature: !!professionalSignature,
+      agreedToConsent: !!agreedToConsent,
+      consentDecision: !!consentDecision,
+      guardianComplete: !isMinor || (guardianName.trim() && guardianDocument.trim() && guardianRelationship.trim())
+    };
+    
+    console.log("Estado del formulario:", checks);
+    console.log("¿Es menor?", isMinor);
+    console.log("Datos del acudiente:", { guardianName, guardianDocument, guardianRelationship });
+    
+    const isComplete = Object.values(checks).every(Boolean);
+    console.log("¿Formulario completo?", isComplete);
+    
+    return isComplete;
   };
 
   const handlePatientSignature = () => {
