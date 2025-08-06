@@ -376,27 +376,37 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
 
       {/* Procedure Information */}
       <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue flex items-center gap-2">
-            <TestTube2 className="h-5 w-5" />
-            Procedimientos para Carga de Glucosa
-          </CardTitle>
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <TestTube2 className="h-5 w-5 text-medical-blue" />
+            <CardTitle className="text-medical-blue">
+              Procedimientos para Carga de Glucosa
+            </CardTitle>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent>
           <div className="space-y-4">
-            <div className="flex items-start space-x-3">
+            <div 
+              className="flex items-start space-x-3 p-3 rounded-lg border border-medical-blue/20 bg-medical-blue/5 cursor-pointer hover:bg-medical-blue/10 transition-colors"
+              onClick={() => setIsProcedureInfoExpanded(!isProcedureInfoExpanded)}
+            >
               <Checkbox
                 id="procedimiento-glucosa"
                 checked={isProcedureInfoExpanded}
                 onCheckedChange={(checked) => setIsProcedureInfoExpanded(checked as boolean)}
-                className="mt-1"
+                className="mt-1 data-[state=checked]:bg-medical-blue data-[state=checked]:border-medical-blue"
               />
               <div className="flex-1">
                 <Label 
                   htmlFor="procedimiento-glucosa" 
-                  className="cursor-pointer text-medical-blue font-medium text-base"
+                  className="cursor-pointer text-medical-blue font-semibold text-base flex items-center gap-2"
                 >
                   Administración oral de carga de glucosa (Dextrosa Anhidra)
+                  {isProcedureInfoExpanded ? (
+                    <ChevronUp className="h-4 w-4 text-medical-blue" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-medical-blue" />
+                  )}
                 </Label>
                 <p className="text-sm text-medical-gray mt-1">
                   Consiste en suministrar vía oral una bebida que contiene una cantidad estandarizada de glucosa (dextrosa anhidra) que servirá para la evaluación de su diagnóstico.
