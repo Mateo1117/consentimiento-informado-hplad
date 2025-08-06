@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { PatientForm } from "@/components/PatientForm";
-import { ConsentForm } from "@/components/ConsentForm";
+
 import { ConsentFormHIV } from "@/components/ConsentFormHIV";
 
 import { ConsentFormFrotisVaginal } from "@/components/ConsentFormFrotisVaginal";
@@ -32,7 +32,7 @@ const Index = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<'search' | 'consent'>('search');
   const [selectedPatient, setSelectedPatient] = useState<PatientData | null>(null);
-  const [consentType, setConsentType] = useState<'laboratorio' | 'hiv' | 'frotis_vaginal' | 'carga_glucosa' | 'venopuncion'>('laboratorio');
+  const [consentType, setConsentType] = useState<'hiv' | 'frotis_vaginal' | 'carga_glucosa' | 'venopuncion'>('hiv');
 
   const handlePatientSelect = (patient: PatientData) => {
     setSelectedPatient(patient);
@@ -99,12 +99,8 @@ const Index = () => {
 
         {currentStep === 'consent' && selectedPatient && (
           <div className="max-w-7xl mx-auto">
-            <Tabs value={consentType} onValueChange={(value) => setConsentType(value as 'laboratorio' | 'hiv' | 'frotis_vaginal' | 'carga_glucosa' | 'venopuncion')} className="w-full">
-              <TabsList className="grid w-full grid-cols-5">
-                <TabsTrigger value="laboratorio" className="flex items-center gap-2">
-                  <Microscope className="h-4 w-4" />
-                  Laboratorio
-                </TabsTrigger>
+            <Tabs value={consentType} onValueChange={(value) => setConsentType(value as 'hiv' | 'frotis_vaginal' | 'carga_glucosa' | 'venopuncion')} className="w-full">
+              <TabsList className="grid w-full grid-cols-4">
                 <TabsTrigger value="hiv" className="flex items-center gap-2">
                   <TestTube className="h-4 w-4" />
                   VIH
@@ -123,12 +119,6 @@ const Index = () => {
                 </TabsTrigger>
               </TabsList>
               
-              <TabsContent value="laboratorio" className="mt-6">
-                <ConsentForm 
-                  patientData={selectedPatient} 
-                  onBack={handleBack}
-                />
-              </TabsContent>
               
               <TabsContent value="hiv" className="mt-6">
                 <ConsentFormHIV 
