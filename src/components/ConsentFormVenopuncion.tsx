@@ -456,6 +456,72 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         </CardContent>
       </Card>
 
+      {/* Información del Profesional */}
+      <Card className="border-medical-blue/20">
+        <CardHeader>
+          <CardTitle className="text-medical-blue flex items-center gap-2">
+            <span className="text-medical-blue">✋</span>
+            Información del Profesional
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {!showProfessionalForm ? (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="professionalName">Nombre del Profesional *</Label>
+                  <Input
+                    id="professionalName"
+                    value={professionalName}
+                    onChange={(e) => setProfessionalName(e.target.value)}
+                    placeholder="Nombre completo del profesional"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="professionalDocument">Documento del Profesional *</Label>
+                  <Input
+                    id="professionalDocument"
+                    value={professionalDocument}
+                    onChange={(e) => setProfessionalDocument(e.target.value)}
+                    placeholder="Número de documento"
+                  />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="professionalName">Nombre del Profesional *</Label>
+                  <Input
+                    id="professionalName"
+                    value={professionalName}
+                    onChange={(e) => setProfessionalName(e.target.value)}
+                    placeholder="Nombre completo del profesional"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="professionalDocument">Documento del Profesional *</Label>
+                  <Input
+                    id="professionalDocument"
+                    value={professionalDocument}
+                    onChange={(e) => setProfessionalDocument(e.target.value)}
+                    placeholder="Número de documento"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {professionalName && (
+            <div className="bg-medical-green-light/20 border border-medical-green/30 rounded-lg p-4">
+              <p className="text-medical-green font-medium">
+                ✓ Profesional seleccionado: {professionalName} - {professionalDocument}
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Firmas Digitales */}
       <Card className="border-medical-blue/20">
