@@ -749,32 +749,39 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
       </Card>
 
       {/* Action Buttons */}
-      <div className="flex gap-4 pt-6">
-        <Button
-          onClick={onBack}
-          variant="outline"
-          className="flex-1 border-gray-300 text-gray-700 hover:bg-gray-50"
-        >
-          Volver
-        </Button>
-        <Button
-          onClick={saveConsent}
-          disabled={isGeneratingPDF}
-          className="flex-1 bg-medical-blue hover:bg-medical-blue-dark text-white"
-        >
-          {isGeneratingPDF ? (
-            <>
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Guardando...
-            </>
-          ) : (
-            <>
-              <FileText className="h-4 w-4 mr-2" />
-              Guardar Consentimiento
-            </>
-          )}
-        </Button>
-      </div>
+      <Card className="border-medical-blue/20">
+        <CardContent className="p-6">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button
+              onClick={onBack}
+              variant="outline"
+              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 text-lg"
+              size="lg"
+            >
+              Volver
+            </Button>
+            
+            <Button
+              onClick={saveConsent}
+              disabled={isGeneratingPDF}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              size="lg"
+            >
+              {isGeneratingPDF ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <FileText className="h-4 w-4" />
+                  Guardar Consentimiento
+                </>
+              )}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
