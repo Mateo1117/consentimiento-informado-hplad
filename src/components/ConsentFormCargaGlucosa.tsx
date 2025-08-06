@@ -309,13 +309,85 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         </Card>
       )}
 
+      {/* Procedure Information */}
+      <Card className="border-medical-blue/20">
+        <CardHeader>
+          <CardTitle className="text-medical-blue flex items-center gap-2">
+            <TestTube2 className="h-5 w-5" />
+            Información del Procedimiento
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="bg-medical-blue-light/10 p-6 rounded-lg border border-medical-blue-light/20">
+            <h3 className="font-semibold text-medical-blue mb-4">PRUEBA DE TOLERANCIA A LA GLUCOSA ORAL (PTGO)</h3>
+            
+            <div className="space-y-4 text-sm text-medical-gray">
+              <div>
+                <h4 className="font-medium text-medical-blue mb-2">¿Qué es la Prueba de Tolerancia a la Glucosa?</h4>
+                <p>La Prueba de Tolerancia a la Glucosa Oral (PTGO) es un examen que mide la capacidad de su cuerpo para procesar la glucosa (azúcar). Se utiliza principalmente para diagnosticar diabetes gestacional en mujeres embarazadas y diabetes tipo 2 en adultos.</p>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-medical-blue mb-2">Preparación para el Examen</h4>
+                <ul className="list-disc list-inside space-y-1 ml-4">
+                  <li>Ayuno de 8-12 horas antes del examen (solo agua permitida)</li>
+                  <li>Mantener dieta normal durante los 3 días previos</li>
+                  <li>No fumar ni hacer ejercicio durante el examen</li>
+                  <li>Informar sobre medicamentos que esté tomando</li>
+                  <li>Permanecer en reposo durante todo el procedimiento</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-medical-blue mb-2">Procedimiento</h4>
+                <ol className="list-decimal list-inside space-y-1 ml-4">
+                  <li>Toma de muestra de sangre en ayunas (glucosa basal)</li>
+                  <li>Administración de solución glucosada (75g de glucosa anhidra)</li>
+                  <li>Toma de muestra de sangre a los 120 minutos</li>
+                  <li>Permanencia en el centro de salud durante todo el procedimiento</li>
+                </ol>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-medical-blue mb-2">Riesgos y Efectos Secundarios</h4>
+                <ul className="list-disc list-inside space-y-1 ml-4">
+                  <li>Náuseas o vómito después de tomar la solución glucosada</li>
+                  <li>Mareos o desmayos (poco frecuente)</li>
+                  <li>Molestias menores en el sitio de punción</li>
+                  <li>Hematoma pequeño en el sitio de extracción</li>
+                </ul>
+              </div>
+
+              <div>
+                <h4 className="font-medium text-medical-blue mb-2">Valores de Referencia</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                  <div className="bg-white p-3 rounded border">
+                    <p className="font-medium">Glucosa en Ayunas:</p>
+                    <p>Normal: &lt; 100 mg/dL</p>
+                    <p>Alterada: 100-125 mg/dL</p>
+                    <p>Diabetes: ≥ 126 mg/dL</p>
+                  </div>
+                  <div className="bg-white p-3 rounded border">
+                    <p className="font-medium">Glucosa 2 horas:</p>
+                    <p>Normal: &lt; 140 mg/dL</p>
+                    <p>Alterada: 140-199 mg/dL</p>
+                    <p>Diabetes: ≥ 200 mg/dL</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Professional Information */}
       <Card className="border-medical-blue/20">
         <CardHeader>
           <CardTitle className="text-medical-blue flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Información del Profesional
+            Firma del Profesional
           </CardTitle>
+          <p className="text-sm text-medical-gray">Profesional Registrado</p>
         </CardHeader>
         <CardContent className="space-y-4">
           {!showProfessionalForm && professionalName && (
@@ -337,7 +409,7 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
             </div>
           )}
 
-          {showProfessionalForm && (
+          {(showProfessionalForm || !professionalName) && (
             <>
               <ProfessionalSelector 
                 onProfessionalSelect={handleProfessionalSelect}
