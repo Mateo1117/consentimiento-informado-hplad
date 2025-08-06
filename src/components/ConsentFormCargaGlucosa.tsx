@@ -435,6 +435,50 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         </CardContent>
       </Card>
 
+      {/* Consent Agreement */}
+      <Card className="border-medical-blue/20">
+        <CardHeader>
+          <CardTitle className="text-medical-blue flex items-center gap-2">
+            <Shield className="h-5 w-5" />
+            Decisión del Consentimiento
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="aprobar"
+                checked={consentDecision === "aprobar"}
+                onCheckedChange={() => setConsentDecision("aprobar")}
+              />
+              <Label htmlFor="aprobar" className="cursor-pointer">
+                Apruebo el procedimiento
+              </Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="disentir"
+                checked={consentDecision === "disentir"}
+                onCheckedChange={() => setConsentDecision("disentir")}
+              />
+              <Label htmlFor="disentir" className="cursor-pointer">
+                No apruebo el procedimiento (Desistir)
+              </Label>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="agreedToConsent"
+              checked={agreedToConsent}
+              onCheckedChange={(checked) => setAgreedToConsent(checked as boolean)}
+            />
+            <Label htmlFor="agreedToConsent" className="cursor-pointer">
+              He leído y acepto los términos del consentimiento informado
+            </Label>
+          </div>
+        </CardContent>
+      </Card>
       {/* Professional Information */}
       <Card className="border-medical-blue/20">
         <CardHeader>
@@ -601,50 +645,6 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         </CardContent>
       </Card>
 
-      {/* Consent Agreement */}
-      <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Decisión del Consentimiento
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="aprobar"
-                checked={consentDecision === "aprobar"}
-                onCheckedChange={() => setConsentDecision("aprobar")}
-              />
-              <Label htmlFor="aprobar" className="cursor-pointer">
-                Apruebo el procedimiento
-              </Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="disentir"
-                checked={consentDecision === "disentir"}
-                onCheckedChange={() => setConsentDecision("disentir")}
-              />
-              <Label htmlFor="disentir" className="cursor-pointer">
-                No apruebo el procedimiento (Desistir)
-              </Label>
-            </div>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="agreedToConsent"
-              checked={agreedToConsent}
-              onCheckedChange={(checked) => setAgreedToConsent(checked as boolean)}
-            />
-            <Label htmlFor="agreedToConsent" className="cursor-pointer">
-              He leído y acepto los términos del consentimiento informado
-            </Label>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Generate PDF Button */}
       <Card className="border-medical-green/20 bg-medical-green/5">
