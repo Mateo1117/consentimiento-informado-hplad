@@ -204,6 +204,10 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
     setShowProfessionalForm(true);
   };
 
+  const handleNewProfessional = () => {
+    setShowProfessionalForm(true);
+  };
+
   const handleEnfoqueChange = (field: keyof typeof enfoqueData) => {
     setEnfoqueData(prev => ({
       ...prev,
@@ -643,47 +647,80 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
 
           {/* Professional Signature */}
           <div>
-            <Label className="text-medical-blue block mb-2">Firma del Profesional *</Label>
-            <div className="border-2 border-dashed border-medical-blue/30 rounded-lg p-4">
-              <SignaturePad
-                ref={professionalSignatureRef}
-                title="Firma del Profesional"
-                subtitle={`Firma de ${professionalName || 'Profesional'}`}
-                required={true}
-                isProfessional={true}
-                professionalName={professionalName}
-                professionalDocument={professionalDocument}
-              />
-              <div className="mt-4 flex gap-2">
-                <Button
-                  onClick={handleProfessionalSignature}
-                  variant="outline"
-                  size="sm"
-                  className="border-medical-blue text-medical-blue hover:bg-medical-blue/5"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Capturar Firma
-                </Button>
-                <Button
-                  onClick={() => {
-                    professionalSignatureRef.current?.clear();
-                    setProfessionalSignature("");
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className="border-gray-300"
-                >
-                  Limpiar
-                </Button>
+            <div className="space-y-4">
+              {/* Header Section exactly as shown in image */}
+              <div>
+                <h3 className="text-blue-600 font-medium text-lg mb-1">Firma del Profesional *</h3>
+                <p className="text-gray-500 text-sm mb-4">Profesional Registrado</p>
               </div>
-              {professionalSignature && (
-                <div className="mt-2">
-                  <span className="text-sm text-medical-green flex items-center gap-1">
-                    <CheckCircle className="h-4 w-4" />
-                    Firma capturada exitosamente
-                  </span>
+              
+              {/* Professional Selector */}
+              <div className="mb-4">
+                <ProfessionalSelector
+                  onProfessionalSelect={handleProfessionalSelect}
+                  onNewProfessional={handleNewProfessional}
+                  selectedDocument={professionalDocument}
+                />
+              </div>
+              
+              {/* Professional Information Display */}
+              {professionalName && professionalDocument && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                  <h4 className="font-medium text-blue-800 mb-2">Información del Profesional</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                    <div>
+                      <span className="font-medium text-blue-700">Nombre:</span>
+                      <p className="text-blue-900">{professionalName}</p>
+                    </div>
+                    <div>
+                      <span className="font-medium text-blue-700">Documento:</span>
+                      <p className="text-blue-900">{professionalDocument}</p>
+                    </div>
+                  </div>
                 </div>
               )}
+              
+              <div className="border-2 border-dashed border-medical-blue/30 rounded-lg p-4">
+                <SignaturePad
+                  ref={professionalSignatureRef}
+                  title="Firma del Profesional"
+                  subtitle={`Firma de ${professionalName || 'Profesional'}`}
+                  required={true}
+                  isProfessional={true}
+                  professionalName={professionalName}
+                  professionalDocument={professionalDocument}
+                />
+                <div className="mt-4 flex gap-2">
+                  <Button
+                    onClick={handleProfessionalSignature}
+                    variant="outline"
+                    size="sm"
+                    className="border-medical-blue text-medical-blue hover:bg-medical-blue/5"
+                  >
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    Capturar Firma
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      professionalSignatureRef.current?.clear();
+                      setProfessionalSignature("");
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="border-gray-300"
+                  >
+                    Limpiar
+                  </Button>
+                </div>
+                {professionalSignature && (
+                  <div className="mt-2">
+                    <span className="text-sm text-medical-green flex items-center gap-1">
+                      <CheckCircle className="h-4 w-4" />
+                      Firma capturada exitosamente
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </CardContent>

@@ -393,19 +393,43 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
             </div>
 
             <div>
-              <Label className="text-medical-blue font-medium">Firma del Profesional *</Label>
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <SignaturePad 
-                  title="Firma del Profesional" 
-                  onSignatureChange={setProfessionalSignature}
-                />
-                <div className="mt-3 text-xs text-medical-gray space-y-1">
-                  <div>• Use su dedo o stylus</div>
-                  <div>• No levante su dedo o stylus</div>
-                  <div>• Mantenga velocidad constante para firma</div>
-                  <div>• Use "Limpiar" para reiniciar la firma</div>
-                  <div>• Use "Guardar Firma" para almacenar la firma automáticamente</div>
-                  <div>• Use "Cargar Firma" para usar una firma previamente guardada</div>
+              <div className="space-y-4">
+                {/* Header Section exactly as shown in image */}
+                <div>
+                  <h3 className="text-blue-600 font-medium text-lg mb-1">Firma del Profesional *</h3>
+                  <p className="text-gray-500 text-sm mb-4">Profesional Registrado</p>
+                </div>
+                
+                {/* Professional Information Display */}
+                {professionalData.name && professionalData.document && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <h4 className="font-medium text-blue-800 mb-2">Información del Profesional</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="font-medium text-blue-700">Nombre:</span>
+                        <p className="text-blue-900">{professionalData.name}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-blue-700">Documento:</span>
+                        <p className="text-blue-900">{professionalData.document}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <SignaturePad 
+                    title="Firma del Profesional" 
+                    onSignatureChange={setProfessionalSignature}
+                  />
+                  <div className="mt-3 text-xs text-medical-gray space-y-1">
+                    <div>• Use su dedo o stylus</div>
+                    <div>• No levante su dedo o stylus</div>
+                    <div>• Mantenga velocidad constante para firma</div>
+                    <div>• Use "Limpiar" para reiniciar la firma</div>
+                    <div>• Use "Guardar Firma" para almacenar la firma automáticamente</div>
+                    <div>• Use "Cargar Firma" para usar una firma previamente guardada</div>
+                  </div>
                 </div>
               </div>
             </div>

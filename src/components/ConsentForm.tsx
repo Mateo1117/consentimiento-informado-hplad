@@ -680,18 +680,41 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
           {/* Professional Signature Card */}
           <Card className="border-medical-blue/20">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2 text-medical-blue">
-                <FileText className="h-5 w-5" />
-                Firma del Profesional
-              </CardTitle>
+              <div className="space-y-4">
+                {/* Header Section exactly as shown in image */}
+                <div>
+                  <h3 className="text-blue-600 font-medium text-lg mb-1">Firma del Profesional *</h3>
+                  <p className="text-gray-500 text-sm mb-4">Profesional Registrado</p>
+                </div>
+                
+                {/* Professional Selector */}
+                <div className="mb-4">
+                  <ProfessionalSelector
+                    onProfessionalSelect={handleProfessionalSelect}
+                    onNewProfessional={handleNewProfessional}
+                    selectedDocument={professionalDocument}
+                  />
+                </div>
+                
+                {/* Professional Information Display */}
+                {professionalName && professionalDocument && !showProfessionalForm && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <h4 className="font-medium text-blue-800 mb-2">Información del Profesional</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="font-medium text-blue-700">Nombre:</span>
+                        <p className="text-blue-900">{professionalName}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-blue-700">Documento:</span>
+                        <p className="text-blue-900">{professionalDocument}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardHeader>
-          <CardContent className="space-y-4">
-            <ProfessionalSelector
-              onProfessionalSelect={handleProfessionalSelect}
-              onNewProfessional={handleNewProfessional}
-              selectedDocument={professionalDocument}
-            />
-            
+           <CardContent className="space-y-4">
             {/* Campos manuales solo si es nuevo profesional */}
             {showProfessionalForm && (
               <div className="space-y-4 p-3 bg-medical-blue-light/20 rounded-lg border border-medical-blue/30">
@@ -721,20 +744,6 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
                     className="medical-button-outline"
                     required
                   />
-                </div>
-              </div>
-            )}
-            
-            {/* Mostrar información del profesional seleccionado */}
-            {professionalName && !showProfessionalForm && (
-              <div className="p-3 bg-medical-green-light border border-medical-green rounded-lg">
-                <div className="flex items-center gap-2 text-medical-green">
-                  <CheckCircle className="h-4 w-4" />
-                  <div>
-                    <p className="font-medium">{professionalName}</p>
-                    <p className="text-sm">Documento: {professionalDocument}</p>
-                    <p className="text-xs mt-1">✓ Datos cargados automáticamente</p>
-                  </div>
                 </div>
               </div>
             )}
