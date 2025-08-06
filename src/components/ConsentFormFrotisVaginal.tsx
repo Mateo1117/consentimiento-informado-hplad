@@ -323,35 +323,6 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         </CardContent>
       </Card>
 
-      {/* Enfoque Diferencial */}
-      <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue">Enfoque Diferencial</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {[
-              { key: 'gender', label: 'Género y Orientación Sexual' },
-              { key: 'ethnicity', label: 'Etnia' },
-              { key: 'vital_cycle', label: 'Ciclo Vital' },
-              { key: 'social_position', label: 'Posición Social Vulnerable' },
-              { key: 'disability', label: 'Discapacidad' },
-              { key: 'life_condition', label: 'Condición de Vida' }
-            ].map(({ key, label }) => (
-              <div key={key} className="flex items-center space-x-2">
-                <Checkbox
-                  id={key}
-                  checked={enfoqueData[key as keyof typeof enfoqueData]}
-                  onCheckedChange={() => handleEnfoqueChange(key as keyof typeof enfoqueData)}
-                />
-                <Label htmlFor={key} className="text-sm cursor-pointer">
-                  {label}
-                </Label>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Minor Information */}
       {isMinor && (
