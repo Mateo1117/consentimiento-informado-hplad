@@ -621,7 +621,7 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
+            <div className="space-y-4">
               <Label className="text-medical-blue font-medium">
                 Firma del {isMinor ? "Acudiente" : "Paciente"} *
               </Label>
@@ -653,6 +653,28 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
                   <p className="text-sm text-medical-green mt-2 flex items-center gap-1">
                     <CheckCircle className="h-4 w-4" />
                     Firma capturada
+                  </p>
+                )}
+              </div>
+              
+              {/* Foto del Paciente debajo de la firma */}
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <Label className="text-medical-blue font-medium mb-2 block">
+                  Foto del Paciente
+                </Label>
+                <CameraCapture ref={cameraCaptureRef} title="Foto del Paciente" />
+                <Button
+                  variant="outline"
+                  onClick={handlePhotoCapture}
+                  className="w-full mt-2 text-medical-blue border-medical-blue/20"
+                  size="sm"
+                >
+                  Capturar Foto
+                </Button>
+                {patientPhoto && (
+                  <p className="text-sm text-medical-green mt-2 flex items-center gap-1">
+                    <CheckCircle className="h-4 w-4" />
+                    Foto capturada exitosamente
                   </p>
                 )}
               </div>
@@ -695,34 +717,6 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
                 )}
               </div>
             </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Photo Capture */}
-      <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Foto del Paciente
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <CameraCapture ref={cameraCaptureRef} title="Foto del Paciente" />
-            <Button
-              variant="outline"
-              onClick={handlePhotoCapture}
-              className="w-full text-medical-blue border-medical-blue/20"
-            >
-              Capturar Foto
-            </Button>
-            {patientPhoto && (
-              <p className="text-sm text-medical-green flex items-center gap-1">
-                <CheckCircle className="h-4 w-4" />
-                Foto capturada exitosamente
-              </p>
-            )}
           </div>
         </CardContent>
       </Card>
