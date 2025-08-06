@@ -5,6 +5,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SignaturePad, SignatureRef } from "./SignaturePad";
 import { CameraCapture, CameraCaptureRef } from "./CameraCapture";
 import { ProfessionalSelector } from "./ProfessionalSelector";
@@ -435,47 +436,54 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         </CardContent>
       </Card>
 
-      {/* Consent Agreement */}
+      {/* Consent Decision */}
       <Card className="border-medical-blue/20">
         <CardHeader>
           <CardTitle className="text-medical-blue flex items-center gap-2">
             <Shield className="h-5 w-5" />
-            Decisión del Consentimiento
+            Decisión sobre el Consentimiento *
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center space-x-2">
-              <Checkbox
+        <CardContent className="space-y-6">
+          <RadioGroup
+            value={consentDecision}
+            onValueChange={(value) => setConsentDecision(value as "aprobar" | "disentir")}
+            className="grid grid-cols-1 md:grid-cols-2 gap-4"
+          >
+            <div className="flex items-center space-x-3">
+              <RadioGroupItem 
+                value="aprobar" 
                 id="aprobar"
-                checked={consentDecision === "aprobar"}
-                onCheckedChange={() => setConsentDecision("aprobar")}
+                className="border-green-600 text-green-600 focus-visible:ring-green-600"
               />
-              <Label htmlFor="aprobar" className="cursor-pointer">
-                Apruebo el procedimiento
+              <Label htmlFor="aprobar" className="cursor-pointer text-green-600 font-medium">
+                APROBAR el(los) procedimiento(s)
               </Label>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
+            <div className="flex items-center space-x-3">
+              <RadioGroupItem 
+                value="disentir" 
                 id="disentir"
-                checked={consentDecision === "disentir"}
-                onCheckedChange={() => setConsentDecision("disentir")}
+                className="border-red-600 text-red-600 focus-visible:ring-red-600"
               />
-              <Label htmlFor="disentir" className="cursor-pointer">
-                No apruebo el procedimiento (Desistir)
+              <Label htmlFor="disentir" className="cursor-pointer text-red-600 font-medium">
+                DISENTIR el(los) procedimiento(s)
               </Label>
             </div>
-          </div>
+          </RadioGroup>
 
-          <div className="flex items-center space-x-2">
-            <Checkbox
-              id="agreedToConsent"
-              checked={agreedToConsent}
-              onCheckedChange={(checked) => setAgreedToConsent(checked as boolean)}
-            />
-            <Label htmlFor="agreedToConsent" className="cursor-pointer">
-              He leído y acepto los términos del consentimiento informado
-            </Label>
+          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="agreedToConsent"
+                checked={agreedToConsent}
+                onCheckedChange={(checked) => setAgreedToConsent(checked as boolean)}
+                className="mt-1"
+              />
+              <Label htmlFor="agreedToConsent" className="cursor-pointer text-sm leading-relaxed">
+                <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
+              </Label>
+            </div>
           </div>
         </CardContent>
       </Card>
