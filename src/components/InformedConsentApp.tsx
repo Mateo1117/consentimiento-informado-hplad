@@ -127,6 +127,22 @@ const InformedConsentApp = () => {
           implications: 'Requiere pruebas de compatibilidad, consentimiento informado, monitoreo continuo y disponibilidad de unidades seguras.'
         }
       ]
+    },
+    {
+      id: 'carga_glucosa',
+      name: 'Carga de Glucosa',
+      code: 'SC-M-09.119',
+      version: '01',
+      procedures: [
+        {
+          name: 'Administración Oral de Carga de Glucosa (Dextrosa Anhidra)',
+          description: 'Consiste en suministrar vía oral una bebida que contiene una cantidad estandarizada de glucosa (dextrosa anhidra) en agua para ser evaluada. No se administra este procedimiento si el paciente está indispuesto, o ha presentado episodios de fiebre, vómito o diarrea en las 24 horas anteriores a la toma de la muestra.',
+          risks: 'Malestar, náuseas, vómito, diarrea, mareo o reacciones alérgicas, urticaria o asma. Si el paciente es diabético debe tener información y/o indicaciones administrativas bajo prescripción médica.',
+          benefits: 'Orientar y/o confirmar un diagnóstico frente a los niveles de glucosa en el paciente o estado metabólico del organismo. Seguimiento de una enfermedad o condición en salud.',
+          alternatives: 'Ninguna',
+          implications: 'Tiempo de permanencia en el laboratorio es de dos (2) a tres (3) horas dependiendo del examen solicitado (curva de glicemia pre y pos carga), múltiples punciones por el número de muestras requeridas.'
+        }
+      ]
     }
   ];
 

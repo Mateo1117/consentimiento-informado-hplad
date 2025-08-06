@@ -2,14 +2,14 @@ import { useState } from "react";
 import { PatientForm } from "@/components/PatientForm";
 import { ConsentForm } from "@/components/ConsentForm";
 import { ConsentFormHIV } from "@/components/ConsentFormHIV";
-
 import { ConsentFormHemocomponentes } from "@/components/ConsentFormHemocomponentes";
 import { ConsentFormFrotisVaginal } from "@/components/ConsentFormFrotisVaginal";
+import { ConsentFormCargaGlucosa } from "@/components/ConsentFormCargaGlucosa";
 import { AuthenticatedHeader } from "@/components/AuthenticatedHeader";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileHeart, CheckCircle, Plus, Search, FileText, BarChart, TestTube, Microscope, Heart, Droplets } from "lucide-react";
+import { FileHeart, CheckCircle, Plus, Search, FileText, BarChart, TestTube, Microscope, Heart, Droplets, TestTube2 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 interface PatientData {
@@ -30,7 +30,7 @@ const Index = () => {
   const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<'search' | 'consent'>('search');
   const [selectedPatient, setSelectedPatient] = useState<PatientData | null>(null);
-  const [consentType, setConsentType] = useState<'laboratorio' | 'hiv' | 'frotis_vaginal' | 'hemocomponentes'>('laboratorio');
+  const [consentType, setConsentType] = useState<'laboratorio' | 'hiv' | 'frotis_vaginal' | 'hemocomponentes' | 'carga_glucosa'>('laboratorio');
 
   const handlePatientSelect = (patient: PatientData) => {
     setSelectedPatient(patient);
@@ -97,8 +97,8 @@ const Index = () => {
 
         {currentStep === 'consent' && selectedPatient && (
           <div className="max-w-7xl mx-auto">
-            <Tabs value={consentType} onValueChange={(value) => setConsentType(value as 'laboratorio' | 'hiv' | 'frotis_vaginal' | 'hemocomponentes')} className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
+            <Tabs value={consentType} onValueChange={(value) => setConsentType(value as 'laboratorio' | 'hiv' | 'frotis_vaginal' | 'hemocomponentes' | 'carga_glucosa')} className="w-full">
+              <TabsList className="grid w-full grid-cols-5">
                 <TabsTrigger value="laboratorio" className="flex items-center gap-2">
                   <Microscope className="h-4 w-4" />
                   Laboratorio
@@ -114,6 +114,10 @@ const Index = () => {
                 <TabsTrigger value="hemocomponentes" className="flex items-center gap-2">
                   <Droplets className="h-4 w-4" />
                   Hemocomponentes
+                </TabsTrigger>
+                <TabsTrigger value="carga_glucosa" className="flex items-center gap-2">
+                  <TestTube2 className="h-4 w-4" />
+                  Carga Glucosa
                 </TabsTrigger>
               </TabsList>
               
@@ -140,6 +144,13 @@ const Index = () => {
               
               <TabsContent value="hemocomponentes" className="mt-6">
                 <ConsentFormHemocomponentes 
+                  patientData={selectedPatient} 
+                  onBack={handleBack}
+                />
+              </TabsContent>
+              
+              <TabsContent value="carga_glucosa" className="mt-6">
+                <ConsentFormCargaGlucosa 
                   patientData={selectedPatient} 
                   onBack={handleBack}
                 />
