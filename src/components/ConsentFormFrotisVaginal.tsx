@@ -222,12 +222,15 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
             </div>
             <div className="flex-1">
               <CardTitle className="text-medical-blue text-xl">
-                Consentimiento Informado - Toma de Muestras Frotis Vaginal
+                Consentimiento Informado - Frotis Vaginal
               </CardTitle>
               <p className="text-medical-gray text-sm mt-1">
-                Complete todos los campos requeridos para generar el consentimiento
+                Formato 319 - Complete todos los campos requeridos para generar el consentimiento
               </p>
             </div>
+            <Button onClick={onBack} variant="outline" className="gap-2">
+              ← Volver a búsqueda
+            </Button>
           </div>
         </CardHeader>
         
@@ -426,56 +429,49 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         </CardContent>
       </Card>
 
-      {/* Consent Decision - Moved here */}
+      {/* Decisión sobre el Consentimiento */}
       <Card className="border-medical-blue/20">
         <CardHeader>
-          <CardTitle className="text-medical-blue">Decisión de Consentimiento</CardTitle>
+          <CardTitle className="text-medical-blue flex items-center gap-2">
+            <span className="text-medical-blue">⚪</span>
+            Decisión sobre el Consentimiento
+            <span className="text-red-500">*</span>
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <Label className="text-medical-blue font-medium">
-              ¿Acepta el procedimiento de Toma de Muestras Frotis Vaginal? *
-            </Label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
+        <CardContent>
+          <div className="space-y-4">
+            <div className="flex flex-row items-center gap-8">
+              <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="radio"
                   name="consentDecision"
                   value="aprobar"
                   checked={consentDecision === "aprobar"}
                   onChange={(e) => setConsentDecision(e.target.value as "aprobar")}
-                  className="text-medical-green focus:ring-medical-green"
+                  className="w-5 h-5 text-green-600 border-green-600"
                 />
-                <span className="text-medical-green font-medium">Aprobar</span>
+                <span className="text-green-600 font-medium text-base">APROBAR el(los) procedimiento(s)</span>
               </label>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center space-x-2 cursor-pointer">
                 <input
                   type="radio"
                   name="consentDecision"
                   value="disentir"
                   checked={consentDecision === "disentir"}
                   onChange={(e) => setConsentDecision(e.target.value as "disentir")}
-                  className="text-red-500 focus:ring-red-500"
+                  className="w-5 h-5 text-red-600 border-red-600"
                 />
-                <span className="text-red-500 font-medium">Disentir</span>
+                <span className="text-red-600 font-medium text-base">DISENTIR el(los) procedimiento(s)</span>
               </label>
             </div>
-          </div>
-
-          <div className="bg-medical-blue-light/20 p-4 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id="agreedToConsent"
-                checked={agreedToConsent}
-                onCheckedChange={(checked) => setAgreedToConsent(checked as boolean)}
-                className="mt-1"
-              />
-              <Label
-                htmlFor="agreedToConsent"
-                className="text-sm text-gray-700 cursor-pointer"
-              >
-                Declaro que he leído y comprendido toda la información proporcionada sobre el procedimiento.
-              </Label>
+            
+            <div className="bg-medical-blue-light/20 border border-medical-blue/20 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <input type="checkbox" className="mt-1 w-4 h-4 text-medical-blue border-medical-blue/30 rounded" defaultChecked />
+                <span className="text-medical-gray text-sm leading-relaxed">
+                  <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
+                </span>
+              </div>
             </div>
           </div>
         </CardContent>
@@ -528,11 +524,11 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         </Card>
       )}
 
-      {/* Professional Information */}
+      {/* Información del Profesional */}
       <Card className="border-medical-blue/20">
         <CardHeader>
           <CardTitle className="text-medical-blue flex items-center gap-2">
-            <FileText className="h-5 w-5" />
+            <span className="text-medical-blue">✋</span>
             Información del Profesional
           </CardTitle>
         </CardHeader>
@@ -592,10 +588,12 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         </CardContent>
       </Card>
 
-      {/* Signatures Section */}
+      {/* Firmas Digitales */}
       <Card className="border-medical-blue/20">
         <CardHeader>
-          <CardTitle className="text-medical-blue">Firmas</CardTitle>
+          <CardTitle className="text-medical-blue flex items-center gap-2">
+            ✍ Firmas Digitales
+          </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Patient Signature */}
@@ -691,10 +689,10 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         </CardContent>
       </Card>
 
-      {/* Photo Capture */}
+      {/* Foto del Paciente */}
       <Card className="border-medical-blue/20">
         <CardHeader>
-          <CardTitle className="text-medical-blue">Foto del Paciente (Opcional)</CardTitle>
+          <CardTitle className="text-medical-blue">Foto del Paciente</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
@@ -722,88 +720,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         </CardContent>
       </Card>
 
-      {/* Additional Information */}
-      <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue">Información Adicional</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="additionalInfo" className="text-medical-blue">
-                Observaciones adicionales (opcional)
-              </Label>
-              <Textarea
-                id="additionalInfo"
-                value={additionalInfo}
-                onChange={(e) => setAdditionalInfo(e.target.value)}
-                placeholder="Cualquier información adicional relevante para el procedimiento..."
-                className="border-medical-blue/20 focus:border-medical-blue min-h-[100px]"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Consent Decision */}
-      <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue">Decisión de Consentimiento</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-3">
-            <Label className="text-medical-blue font-medium">
-              ¿Acepta el procedimiento de Toma de Muestras Frotis Vaginal? *
-            </Label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="consentDecision"
-                  value="aprobar"
-                  checked={consentDecision === "aprobar"}
-                  onChange={(e) => setConsentDecision(e.target.value as "aprobar")}
-                  className="text-medical-green focus:ring-medical-green"
-                />
-                <span className="text-medical-green font-medium">Aprobar</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="consentDecision"
-                  value="disentir"
-                  checked={consentDecision === "disentir"}
-                  onChange={(e) => setConsentDecision(e.target.value as "disentir")}
-                  className="text-red-500 focus:ring-red-500"
-                />
-                <span className="text-red-500 font-medium">Disentir</span>
-              </label>
-            </div>
-          </div>
-
-          <div className="bg-medical-blue-light/20 p-4 rounded-lg">
-            <div className="flex items-start gap-3">
-              <Checkbox
-                id="agreedToConsent"
-                checked={agreedToConsent}
-                onCheckedChange={(checked) => setAgreedToConsent(checked as boolean)}
-                className="mt-1"
-              />
-              <Label
-                htmlFor="agreedToConsent"
-                className="text-sm text-gray-700 cursor-pointer"
-              >
-                Declaro que he leído y comprendido toda la información proporcionada sobre el procedimiento
-                de Toma de Muestras Frotis Vaginal - Cultivo Recto-Vaginal, incluyendo sus riesgos, beneficios 
-                y alternativas. He tenido la oportunidad de hacer preguntas y todas han sido respondidas 
-                satisfactoriamente. Entiendo que puedo retirar mi consentimiento en cualquier momento.
-              </Label>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Action Buttons */}
+      {/* Botones de Acción */}
       <Card className="border-medical-blue/20">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -829,7 +746,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
                 </>
               ) : (
                 <>
-                  <FileText className="h-4 w-4" />
+                  <Download className="h-4 w-4" />
                   Guardar Consentimiento
                 </>
               )}
@@ -837,6 +754,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
           </div>
         </CardContent>
       </Card>
+
     </div>
   );
 };
