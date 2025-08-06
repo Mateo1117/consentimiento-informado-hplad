@@ -496,6 +496,23 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
                   />
                 </div>
                 
+                {/* Professional Information Display */}
+                {professionalName && professionalDocument && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <h4 className="font-medium text-blue-800 mb-2">Información del Profesional</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="font-medium text-blue-700">Nombre:</span>
+                        <p className="text-blue-900">{professionalName}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-blue-700">Documento:</span>
+                        <p className="text-blue-900">{professionalDocument}</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
                 {/* Signature Area */}
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <SignaturePad 
