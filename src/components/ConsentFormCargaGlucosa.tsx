@@ -65,12 +65,25 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
   };
 
   const handlePatientSignature = () => {
-    const signature = patientSignatureRef.current?.getSignatureData();
-    if (signature) {
-      setPatientSignature(signature);
-      toast.success("Firma del paciente capturada exitosamente");
-    } else {
-      toast.error("Por favor dibuje su firma antes de capturar");
+    console.log("🖊️ Intentando capturar firma del paciente...");
+    console.log("📱 Referencia patientSignatureRef:", patientSignatureRef.current);
+    
+    try {
+      const signature = patientSignatureRef.current?.getSignatureData();
+      console.log("🔍 Firma obtenida:", signature ? "SÍ" : "NO");
+      console.log("📏 Longitud de firma:", signature?.length);
+      
+      if (signature && signature.length > 50) {
+        setPatientSignature(signature);
+        console.log("✅ Firma del paciente guardada en estado");
+        toast.success("Firma del paciente capturada exitosamente");
+      } else {
+        console.log("❌ Firma vacía o muy pequeña");
+        toast.error("Por favor dibuje su firma antes de capturar");
+      }
+    } catch (error) {
+      console.error("❌ Error capturando firma del paciente:", error);
+      toast.error("Error al capturar la firma");
     }
   };
 
