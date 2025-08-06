@@ -368,9 +368,9 @@ export class CargaGlucosaPDFGenerator {
       'Fui informado(a) también que: a) Puedo denegar mi consentimiento, sin que ello implique desmejora del trato que recibiré de parte del equipo de salud, b) puedo acceder a los servicios de salud en cualquier momento, aún luego de haber disentido.',
       'En este momento este documento, aunque acepto será real(izados) la(s) intervención(es), puedo retirar mi consentimiento de manera parcial o total, cualquiera momento hasta el límite en donde el profesional, según su criterio técnico y científico y con justificar mi decisión; c) Que en caso tal que mi decisión sea anular o cancelar, mi consentimiento, dejaré constancia de ello por escrito firmado y con fecha del día.',
       '',
-      'Actuando en nombre propio ( ) y en calidad de representante legal ( ) de la(del) paciente cuyos nombres e identificación están registrados en el encabezado de este documento, autorizo al personal asistencial de esta institución, para que me/le realice el/los procedimiento(s) enseñida señalado(s) y, en caso de ser necesario, tome las medidas y conductas médicas necesarias para salvaguardar mi integridad física, de acuerdo a como se presenten las situaciones imprevistas en el curso del procedimiento.',
+      'Actuando en nombre propio (X) y en calidad de representante legal ( ) de la(del) paciente cuyos nombres e identificación están registrados en el encabezado de este documento, autorizo al personal asistencial de esta institución, para que me/le realice el/los procedimiento(s) enseñida señalado(s) y, en caso de ser necesario, tome las medidas y conductas médicas necesarias para salvaguardar mi integridad física, de acuerdo a como se presenten las situaciones imprevistas en el curso del procedimiento.',
       '',
-      'En manifestación de aceptación firmo/pongo mi huella en este documento a los _______ días del mes de __________ de 20_____'
+      `En manifestación de aceptación firmo/pongo mi huella en este documento a los ${new Date().getDate()} días del mes de ${new Date().toLocaleDateString('es-ES', { month: 'long' })} de ${new Date().getFullYear()}`
     ];
     
     for (const text of consentTexts) {
@@ -423,29 +423,44 @@ export class CargaGlucosaPDFGenerator {
     this.pdf.setFontSize(8);
     this.pdf.setFont('helvetica', 'normal');
     
+    // Patient signature box
+    this.pdf.rect(startX, this.currentY, boxWidth, boxHeight);
+    this.pdf.setFontSize(8);
+    this.pdf.setFont('helvetica', 'normal');
+    
     // Add actual signature if available
-    if (data.patientSignature) {
+    if (data.patientSignature && data.patientSignature !== "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==") {
       try {
-        this.pdf.addImage(data.patientSignature, 'PNG', startX + 2, this.currentY + 2, boxWidth - 4, 25);
+        this.pdf.addImage(data.patientSignature, 'PNG', startX + 2, this.currentY + 2, boxWidth - 4, 30);
       } catch (error) {
         console.error('Error adding patient signature:', error);
+        this.pdf.setFillColor(255, 255, 0); // Yellow background for signature area
+        this.pdf.rect(startX + 2, this.currentY + 2, boxWidth - 4, 30, 'F');
       }
+    } else {
+      // Default yellow background if no signature
+      this.pdf.setFillColor(255, 255, 0);
+      this.pdf.rect(startX + 2, this.currentY + 2, boxWidth - 4, 30, 'F');
     }
     
+    this.pdf.setFillColor(255, 255, 255); // Reset fill color
     this.pdf.text('_________________________', startX + 5, this.currentY + boxHeight - 5);
     this.pdf.text('Firma Paciente/Acudiente', startX + 15, this.currentY + boxHeight + 5);
     this.pdf.text(`Doc: ${data.patientData.numeroDocumento}`, startX + 15, this.currentY + boxHeight + 10);
     
-    // Professional signature
+    // Professional signature box
     const profX = startX + boxWidth + spacing;
     this.pdf.rect(profX, this.currentY, boxWidth, boxHeight);
     
     // Add professional signature if available
-    if (data.professionalSignature) {
+    if (data.professionalSignature && data.professionalSignature !== "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==") {
       try {
-        this.pdf.addImage(data.professionalSignature, 'PNG', profX + 2, this.currentY + 2, boxWidth - 4, 25);
+        this.pdf.addImage(data.professionalSignature, 'PNG', profX + 2, this.currentY + 2, boxWidth - 4, 30);
       } catch (error) {
         console.error('Error adding professional signature:', error);
+        // Empty box for professional signature
+        this.pdf.setFillColor(255, 255, 255);
+        this.pdf.rect(profX + 2, this.currentY + 2, boxWidth - 4, 30, 'F');
       }
     }
     
