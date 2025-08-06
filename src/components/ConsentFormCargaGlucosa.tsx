@@ -561,15 +561,8 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         </CardContent>
       </Card>
       {/* Professional Information */}
-      <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Firma del Profesional
-          </CardTitle>
-          <p className="text-sm text-medical-gray">Profesional Registrado</p>
-        </CardHeader>
-        <CardContent className="space-y-4">
+       <Card className="border-medical-blue/20">
+         <CardContent className="space-y-4">
           {!showProfessionalForm && professionalName && (
             <div className="bg-medical-green/10 p-4 rounded-lg border border-medical-green/20">
               <div className="flex items-center justify-between">
