@@ -167,61 +167,63 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="medical-card medical-header">
-        <CardHeader className="medical-header-content">
+      <Card className="border-medical-blue/20">
+        <CardHeader className="bg-gradient-to-r from-medical-blue/5 to-medical-blue-light/5 pb-4">
           <div className="flex items-center gap-3">
-            <div className="medical-header-icon">
+            <div className="w-12 h-12 bg-medical-blue/10 rounded-lg flex items-center justify-center">
               <TestTube className="h-6 w-6 text-medical-blue" />
             </div>
             <div className="flex-1">
-              <CardTitle className="medical-heading text-medical-blue">
-                Consentimiento Informado - Toma de Muestras por Venopunción
+              <CardTitle className="text-medical-blue text-xl">
+                Consentimiento Informado - Venopunción
               </CardTitle>
-              <p className="medical-header-subtitle">
-                Procedimiento para la extracción de muestras sanguíneas mediante punción venosa
+              <p className="text-medical-gray text-sm mt-1">
+                Formato 220 - Complete todos los campos requeridos para generar el consentimiento
               </p>
             </div>
-            <Button onClick={onBack} variant="outline" className="medical-button-outline">
+            <Button onClick={onBack} variant="outline" className="gap-2">
               ← Volver a búsqueda
             </Button>
           </div>
         </CardHeader>
-      </Card>
-
-      {/* Patient Info */}
-      <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue">Información del Paciente</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <Label className="text-sm font-medium text-medical-gray">Nombre Completo</Label>
-              <p className="text-medical-blue font-medium">{`${patientData.nombre} ${patientData.apellidos}`}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-medical-gray">Documento</Label>
-              <p className="text-medical-blue font-medium">{`${patientData.tipoDocumento} ${patientData.numeroDocumento}`}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-medical-gray">Edad</Label>
-              <p className="text-medical-blue font-medium">{patientData.edad} años</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-medical-gray">EPS</Label>
-              <p className="text-medical-blue font-medium">{patientData.eps}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-medical-gray">Teléfono</Label>
-              <p className="text-medical-blue font-medium">{patientData.telefono}</p>
-            </div>
-            <div>
-              <Label className="text-sm font-medium text-medical-gray">Centro de Salud</Label>
-              <p className="text-medical-blue font-medium">{patientData.centroSalud}</p>
+        
+        <CardContent className="pt-6">
+          {/* Patient Information */}
+          <div className="bg-medical-blue-light/20 p-4 rounded-lg mb-6">
+            <h3 className="font-semibold text-medical-blue mb-3 flex items-center gap-2">
+              <AlertCircle className="h-4 w-4" />
+              Información del Paciente
+            </h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+              <div>
+                <span className="font-medium text-medical-gray">Nombre:</span>
+                <p className="text-medical-blue">{patientData.nombre} {patientData.apellidos}</p>
+              </div>
+              <div>
+                <span className="font-medium text-medical-gray">Documento:</span>
+                <p className="text-medical-blue">{patientData.tipoDocumento} {patientData.numeroDocumento}</p>
+              </div>
+              <div>
+                <span className="font-medium text-medical-gray">Edad:</span>
+                <p className="text-medical-blue">{patientData.edad} años</p>
+              </div>
+              <div>
+                <span className="font-medium text-medical-gray">EPS:</span>
+                <p className="text-medical-blue">{patientData.eps}</p>
+              </div>
+              <div>
+                <span className="font-medium text-medical-gray">Teléfono:</span>
+                <p className="text-medical-blue">{patientData.telefono}</p>
+              </div>
+              <div>
+                <span className="font-medium text-medical-gray">Centro:</span>
+                <p className="text-medical-blue">{patientData.centroSalud}</p>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
+
 
       {/* Guardian Info (for minors) */}
       {isMinor && (
@@ -409,63 +411,49 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         </CardContent>
       </Card>
 
-      {/* Consent Decision */}
+      {/* Decisión sobre el Consentimiento */}
       <Card className="border-medical-blue/20">
         <CardHeader>
           <CardTitle className="text-medical-blue flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Decisión sobre el Consentimiento *
+            <span className="text-medical-blue">⚪</span>
+            Decisión sobre el Consentimiento
+            <span className="text-red-500">*</span>
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <RadioGroup
-            value={consentDecision}
-            onValueChange={(value) => setConsentDecision(value as "aprobar" | "disentir")}
-            className="grid grid-cols-1 md:grid-cols-2 gap-4"
-          >
-            <div className="flex items-center space-x-3">
-              <RadioGroupItem 
-                value="aprobar" 
-                id="aprobar"
-                className="border-green-600 text-green-600 focus-visible:ring-green-600"
-              />
-              <Label htmlFor="aprobar" className="cursor-pointer text-green-600 font-medium">
-                APROBAR el(los) procedimiento(s)
-              </Label>
-            </div>
-            <div className="flex items-center space-x-3">
-              <RadioGroupItem 
-                value="disentir" 
-                id="disentir"
-                className="border-red-600 text-red-600 focus-visible:ring-red-600"
-              />
-              <Label htmlFor="disentir" className="cursor-pointer text-red-600 font-medium">
-                DISENTIR el(los) procedimiento(s)
-              </Label>
-            </div>
-          </RadioGroup>
-
-          <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-            <div className="flex items-start space-x-3">
-              <Checkbox
-                id="agreedToConsent"
-                checked={agreedToConsent}
-                onCheckedChange={(checked) => setAgreedToConsent(checked as boolean)}
-                className="mt-1"
-              />
-              <Label htmlFor="agreedToConsent" className="cursor-pointer text-sm leading-relaxed">
-                <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
-              </Label>
+        <CardContent>
+          <div className="space-y-4">
+            <RadioGroup 
+              value={consentDecision} 
+              onValueChange={(value: 'aprobar' | 'disentir') => setConsentDecision(value)}
+              className="flex flex-row items-center gap-8"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="aprobar" id="aprobar" className="w-5 h-5 text-green-600 border-green-600" />
+                <Label htmlFor="aprobar" className="text-green-600 font-medium text-base">APROBAR el(los) procedimiento(s)</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="disentir" id="disentir" className="w-5 h-5 text-red-600 border-red-600" />
+                <Label htmlFor="disentir" className="text-red-600 font-medium text-base">DISENTIR el(los) procedimiento(s)</Label>
+              </div>
+            </RadioGroup>
+            
+            <div className="bg-medical-blue-light/20 border border-medical-blue/20 rounded-lg p-4">
+              <div className="flex items-start gap-3">
+                <input type="checkbox" className="mt-1 w-4 h-4 text-medical-blue border-medical-blue/30 rounded" defaultChecked />
+                <span className="text-medical-gray text-sm leading-relaxed">
+                  <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
+                </span>
+              </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Professional Information */}
+      {/* Información del Profesional */}
       <Card className="border-medical-blue/20">
         <CardHeader>
           <CardTitle className="text-medical-blue flex items-center gap-2">
-            <FileText className="h-5 w-5" />
+            <span className="text-medical-blue">✋</span>
             Información del Profesional
           </CardTitle>
         </CardHeader>
@@ -517,12 +505,11 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         </CardContent>
       </Card>
 
-      {/* Digital Signatures */}
+      {/* Firmas Digitales */}
       <Card className="border-medical-blue/20">
         <CardHeader>
           <CardTitle className="text-medical-blue flex items-center gap-2">
-            <FileText className="h-5 w-5" />
-            Firmas Digitales
+            ✍ Firmas Digitales
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -587,14 +574,14 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         </CardContent>
       </Card>
 
-      {/* Action Buttons */}
+      {/* Botones de Acción */}
       <Card className="border-medical-blue/20">
         <CardContent className="p-6">
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button
               onClick={onBack}
               variant="outline"
-              className="medical-button-outline"
+              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 text-lg"
               size="lg"
             >
               Volver
@@ -602,29 +589,23 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
             
             <Button
               onClick={generatePDF}
-              disabled={isGeneratingPDF || !isFormComplete()}
-              className="medical-button-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={isGeneratingPDF}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               size="lg"
             >
               {isGeneratingPDF ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  <span className="medical-text-base">Generando PDF...</span>
+                  Guardando...
                 </>
               ) : (
                 <>
-                  <FileText className="h-4 w-4" />
-                  <span className="medical-text-base">Guardar Consentimiento</span>
+                  <Download className="h-4 w-4" />
+                  Guardar Consentimiento
                 </>
               )}
             </Button>
           </div>
-          
-          {!isFormComplete() && (
-            <p className="text-center medical-text-sm text-green-600 mt-3">
-              ✅ Listo para generar el PDF
-            </p>
-          )}
         </CardContent>
       </Card>
     </div>
