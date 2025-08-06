@@ -143,6 +143,13 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
     setProfessionalDocument(professional.document);
     if (professional.signatureData) {
       setProfessionalSignature(professional.signatureData);
+      // Load the signature into the SignaturePad automatically
+      setTimeout(() => {
+        if (professionalSignatureRef.current) {
+          professionalSignatureRef.current.loadSignature(professional.signatureData);
+          toast.success("Firma del profesional cargada automáticamente");
+        }
+      }, 100);
     }
     setShowProfessionalForm(false);
   };
