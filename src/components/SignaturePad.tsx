@@ -21,14 +21,30 @@ interface SignaturePadProps {
   isProfessional?: boolean;
   professionalDocument?: string;
   professionalName?: string;
+  onSignatureChange?: (signature: string | null) => void; // Nueva prop para captura automática
 }
 
 export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(
-  ({ title, subtitle, required = false, isProfessional = false, professionalDocument, professionalName }, ref) => {
+  ({ title, subtitle, required = false, isProfessional = false, professionalDocument, professionalName, onSignatureChange }, ref) => {
     const sigCanvas = useRef<SignatureCanvas>(null);
     const [savedSignatures, setSavedSignatures] = useState<ProfessionalSignature[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [tempSignature, setTempSignature] = useState<string | null>(null);
+
+    // Auto-capture signature after user stops drawing
+    const handleSignatureEnd = () => {
+      if (onSignatureChange) {
+        setTimeout(() => {
+          const signature = sigCanvas.current?.toDataURL();
+          if (signature && !sigCanvas.current?.isEmpty()) {
+            console.log('🖊️ Firma capturada automáticamente');
+            onSignatureChange(signature);
+          } else {
+            onSignatureChange(null);
+          }
+        }, 500); // Wait 500ms after user stops drawing
+      }
+    };
 
     // Load saved signatures if this is a professional signature pad
     useEffect(() => {
@@ -169,6 +185,7 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(
             <div className="border-2 border-dashed border-medical-blue/30 rounded-lg bg-signature-area p-1">
               <SignatureCanvas
                 ref={sigCanvas}
+                onEnd={handleSignatureEnd} // Captura automática cuando termina de firmar
                 canvasProps={{
                   className: "w-full h-48 rounded cursor-crosshair",
                   style: { 

@@ -64,8 +64,26 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
     return true; // Simplificado al máximo para que siempre funcione
   };
 
+  // Captura automática de firmas
+  const handlePatientSignatureChange = (signature: string | null) => {
+    console.log("🖊️ Captura automática - Firma del paciente:", signature ? "CAPTURADA" : "VACÍA");
+    setPatientSignature(signature);
+    if (signature) {
+      toast.success("✅ Firma del paciente capturada automáticamente");
+    }
+  };
+
+  const handleProfessionalSignatureChange = (signature: string | null) => {
+    console.log("👨‍⚕️ Captura automática - Firma del profesional:", signature ? "CAPTURADA" : "VACÍA");
+    setProfessionalSignature(signature);
+    if (signature) {
+      toast.success("✅ Firma del profesional capturada automáticamente");
+    }
+  };
+
+  // Funciones manuales de captura (backup)
   const handlePatientSignature = () => {
-    console.log("🖊️ Intentando capturar firma del paciente...");
+    console.log("🖊️ Intentando capturar firma del paciente manualmente...");
     console.log("📱 Referencia patientSignatureRef:", patientSignatureRef.current);
     
     try {
@@ -608,7 +626,11 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
                 Firma del {isMinor ? "Acudiente" : "Paciente"} *
               </Label>
               <div className="border rounded-lg p-4 bg-gray-50">
-                <SignaturePad ref={patientSignatureRef} title="Firma del Paciente" />
+                <SignaturePad 
+                  ref={patientSignatureRef} 
+                  title="Firma del Paciente"
+                  onSignatureChange={handlePatientSignatureChange}
+                />
                 <div className="flex gap-2 mt-2">
                   <Button
                     variant="outline"
@@ -639,7 +661,14 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
             <div>
               <Label className="text-medical-blue font-medium">Firma del Profesional *</Label>
               <div className="border rounded-lg p-4 bg-gray-50">
-                <SignaturePad ref={professionalSignatureRef} title="Firma del Profesional" />
+                <SignaturePad 
+                  ref={professionalSignatureRef} 
+                  title="Firma del Profesional"
+                  onSignatureChange={handleProfessionalSignatureChange}
+                  isProfessional={true}
+                  professionalDocument={professionalDocument}
+                  professionalName={professionalName}
+                />
                 <div className="flex gap-2 mt-2">
                   <Button
                     variant="outline"

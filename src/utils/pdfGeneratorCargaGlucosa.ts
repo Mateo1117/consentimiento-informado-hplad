@@ -489,6 +489,20 @@ export class CargaGlucosaPDFGenerator {
     
     this.currentY += boxHeight + 25;
     
+    // Add patient photo if available
+    if (data.patientPhoto) {
+      try {
+        console.log('📸 Agregando foto del paciente al PDF');
+        this.pdf.text('Foto del Paciente:', this.margin, this.currentY);
+        this.currentY += 5;
+        this.pdf.addImage(data.patientPhoto, 'JPEG', this.margin, this.currentY, 40, 30);
+        this.currentY += 35;
+        console.log('✅ Foto del paciente agregada exitosamente');
+      } catch (error) {
+        console.error('❌ Error adding patient photo:', error);
+      }
+    }
+    
     // Date and time
     this.pdf.setFontSize(8);
     this.pdf.text(`Fecha: ${data.date} - Hora: ${data.time}`, this.margin, this.currentY);
