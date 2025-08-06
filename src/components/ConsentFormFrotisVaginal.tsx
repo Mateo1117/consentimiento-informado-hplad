@@ -426,6 +426,61 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         </CardContent>
       </Card>
 
+      {/* Consent Decision - Moved here */}
+      <Card className="border-medical-blue/20">
+        <CardHeader>
+          <CardTitle className="text-medical-blue">Decisión de Consentimiento</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-3">
+            <Label className="text-medical-blue font-medium">
+              ¿Acepta el procedimiento de Toma de Muestras Frotis Vaginal? *
+            </Label>
+            <div className="flex gap-4">
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="consentDecision"
+                  value="aprobar"
+                  checked={consentDecision === "aprobar"}
+                  onChange={(e) => setConsentDecision(e.target.value as "aprobar")}
+                  className="text-medical-green focus:ring-medical-green"
+                />
+                <span className="text-medical-green font-medium">Aprobar</span>
+              </label>
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input
+                  type="radio"
+                  name="consentDecision"
+                  value="disentir"
+                  checked={consentDecision === "disentir"}
+                  onChange={(e) => setConsentDecision(e.target.value as "disentir")}
+                  className="text-red-500 focus:ring-red-500"
+                />
+                <span className="text-red-500 font-medium">Disentir</span>
+              </label>
+            </div>
+          </div>
+
+          <div className="bg-medical-blue-light/20 p-4 rounded-lg">
+            <div className="flex items-start gap-3">
+              <Checkbox
+                id="agreedToConsent"
+                checked={agreedToConsent}
+                onCheckedChange={(checked) => setAgreedToConsent(checked as boolean)}
+                className="mt-1"
+              />
+              <Label
+                htmlFor="agreedToConsent"
+                className="text-sm text-gray-700 cursor-pointer"
+              >
+                Declaro que he leído y comprendido toda la información proporcionada sobre el procedimiento.
+              </Label>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
 
       {/* Minor Information */}
       {isMinor && (
