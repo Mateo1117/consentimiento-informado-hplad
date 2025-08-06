@@ -329,63 +329,86 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
           </CardTitle>
         </CardHeader>
         {isProcedureInfoExpanded && (
-          <CardContent className="space-y-4 animate-in slide-in-from-top-2 duration-200">
+          <CardContent className="space-y-4 animate-accordion-down">
             <div className="bg-medical-blue-light/10 p-6 rounded-lg border border-medical-blue-light/20">
-              <h3 className="font-semibold text-medical-blue mb-4">PRUEBA DE TOLERANCIA A LA GLUCOSA ORAL (PTGO)</h3>
+              <h3 className="font-semibold text-medical-blue mb-4 text-center">CONSENTIMIENTO INFORMADO PARA PRUEBA DE TOLERANCIA A LA GLUCOSA ORAL</h3>
               
               <div className="space-y-4 text-sm text-medical-gray">
-                <div>
-                  <h4 className="font-medium text-medical-blue mb-2">¿Qué es la Prueba de Tolerancia a la Glucosa?</h4>
-                  <p>La Prueba de Tolerancia a la Glucosa Oral (PTGO) es un examen que mide la capacidad de su cuerpo para procesar la glucosa (azúcar). Se utiliza principalmente para diagnosticar diabetes gestacional en mujeres embarazadas y diabetes tipo 2 en adultos.</p>
+                <div className="text-justify">
+                  <p className="mb-3">
+                    <strong>Yo,</strong> _________________________________ identificado(a) con documento de identidad No. _________________, 
+                    declaro que he sido informado(a) por el médico tratante sobre la naturaleza, propósito, beneficios, riesgos y alternativas 
+                    del procedimiento denominado <strong>PRUEBA DE TOLERANCIA A LA GLUCOSA ORAL (PTGO)</strong>.
+                  </p>
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-medical-blue mb-2">Preparación para el Examen</h4>
-                  <ul className="list-disc list-inside space-y-1 ml-4">
-                    <li>Ayuno de 8-12 horas antes del examen (solo agua permitida)</li>
-                    <li>Mantener dieta normal durante los 3 días previos</li>
-                    <li>No fumar ni hacer ejercicio durante el examen</li>
-                    <li>Informar sobre medicamentos que esté tomando</li>
-                    <li>Permanecer en reposo durante todo el procedimiento</li>
+                  <h4 className="font-medium text-medical-blue mb-2">DESCRIPCIÓN DEL PROCEDIMIENTO:</h4>
+                  <p className="text-justify mb-2">
+                    La Prueba de Tolerancia a la Glucosa Oral es un examen que mide la capacidad del organismo para metabolizar 
+                    la glucosa. Consiste en la administración oral de una solución que contiene 75 gramos de glucosa anhidra 
+                    disuelta en agua, seguida de la medición de los niveles de glucemia en sangre en diferentes momentos.
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="font-medium text-medical-blue mb-2">PREPARACIÓN:</h4>
+                  <ul className="list-disc list-inside space-y-1 ml-4 text-justify">
+                    <li>Ayuno de 8 a 12 horas (únicamente se permite el consumo de agua)</li>
+                    <li>Mantener dieta habitual durante los 3 días previos al examen</li>
+                    <li>No consumir medicamentos que puedan alterar la glucemia, salvo indicación médica</li>
+                    <li>Evitar ejercicio físico intenso antes del examen</li>
+                    <li>No fumar durante el procedimiento</li>
                   </ul>
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-medical-blue mb-2">Procedimiento</h4>
-                  <ol className="list-decimal list-inside space-y-1 ml-4">
-                    <li>Toma de muestra de sangre en ayunas (glucosa basal)</li>
-                    <li>Administración de solución glucosada (75g de glucosa anhidra)</li>
-                    <li>Toma de muestra de sangre a los 120 minutos</li>
-                    <li>Permanencia en el centro de salud durante todo el procedimiento</li>
+                  <h4 className="font-medium text-medical-blue mb-2">PROCEDIMIENTO:</h4>
+                  <ol className="list-decimal list-inside space-y-1 ml-4 text-justify">
+                    <li>Toma de muestra de sangre en ayunas (glucemia basal)</li>
+                    <li>Administración de 75g de glucosa anhidra en 250-300 ml de agua</li>
+                    <li>El paciente debe permanecer en reposo en el laboratorio</li>
+                    <li>Toma de muestra de sangre a los 120 minutos post-carga</li>
                   </ol>
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-medical-blue mb-2">Riesgos y Efectos Secundarios</h4>
-                  <ul className="list-disc list-inside space-y-1 ml-4">
-                    <li>Náuseas o vómito después de tomar la solución glucosada</li>
-                    <li>Mareos o desmayos (poco frecuente)</li>
-                    <li>Molestias menores en el sitio de punción</li>
-                    <li>Hematoma pequeño en el sitio de extracción</li>
+                  <h4 className="font-medium text-medical-blue mb-2">RIESGOS Y COMPLICACIONES:</h4>
+                  <ul className="list-disc list-inside space-y-1 ml-4 text-justify">
+                    <li>Náuseas y/o vómito relacionados con la ingesta de la solución glucosada</li>
+                    <li>Malestar abdominal transitorio</li>
+                    <li>Mareos o sensación de debilidad (poco frecuente)</li>
+                    <li>Dolor, hematoma o infección en el sitio de punción venosa</li>
+                    <li>Reacciones adversas excepcionales que requieran atención médica inmediata</li>
                   </ul>
                 </div>
 
                 <div>
-                  <h4 className="font-medium text-medical-blue mb-2">Valores de Referencia</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
-                    <div className="bg-white p-3 rounded border">
-                      <p className="font-medium">Glucosa en Ayunas:</p>
-                      <p>Normal: &lt; 100 mg/dL</p>
-                      <p>Alterada: 100-125 mg/dL</p>
-                      <p>Diabetes: ≥ 126 mg/dL</p>
-                    </div>
-                    <div className="bg-white p-3 rounded border">
-                      <p className="font-medium">Glucosa 2 horas:</p>
-                      <p>Normal: &lt; 140 mg/dL</p>
-                      <p>Alterada: 140-199 mg/dL</p>
-                      <p>Diabetes: ≥ 200 mg/dL</p>
+                  <h4 className="font-medium text-medical-blue mb-2">VALORES DE REFERENCIA PARA ADULTOS:</h4>
+                  <div className="bg-white p-4 rounded border">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <p className="font-medium">Glucemia en Ayunas:</p>
+                        <p>• Normal: &lt; 100 mg/dL</p>
+                        <p>• Glucemia alterada en ayunas: 100-125 mg/dL</p>
+                        <p>• Diabetes Mellitus: ≥ 126 mg/dL</p>
+                      </div>
+                      <div>
+                        <p className="font-medium">Glucemia a las 2 horas:</p>
+                        <p>• Normal: &lt; 140 mg/dL</p>
+                        <p>• Intolerancia a la glucosa: 140-199 mg/dL</p>
+                        <p>• Diabetes Mellitus: ≥ 200 mg/dL</p>
+                      </div>
                     </div>
                   </div>
+                </div>
+
+                <div className="border-t pt-4">
+                  <p className="text-justify text-xs">
+                    <strong>DECLARACIÓN:</strong> Declaro que he leído y comprendido completamente este documento, 
+                    que mis preguntas han sido respondidas satisfactoriamente y que entiendo los beneficios, 
+                    riesgos y alternativas del procedimiento. Entiendo que ningún procedimiento está exento de riesgos.
+                  </p>
                 </div>
               </div>
             </div>
