@@ -9,7 +9,7 @@ import { SignaturePad, SignatureRef } from "./SignaturePad";
 import { CameraCapture, CameraCaptureRef } from "./CameraCapture";
 import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
-import { FileText, AlertCircle, Shield, Download, CheckCircle } from "lucide-react";
+import { FileText, AlertCircle, Shield, Download, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { toast } from "sonner";
 
 
@@ -75,6 +75,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
   const [patientSignature, setPatientSignature] = useState<string>("");
   const [professionalSignature, setProfessionalSignature] = useState<string>("");
   const [patientPhoto, setPatientPhoto] = useState<string | null>(null);
+  const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
 
   useEffect(() => {
     if (patientData && patientData.edad < 18) {
@@ -269,56 +270,158 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
 
       {/* Procedures Section */}
       <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue flex items-center gap-2">
-            <Shield className="h-5 w-5" />
-            Procedimientos a Realizar
-          </CardTitle>
+        <CardHeader className="pb-4">
+          <div className="flex items-center gap-3">
+            <Shield className="h-5 w-5 text-medical-blue" />
+            <CardTitle className="text-medical-blue">
+              Procedimientos para Frotis Vaginal
+            </CardTitle>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {procedimientos.map((procedimiento) => (
-              <div key={procedimiento.id} className="border rounded-lg p-4 hover:bg-medical-blue-light/10 transition-colors">
-                <div className="flex items-start gap-3">
-                  <Checkbox
-                    id={procedimiento.id}
-                    checked={selectedProcedures.includes(procedimiento.id)}
-                    onCheckedChange={() => handleProcedureChange(procedimiento.id)}
-                    className="mt-1"
-                  />
-                  <div className="flex-1 space-y-2">
-                    <Label 
-                      htmlFor={procedimiento.id} 
-                      className="text-medical-blue font-semibold cursor-pointer"
-                    >
-                      {procedimiento.nombre}
-                    </Label>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="font-medium text-medical-gray">Descripción:</span>
-                        <p className="text-gray-700 mt-1">{procedimiento.descripcion}</p>
+            <div 
+              className="flex items-start space-x-3 p-3 rounded-lg border border-medical-blue/20 bg-medical-blue/5 cursor-pointer hover:bg-medical-blue/10 transition-colors"
+              onClick={() => setIsProcedureInfoExpanded(!isProcedureInfoExpanded)}
+            >
+              <Checkbox
+                id="procedimiento-frotis"
+                checked={isProcedureInfoExpanded}
+                onCheckedChange={(checked) => setIsProcedureInfoExpanded(checked as boolean)}
+                className="mt-1 data-[state=checked]:bg-medical-blue data-[state=checked]:border-medical-blue"
+              />
+              <div className="flex-1">
+                <Label 
+                  htmlFor="procedimiento-frotis" 
+                  className="cursor-pointer text-medical-blue font-semibold text-base flex items-center gap-2"
+                >
+                  Toma de Muestra Frotis Vaginal - Cultivo Recto-Vaginal
+                  {isProcedureInfoExpanded ? (
+                    <ChevronUp className="h-4 w-4 text-medical-blue" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-medical-blue" />
+                  )}
+                </Label>
+                <p className="text-sm text-medical-gray mt-1">
+                  Se toma una muestra de secreción de flujo del área vaginal o rectal, utilizando aplicadores, solución salina, tubos de ensayo, medio de cultivo, láminas, espéculo.
+                </p>
+              </div>
+            </div>
+
+            {isProcedureInfoExpanded && (
+              <div className="ml-6 space-y-4 animate-accordion-down">
+                <div className="bg-medical-blue-light/10 p-6 rounded-lg border border-medical-blue-light/20">
+                  <div className="space-y-4">
+                    {/* Descripción Completa */}
+                    <div className="border-l-4 border-blue-500 bg-blue-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-4 w-4 text-blue-600" />
+                        <h5 className="font-semibold text-blue-800">Descripción del Procedimiento:</h5>
                       </div>
-                      <div>
-                        <span className="font-medium text-medical-gray">Riesgos:</span>
-                        <p className="text-gray-700 mt-1">{procedimiento.riesgos}</p>
+                      <p className="text-sm text-gray-700 mb-3">
+                        Se toma una muestra de secreción de flujo del área vaginal o rectal, utilizando aplicadores, solución salina, 
+                        tubos de ensayo, medio de cultivo, láminas, espéculo. Este material utilizado es totalmente desechable. En 
+                        el caso de toma de citología se utilizan aplicadores para tomar células sexuales no se debe especificar para la toma de 
+                        la muestra.
+                      </p>
+                      <div className="bg-blue-100 p-3 rounded">
+                        <p className="text-sm font-medium text-blue-800">
+                          <strong>Propósito:</strong> Identificar la presencia de bacterias, procesos inflamatorios o infecciosos para dar un tratamiento médico.
+                        </p>
                       </div>
-                      <div>
-                        <span className="font-medium text-medical-gray">Beneficios:</span>
-                        <p className="text-gray-700 mt-1">{procedimiento.beneficios}</p>
+                    </div>
+
+                    {/* Beneficios Esperados */}
+                    <div className="border-l-4 border-green-500 bg-green-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CheckCircle className="h-4 w-4 text-green-600" />
+                        <h5 className="font-semibold text-green-800">Beneficios Esperados:</h5>
                       </div>
-                      <div>
-                        <span className="font-medium text-medical-gray">Alternativas:</span>
-                        <p className="text-gray-700 mt-1">{procedimiento.alternativas}</p>
+                      <p className="text-sm text-gray-700">
+                        Orientar y/o confirmar un diagnóstico y realizar el seguimiento oportuno de una condición en salud, que 
+                        permita dar pautas de pautas para el tratamiento por el profesional.
+                      </p>
+                    </div>
+
+                    {/* Riesgos */}
+                    <div className="border-l-4 border-red-500 bg-red-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <AlertCircle className="h-4 w-4 text-red-600" />
+                        <h5 className="font-semibold text-red-800">Riesgos:</h5>
                       </div>
-                      <div className="md:col-span-2">
-                        <span className="font-medium text-medical-gray">Implicaciones:</span>
-                        <p className="text-gray-700 mt-1">{procedimiento.implicaciones}</p>
+                      <p className="text-sm text-gray-700">
+                        Frotar fuerte. Ardor, dolor, picazón o incomodidad al momento de introducir el espéculo y el aplicador.
+                      </p>
+                    </div>
+
+                    {/* Implicaciones */}
+                    <div className="border-l-4 border-orange-500 bg-orange-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-orange-600">🕐</span>
+                        <h5 className="font-semibold text-orange-800">Implicaciones:</h5>
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        Sangrado, dolor pélvico, laceración cervicouterina.
+                      </p>
+                    </div>
+
+                    {/* Efectos Inevitables */}
+                    <div className="border-l-4 border-yellow-500 bg-yellow-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-yellow-600">⚠️</span>
+                        <h5 className="font-semibold text-yellow-800">Efectos Inevitables:</h5>
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        Sangrado escaso ocasionado por el espéculo. Molestia, dolor leve o ardor transitorio en la zona vaginal.
+                      </p>
+                    </div>
+
+                    {/* Alternativas */}
+                    <div className="border-l-4 border-purple-500 bg-purple-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-purple-600">🔄</span>
+                        <h5 className="font-semibold text-purple-800">Alternativas Razonables a este Procedimiento:</h5>
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        Ninguna.
+                      </p>
+                    </div>
+
+                    {/* Posibles Consecuencias */}
+                    <div className="border-l-4 border-gray-500 bg-gray-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-gray-600">ℹ️</span>
+                        <h5 className="font-semibold text-gray-800">Posibles Consecuencias en caso que decida no aceptar el procedimiento:</h5>
+                      </div>
+                      <p className="text-sm text-gray-700">
+                        Impide a los médicos tratantes tener información valiosa para determinar, confirmar o ajustar su diagnóstico y tratamiento médico.
+                      </p>
+                    </div>
+
+                    {/* Riesgos Específicos del Paciente */}
+                    <div className="border-l-4 border-slate-500 bg-slate-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-slate-600">🔍</span>
+                        <h5 className="font-semibold text-slate-800">Riesgos Específicos del Paciente:</h5>
+                      </div>
+                      <p className="text-sm text-slate-500 italic">
+                        [Campo a completar según situación específica del paciente]
+                      </p>
+                    </div>
+
+                    {/* Declaración final */}
+                    <div className="bg-blue-100 border border-blue-300 rounded-lg p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-blue-600">📝</span>
+                        <p className="text-sm font-medium text-blue-800">
+                          Al seleccionar este procedimiento, usted declara haber leído y comprendido toda la información anterior.
+                        </p>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-            ))}
+            )}
           </div>
         </CardContent>
       </Card>
