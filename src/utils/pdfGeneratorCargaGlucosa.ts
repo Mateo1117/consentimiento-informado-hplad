@@ -396,40 +396,70 @@ export class CargaGlucosaPDFGenerator {
     // Add space for signatures
     this.currentY += 10;
     
-    if (this.currentY > this.pageHeight - 60) {
+    if (this.currentY > this.pageHeight - 80) {
       this.pdf.addPage();
       this.currentY = this.margin;
     }
     
+    // Signature section header
+    this.pdf.setFillColor(240, 240, 240);
+    this.pdf.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, 6, 'F');
+    
+    this.pdf.setFontSize(9);
+    this.pdf.setFont('helvetica', 'bold');
+    this.pdf.text('FIRMAS', this.margin + 2, this.currentY + 4);
+    
+    this.currentY += 10;
+    
     // Signature boxes
-    const boxWidth = 60;
-    const boxHeight = 20;
-    const startX = this.margin + 10;
+    const boxWidth = 80;
+    const boxHeight = 40;
+    const spacing = 10;
+    const totalWidth = this.pageWidth - 2 * this.margin;
+    const startX = this.margin;
     
     // Patient signature
     this.pdf.rect(startX, this.currentY, boxWidth, boxHeight);
     this.pdf.setFontSize(8);
     this.pdf.setFont('helvetica', 'normal');
+    
+    // Add actual signature if available
+    if (data.patientSignature) {
+      try {
+        this.pdf.addImage(data.patientSignature, 'PNG', startX + 2, this.currentY + 2, boxWidth - 4, 25);
+      } catch (error) {
+        console.error('Error adding patient signature:', error);
+      }
+    }
+    
     this.pdf.text('_________________________', startX + 5, this.currentY + boxHeight - 5);
-    this.pdf.text('Firma paciente', startX + 15, this.currentY + boxHeight + 5);
+    this.pdf.text('Firma Paciente/Acudiente', startX + 15, this.currentY + boxHeight + 5);
+    this.pdf.text(`Doc: ${data.patientData.numeroDocumento}`, startX + 15, this.currentY + boxHeight + 10);
     
     // Professional signature
-    this.pdf.rect(startX + boxWidth + 10, this.currentY, boxWidth, boxHeight);
-    this.pdf.text('_________________________', startX + boxWidth + 15, this.currentY + boxHeight - 5);
-    this.pdf.text('Firma Representante legal:', startX + boxWidth + 10, this.currentY + boxHeight + 5);
+    const profX = startX + boxWidth + spacing;
+    this.pdf.rect(profX, this.currentY, boxWidth, boxHeight);
     
-    // Professional details
-    this.pdf.rect(startX + 2 * (boxWidth + 10), this.currentY, boxWidth, boxHeight);
-    this.pdf.text('Nombre y documento de quien toma el', startX + 2 * (boxWidth + 10) + 2, this.currentY + boxHeight + 5);
-    this.pdf.text('consentimiento:', startX + 2 * (boxWidth + 10) + 2, this.currentY + boxHeight + 10);
+    // Add professional signature if available
+    if (data.professionalSignature) {
+      try {
+        this.pdf.addImage(data.professionalSignature, 'PNG', profX + 2, this.currentY + 2, boxWidth - 4, 25);
+      } catch (error) {
+        console.error('Error adding professional signature:', error);
+      }
+    }
     
-    this.currentY += boxHeight + 20;
+    this.pdf.text('_________________________', profX + 5, this.currentY + boxHeight - 5);
+    this.pdf.text('Firma Profesional', profX + 20, this.currentY + boxHeight + 5);
+    this.pdf.text(`${data.professionalName}`, profX + 5, this.currentY + boxHeight + 10);
+    this.pdf.text(`Doc: ${data.professionalDocument}`, profX + 5, this.currentY + boxHeight + 15);
     
-    // Document numbers
-    const docY = this.currentY;
-    this.pdf.text('Documento:___________________', startX, docY);
-    this.pdf.text('Documento: ___________________', startX + boxWidth + 10, docY);
-    this.pdf.text('Documento: ___________________', startX + 2 * (boxWidth + 10), docY);
+    this.currentY += boxHeight + 25;
+    
+    // Date and time
+    this.pdf.setFontSize(8);
+    this.pdf.text(`Fecha: ${data.date} - Hora: ${data.time}`, this.margin, this.currentY);
+    this.pdf.text(`Decisión: ${data.consentDecision === 'aprobar' ? 'APROBÓ el procedimiento' : 'DISENTIÓ el procedimiento'}`, this.margin, this.currentY + 5);
   }
 
   private drawWithdrawalPage(data: CargaGlucosaPDFData) {
