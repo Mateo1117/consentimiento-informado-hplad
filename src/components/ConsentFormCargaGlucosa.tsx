@@ -58,6 +58,19 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
   // Determinar si es menor de edad
   const isMinor = patientData.edad < 18;
 
+  // Validar si el formulario está completo para habilitar el botón
+  const isFormComplete = () => {
+    return (
+      professionalName.trim() &&
+      professionalDocument.trim() &&
+      patientSignature &&
+      professionalSignature &&
+      agreedToConsent &&
+      consentDecision &&
+      (!isMinor || (guardianName.trim() && guardianDocument.trim() && guardianRelationship.trim()))
+    );
+  };
+
   const handlePatientSignature = () => {
     const signature = patientSignatureRef.current?.getSignatureData();
     if (signature) {
@@ -660,8 +673,8 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
           <div className="text-center">
             <Button
               onClick={generatePDF}
-              disabled={isGeneratingPDF || !agreedToConsent}
-              className="bg-medical-green hover:bg-medical-green/90 text-white px-8 py-3 text-lg gap-2"
+              disabled={isGeneratingPDF || !isFormComplete()}
+              className="bg-medical-green hover:bg-medical-green/90 text-white px-8 py-3 text-lg gap-2 disabled:opacity-50"
               size="lg"
             >
               {isGeneratingPDF ? (
