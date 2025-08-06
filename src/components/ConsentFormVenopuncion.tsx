@@ -166,15 +166,24 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
   return (
     <div className="space-y-6">
       {/* Header */}
-      <Card className="border-medical-blue/20 bg-gradient-to-r from-white to-medical-blue-light/30">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-3 text-medical-blue">
-            <TestTube className="h-6 w-6" />
-            Consentimiento Informado - Toma de Muestras por Venopunción
-          </CardTitle>
-          <p className="text-medical-gray">
-            Procedimiento para la extracción de muestras sanguíneas mediante punción venosa
-          </p>
+      <Card className="medical-card medical-header">
+        <CardHeader className="medical-header-content">
+          <div className="flex items-center gap-3">
+            <div className="medical-header-icon">
+              <TestTube className="h-6 w-6 text-medical-blue" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className="medical-heading text-medical-blue">
+                Consentimiento Informado - Toma de Muestras por Venopunción
+              </CardTitle>
+              <p className="medical-header-subtitle">
+                Procedimiento para la extracción de muestras sanguíneas mediante punción venosa
+              </p>
+            </div>
+            <Button onClick={onBack} variant="outline" className="medical-button-outline">
+              ← Volver a búsqueda
+            </Button>
+          </div>
         </CardHeader>
       </Card>
 
@@ -536,7 +545,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
             <Button
               onClick={onBack}
               variant="outline"
-              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 text-lg"
+              className="medical-button-outline"
               size="lg"
             >
               Volver
@@ -545,25 +554,25 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
             <Button
               onClick={generatePDF}
               disabled={isGeneratingPDF || !isFormComplete()}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="medical-button-primary disabled:opacity-50 disabled:cursor-not-allowed"
               size="lg"
             >
               {isGeneratingPDF ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Generando PDF...
+                  <span className="medical-text-base">Generando PDF...</span>
                 </>
               ) : (
                 <>
                   <FileText className="h-4 w-4" />
-                  Guardar Consentimiento
+                  <span className="medical-text-base">Guardar Consentimiento</span>
                 </>
               )}
             </Button>
           </div>
           
           {!isFormComplete() && (
-            <p className="text-center text-sm text-green-600 mt-3">
+            <p className="text-center medical-text-sm text-green-600 mt-3">
               ✅ Listo para generar el PDF
             </p>
           )}
