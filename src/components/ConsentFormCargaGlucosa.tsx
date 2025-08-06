@@ -331,84 +331,101 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         {isProcedureInfoExpanded && (
           <CardContent className="space-y-4 animate-accordion-down">
             <div className="bg-medical-blue-light/10 p-6 rounded-lg border border-medical-blue-light/20">
-              <h3 className="font-semibold text-medical-blue mb-4 text-center">CONSENTIMIENTO INFORMADO PARA PRUEBA DE TOLERANCIA A LA GLUCOSA ORAL</h3>
+              <h3 className="font-semibold text-medical-blue mb-4 text-center">DATOS DEL PROCEDIMIENTO</h3>
               
-              <div className="space-y-4 text-sm text-medical-gray">
-                <div className="text-justify">
-                  <p className="mb-3">
-                    <strong>Yo,</strong> _________________________________ identificado(a) con documento de identidad No. _________________, 
-                    declaro que he sido informado(a) por el médico tratante sobre la naturaleza, propósito, beneficios, riesgos y alternativas 
-                    del procedimiento denominado <strong>PRUEBA DE TOLERANCIA A LA GLUCOSA ORAL (PTGO)</strong>.
-                  </p>
+              <div className="space-y-4">
+                {/* Procedimiento */}
+                <div className="border border-gray-300">
+                  <div className="bg-gray-100 p-2 border-b border-gray-300">
+                    <h4 className="font-bold text-center">PROCEDIMIENTO</h4>
+                  </div>
+                  <div className="p-2 text-center font-semibold">
+                    ADMINISTRACIÓN ORAL DE CARGA DE GLUCOSA (DEXTROSA ANHIDRA)
+                  </div>
                 </div>
 
-                <div>
-                  <h4 className="font-medium text-medical-blue mb-2">DESCRIPCIÓN DEL PROCEDIMIENTO:</h4>
-                  <p className="text-justify mb-2">
-                    La Prueba de Tolerancia a la Glucosa Oral es un examen que mide la capacidad del organismo para metabolizar 
-                    la glucosa. Consiste en la administración oral de una solución que contiene 75 gramos de glucosa anhidra 
-                    disuelta en agua, seguida de la medición de los niveles de glucemia en sangre en diferentes momentos.
-                  </p>
+                {/* Descripción */}
+                <div className="border border-gray-300">
+                  <div className="bg-gray-100 p-2 border-b border-gray-300">
+                    <h4 className="font-bold text-center">DESCRIPCIÓN DEL PROCEDIMIENTO</h4>
+                  </div>
+                  <div className="p-3 text-sm">
+                    Consiste en suministrar vía oral una bebida que contiene una cantidad estandarizada de glucosa (dextrosa anhidra) que servirá para la evaluación de su diagnóstico. No se debe realizar este procedimiento si el paciente está indispuesto, o ha presentado episodios de fiebre, vómito o diarrea en las 24 horas anteriores a la toma de la muestra.
+                  </div>
                 </div>
 
-                <div>
-                  <h4 className="font-medium text-medical-blue mb-2">PREPARACIÓN:</h4>
-                  <ul className="list-disc list-inside space-y-1 ml-4 text-justify">
-                    <li>Ayuno de 8 a 12 horas (únicamente se permite el consumo de agua)</li>
-                    <li>Mantener dieta habitual durante los 3 días previos al examen</li>
-                    <li>No consumir medicamentos que puedan alterar la glucemia, salvo indicación médica</li>
-                    <li>Evitar ejercicio físico intenso antes del examen</li>
-                    <li>No fumar durante el procedimiento</li>
-                  </ul>
+                {/* Propósito */}
+                <div className="border border-gray-300">
+                  <div className="bg-gray-100 p-2 border-b border-gray-300">
+                    <h4 className="font-bold text-center">PROPÓSITO</h4>
+                  </div>
+                  <div className="p-3 text-sm">
+                    Analizar los niveles de azúcar en sangre y la reacción del organismo a la ingesta de la carga de glucosa.
+                  </div>
                 </div>
 
-                <div>
-                  <h4 className="font-medium text-medical-blue mb-2">PROCEDIMIENTO:</h4>
-                  <ol className="list-decimal list-inside space-y-1 ml-4 text-justify">
-                    <li>Toma de muestra de sangre en ayunas (glucemia basal)</li>
-                    <li>Administración de 75g de glucosa anhidra en 250-300 ml de agua</li>
-                    <li>El paciente debe permanecer en reposo en el laboratorio</li>
-                    <li>Toma de muestra de sangre a los 120 minutos post-carga</li>
-                  </ol>
+                {/* Beneficios */}
+                <div className="border border-gray-300">
+                  <div className="bg-gray-100 p-2 border-b border-gray-300">
+                    <h4 className="font-bold text-center">BENEFICIOS ESPERADOS</h4>
+                  </div>
+                  <div className="p-3 text-sm">
+                    Orientar y/o confirmar un diagnóstico frente a los niveles de glucosa en el paciente o cómo la está procesando el organismo. Seguimiento de una enfermedad o condición en salud.
+                  </div>
                 </div>
 
-                <div>
-                  <h4 className="font-medium text-medical-blue mb-2">RIESGOS Y COMPLICACIONES:</h4>
-                  <ul className="list-disc list-inside space-y-1 ml-4 text-justify">
-                    <li>Náuseas y/o vómito relacionados con la ingesta de la solución glucosada</li>
-                    <li>Malestar abdominal transitorio</li>
-                    <li>Mareos o sensación de debilidad (poco frecuente)</li>
-                    <li>Dolor, hematoma o infección en el sitio de punción venosa</li>
-                    <li>Reacciones adversas excepcionales que requieran atención médica inmediata</li>
-                  </ul>
+                {/* Riesgos */}
+                <div className="border border-gray-300">
+                  <div className="bg-gray-100 p-2 border-b border-gray-300">
+                    <h4 className="font-bold text-center">RIESGOS Y POSIBLES COMPLICACIONES</h4>
+                  </div>
+                  <div className="p-3 text-sm">
+                    Malestar, náuseas, vómito, diarrea, mareo o reacciones alérgicas, urticaria o asma. <strong>Si el paciente es diabético, debe informar previamente y sólo se administrará bajo prescripción médica.</strong>
+                  </div>
                 </div>
 
-                <div>
-                  <h4 className="font-medium text-medical-blue mb-2">VALORES DE REFERENCIA PARA ADULTOS:</h4>
-                  <div className="bg-white p-4 rounded border">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <p className="font-medium">Glucemia en Ayunas:</p>
-                        <p>• Normal: &lt; 100 mg/dL</p>
-                        <p>• Glucemia alterada en ayunas: 100-125 mg/dL</p>
-                        <p>• Diabetes Mellitus: ≥ 126 mg/dL</p>
-                      </div>
-                      <div>
-                        <p className="font-medium">Glucemia a las 2 horas:</p>
-                        <p>• Normal: &lt; 140 mg/dL</p>
-                        <p>• Intolerancia a la glucosa: 140-199 mg/dL</p>
-                        <p>• Diabetes Mellitus: ≥ 200 mg/dL</p>
-                      </div>
+                {/* Implicaciones */}
+                <div className="border border-gray-300">
+                  <div className="bg-gray-100 p-2 border-b border-gray-300">
+                    <h4 className="font-bold text-center">IMPLICACIONES</h4>
+                  </div>
+                  <div className="p-3 text-sm">
+                    Tiempo de permanencia en el laboratorio es de dos (2) a tres (3) horas dependiendo el examen solicitado (curva o glicemia pre y pos carga), múltiples punciones por el número de muestras requeridas.
+                  </div>
+                </div>
+
+                {/* Efectos Inevitables */}
+                <div className="border border-gray-300">
+                  <div className="bg-gray-100 p-2 border-b border-gray-300">
+                    <h4 className="font-bold text-center">EFECTOS INEVITABLES</h4>
+                  </div>
+                  <div className="p-3 text-sm">
+                    Náuseas o molestia por el sabor azucarado
+                  </div>
+                </div>
+
+                {/* Alternativas */}
+                <div className="border border-gray-300">
+                  <div className="grid grid-cols-2">
+                    <div className="bg-gray-100 p-2 border-r border-gray-300">
+                      <h4 className="font-bold text-center">ALTERNATIVAS RAZONABLES A ESTE PROCEDIMIENTO</h4>
+                    </div>
+                    <div className="p-3 text-sm">
+                      Ninguna
                     </div>
                   </div>
                 </div>
 
-                <div className="border-t pt-4">
-                  <p className="text-justify text-xs">
-                    <strong>DECLARACIÓN:</strong> Declaro que he leído y comprendido completamente este documento, 
-                    que mis preguntas han sido respondidas satisfactoriamente y que entiendo los beneficios, 
-                    riesgos y alternativas del procedimiento. Entiendo que ningún procedimiento está exento de riesgos.
-                  </p>
+                {/* Consecuencias */}
+                <div className="border border-gray-300">
+                  <div className="grid grid-cols-2">
+                    <div className="bg-gray-100 p-2 border-r border-gray-300">
+                      <h4 className="font-bold text-center">POSIBLES CONSECUENCIAS EN CASO QUE DECIDA NO ACEPTAR EL PROCEDIMIENTO</h4>
+                    </div>
+                    <div className="p-3 text-sm">
+                      Impide a los médicos tratantes tener información valiosa para determinar, confirmar o ajustar el diagnóstico y tratamiento médico
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
