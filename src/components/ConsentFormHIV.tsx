@@ -10,6 +10,7 @@ import { AlertTriangle, Download, ArrowLeft, TestTube, Camera, AlertCircle, Chev
 import { toast } from 'sonner';
 import { SignaturePad } from './SignaturePad';
 import { CameraCapture } from './CameraCapture';
+import { ProfessionalSelector } from './ProfessionalSelector';
 import { generateHIVPDF } from '@/utils/pdfGeneratorHIV';
 
 interface PatientData {
@@ -87,6 +88,25 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
       console.error('Error generating PDF:', error);
       toast.error('Error al generar el PDF');
     }
+  };
+
+  const handleProfessionalSelect = (professional: any) => {
+    setProfessionalData({
+      name: professional.name,
+      document: professional.document
+    });
+    if (professional.signatureData) {
+      setProfessionalSignature(professional.signatureData);
+      toast.success("Firma del profesional cargada automáticamente");
+    }
+  };
+
+  const handleNewProfessional = () => {
+    setProfessionalData({
+      name: '',
+      document: ''
+    });
+    setProfessionalSignature(null);
   };
 
   return (
@@ -398,6 +418,15 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
                 <div>
                   <h3 className="text-blue-600 font-medium text-lg mb-1">Firma del Profesional *</h3>
                   <p className="text-gray-500 text-sm mb-4">Profesional Registrado</p>
+                </div>
+                
+                {/* Professional Selector */}
+                <div className="mb-4">
+                  <ProfessionalSelector 
+                    onProfessionalSelect={handleProfessionalSelect}
+                    onNewProfessional={handleNewProfessional}
+                    selectedDocument={professionalData.document}
+                  />
                 </div>
                 
                 {/* Professional Information Display */}
