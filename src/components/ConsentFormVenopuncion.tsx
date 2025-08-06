@@ -459,10 +459,28 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         </CardHeader>
         <CardContent className="space-y-4">
           {!showProfessionalForm ? (
-            <ProfessionalSelector
-              onProfessionalSelect={handleProfessionalSelect}
-              onNewProfessional={handleNewProfessional}
-            />
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="professionalName">Nombre del Profesional *</Label>
+                  <Input
+                    id="professionalName"
+                    value={professionalName}
+                    onChange={(e) => setProfessionalName(e.target.value)}
+                    placeholder="Nombre completo del profesional"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="professionalDocument">Documento del Profesional *</Label>
+                  <Input
+                    id="professionalDocument"
+                    value={professionalDocument}
+                    onChange={(e) => setProfessionalDocument(e.target.value)}
+                    placeholder="Número de documento"
+                  />
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="space-y-4">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -485,13 +503,6 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
                   />
                 </div>
               </div>
-              <Button
-                variant="outline"
-                onClick={() => setShowProfessionalForm(false)}
-                className="border-medical-blue/30 text-medical-blue"
-              >
-                Seleccionar Profesional Existente
-              </Button>
             </div>
           )}
 
@@ -531,6 +542,13 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
               <Label className="text-medical-blue font-medium">
                 Firma del Profesional *
               </Label>
+              <div className="mb-3">
+                <ProfessionalSelector
+                  onProfessionalSelect={handleProfessionalSelect}
+                  onNewProfessional={handleNewProfessional}
+                  selectedDocument={professionalDocument}
+                />
+              </div>
               <div className="border rounded-lg p-4 bg-gray-50">
                 <SignaturePad 
                   ref={professionalSignatureRef} 
