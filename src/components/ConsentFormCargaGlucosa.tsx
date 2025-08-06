@@ -149,7 +149,12 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
   };
 
   const generatePDF = async () => {
-    if (!validateForm()) return;
+    console.log("Iniciando generación de PDF...");
+    
+    if (!validateForm()) {
+      console.log("Validación de formulario falló");
+      return;
+    }
 
     setIsGeneratingPDF(true);
 
@@ -158,6 +163,8 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
       const date = currentDate.toLocaleDateString('es-CO');
       const time = currentDate.toLocaleTimeString('es-CO');
 
+      console.log("Preparando datos del PDF...");
+      
       const pdfData = {
         patientData,
         guardianData: isMinor ? {
@@ -176,17 +183,22 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         time
       };
 
+      console.log("Generando PDF con los datos:", pdfData);
+      
       const pdf = generateCargaGlucosaPDF(pdfData);
+      
+      console.log("PDF generado exitosamente, iniciando descarga...");
       
       // Download PDF directly
       const fileName = `consentimiento_carga_glucosa_${patientData.numeroDocumento}_${Date.now()}.pdf`;
       pdf.save(fileName);
 
-      toast.success("PDF generado exitosamente");
+      toast.success("PDF generado y descargado exitosamente");
+      console.log("PDF descargado:", fileName);
 
     } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast.error("Error al generar el PDF");
+      console.error("Error detallado al generar PDF:", error);
+      toast.error(`Error al generar el PDF: ${error instanceof Error ? error.message : 'Error desconocido'}`);
     } finally {
       setIsGeneratingPDF(false);
     }
