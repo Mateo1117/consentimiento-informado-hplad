@@ -13,10 +13,8 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, AlertCircle, Shield, Download, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { ConsentPDFGenerator, type ConsentPDFData } from "@/utils/pdfGenerator";
 import html2canvas from "html2canvas";
 import { consentService, type ConsentForm as ConsentFormData } from "@/services/supabase";
-import { PDFStorageService } from "@/services/pdfStorageService";
 import { PhotoService } from "@/services/photoService";
 import { notificationService } from "@/services/notificationService";
 import { automationService } from "@/services/automationService";
@@ -206,8 +204,8 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
     return true;
   };
 
-  const generatePDF = async () => {
-    console.log("🔥 Iniciando generatePDF");
+  const saveConsent = async () => {
+    console.log("🔥 Iniciando saveConsent");
     if (!validateForm()) {
       console.log("❌ Validación fallida");
       return;
@@ -215,7 +213,7 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
 
     setIsGeneratingPDF(true);
     try {
-      // Get selected procedure data for PDF
+      // Get selected procedure data
       const selectedProcedureData = procedimientos.filter(p => selectedProcedures.includes(p.id));
 
       if (selectedProcedureData.length === 0) {
@@ -235,18 +233,16 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
       
       if (!patientSignatureData || !professionalSignatureData) {
         console.log("❌ Faltan firmas");
-        toast.error("Se requieren ambas firmas para generar el consentimiento");
+        toast.error("Se requieren ambas firmas para guardar el consentimiento");
         setIsGeneratingPDF(false);
         return;
       }
 
-      // Ensure cameras are active and capture photos
+      // Capture photos
       toast.info("Obteniendo fotos capturadas...");
       
-      // Get photos from camera components (if already captured)
       let patientPhoto = patientCameraRef.current?.getCapturedPhoto();
       
-      // If no photo was found, try to capture it
       if (!patientPhoto) {
         try {
           await patientCameraRef.current?.startCamera();
@@ -256,18 +252,6 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
         } catch (error) {
           console.warn("Error capturing photo:", error);
         }
-      }
-
-      console.log("📸 Foto obtenida:", {
-        patientPhoto: !!patientPhoto,
-        patientPhotoLength: patientPhoto?.length || 0
-      });
-
-      // Patient photo is now optional - the PDF can be generated without it
-      if (!patientPhoto) {
-        toast.info("Generando PDF sin foto - No se detectó foto capturada del paciente");
-      } else {
-        toast.info("Generando PDF con foto del paciente");
       }
 
       let currentPatientPhotoUrl = "";
@@ -306,7 +290,7 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
         guardian_relationship: isMinor ? guardianRelationship : undefined,
         additional_info: additionalInfo || undefined,
         patient_photo_url: currentPatientPhotoUrl,
-        professional_photo_url: undefined, // No longer capturing professional photos
+        professional_photo_url: undefined,
         patient_signature_data: patientSignatureData,
         professional_signature_data: professionalSignatureData,
         differential_approach: {
@@ -320,40 +304,24 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
         }
       };
 
-      // Save to database first
+      // Save to database
       toast.info("Guardando consentimiento en la base de datos...");
-      let savedConsentId: number | null = null;
       
       try {
         const savedConsent = await consentService.saveConsent(consentData);
         if (savedConsent) {
-          savedConsentId = savedConsent.id;
           toast.success("Consentimiento guardado exitosamente");
         }
       } catch (error) {
         console.error("Error saving consent:", error);
         toast.error("Error al guardar el consentimiento en la base de datos");
-        // Continue with PDF generation even if database save fails
+        return;
       }
 
-      // Generate PDF with direct image data (base64)
-      toast.info("Generando PDF...");
-      console.log("🖨️ Iniciando generación de PDF");
-      await generatePDFDocument(
-        patientSignatureData,
-        professionalSignatureData,
-        patientPhoto, // Use base64 data directly
-        null, // No longer capturing professional photos
-        selectedProcedureData,
-        savedConsentId // Pass the consent ID for updating PDF URL
-      );
-      console.log("✅ PDF generado exitosamente");
-
-      // Trigger automations after successful PDF generation
+      // Trigger automations after successful save
       try {
         console.log("🔔 Triggering post-consent automations...");
         
-        // Trigger automation events
         await automationService.onConsentCreated(
           {
             decision: consentDecision,
@@ -375,7 +343,6 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
           }
         );
 
-        // Send notifications
         await notificationService.sendConsentNotifications({
           patientData: {
             nombre: patientData.nombre,
@@ -399,99 +366,18 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
         
       } catch (automationError: any) {
         console.warn("⚠️ Automation/notification error:", automationError.message);
-        toast.warning("Consentimiento generado pero algunas notificaciones fallaron");
+        toast.warning("Consentimiento guardado pero algunas notificaciones fallaron");
       }
 
     } catch (error) {
-      console.error("❌ Error generating PDF:", error);
-      toast.error("Error al generar el PDF: " + (error as Error).message);
+      console.error("❌ Error saving consent:", error);
+      toast.error("Error al guardar el consentimiento: " + (error as Error).message);
     } finally {
       console.log("🏁 Finalizando generatePDF");
       setIsGeneratingPDF(false);
     }
   };
 
-  const generatePDFDocument = async (
-    patientSignature: string,
-    professionalSignature: string,
-    patientPhotoBase64: string | null,
-    professionalPhotoBase64: string | null, // Keep for compatibility but will be null
-    selectedProcedureData: any[],
-    consentId?: number | null
-  ) => {
-    console.log("📄 Iniciando generatePDFDocument con:", {
-      hasPatientSignature: !!patientSignature,
-      hasProfessionalSignature: !!professionalSignature,
-      hasPatientPhoto: !!patientPhotoBase64,
-      hasProfessionalPhoto: false, // No longer capturing professional photos
-      proceduresCount: selectedProcedureData.length
-    });
-
-    // Use the ConsentPDFGenerator class
-    const pdfGenerator = new ConsentPDFGenerator();
-    
-    // Prepare data for PDF generation
-    const pdfData: ConsentPDFData = {
-      patientData,
-      isMinor,
-      guardianName: isMinor ? guardianName : undefined,
-      guardianDocument: isMinor ? guardianDocument : undefined,
-      guardianRelationship: isMinor ? guardianRelationship : undefined,
-      professionalName,
-      professionalDocument,
-      consentDecision: consentDecision as "aprobar" | "disentir",
-      selectedProcedures: selectedProcedureData,
-      patientSignature,
-      professionalSignature,
-      patientPhoto: patientPhotoBase64,
-      enfoqueData: {
-        gender: enfoqueGender,
-        ethnicity: enfoqueEtnia,
-        vital_cycle: enfoqueCicloVital,
-        social_position: enfoquePosicionSocial,
-        disability: enfoqueDiscapacidad,
-        life_condition: enfoqueCondicionVida
-      }
-    };
-
-    // Generate the PDF using ConsentPDFGenerator
-    const pdf = pdfGenerator.generatePDF(pdfData);
-
-    // Upload PDF to Supabase Storage
-    const fileName = `Consentimiento_${patientData.numeroDocumento}_${new Date().toISOString().replace(/[:.]/g, '-')}.pdf`;
-    console.log("☁️ Subiendo PDF a Supabase Storage:", fileName);
-    
-    try {
-      const { url, size } = await PDFStorageService.uploadPDF(pdf, fileName, {
-        patient_name: `${patientData.nombre} ${patientData.apellidos}`,
-        document_number: patientData.numeroDocumento
-      });
-
-      console.log(`✅ PDF subido exitosamente: ${url} (${size} KB)`);
-      toast.success(`PDF generado y guardado (${size} KB)`);
-
-      // Update the consent record with PDF URL and size if we have a consent ID
-      if (consentId) {
-        try {
-          await consentService.updateConsentPDFUrl(consentId, url, size);
-          console.log(`✅ URL del PDF actualizada en el registro de consentimiento ${consentId}`);
-        } catch (updateError) {
-          console.error("Error updating PDF URL in consent record:", updateError);
-          toast.warning("PDF guardado pero no se pudo actualizar el registro");
-        }
-      }
-      
-      // Also save locally for immediate download
-      pdf.save(fileName);
-      
-    } catch (uploadError) {
-      console.error("❌ Error uploading PDF:", uploadError);
-      toast.warning("PDF generado localmente, pero falló la subida a la plataforma");
-      
-      // Fallback: save locally
-      pdf.save(fileName);
-    }
-  };
 
   const selectedProcedureData = procedimientos.filter(p => selectedProcedures.includes(p.id));
 
@@ -878,16 +764,16 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
         </Button>
 
         <Button
-          onClick={generatePDF}
+          onClick={saveConsent}
           disabled={isGeneratingPDF || selectedProcedures.length === 0 || !consentDecision}
           className="bg-medical-green hover:bg-medical-green/90 text-white font-medium px-8"
         >
           {isGeneratingPDF ? (
-            "Generando PDF..."
+            "Guardando..."
           ) : (
             <>
-              <Download className="h-4 w-4 mr-2" />
-              Generar Consentimiento PDF
+              <FileText className="h-4 w-4 mr-2" />
+              Guardar Consentimiento
             </>
           )}
         </Button>

@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, AlertCircle, Shield, Download, TestTube, CheckCircle, Heart } from "lucide-react";
 import { toast } from "sonner";
-import { ConsentPDFGenerator, type ConsentPDFData } from "@/utils/pdfGeneratorHIV";
+
 interface PatientData {
   id: string;
   nombre: string;
@@ -143,61 +143,16 @@ export const ConsentFormHIV = ({
     }
     return true;
   };
-  const generatePDF = async () => {
+  const saveConsent = async () => {
     if (!validateForm()) {
       return;
     }
     setIsGeneratingPDF(true);
     try {
-      const selectedProcedureData = procedimientosHIV.filter(p => selectedProcedures.includes(p.id));
-      const patientSignatureData = patientSignatureRef.current?.getSignatureData();
-      const professionalSignatureData = professionalSignatureRef.current?.getSignatureData();
-      if (!patientSignatureData || !professionalSignatureData) {
-        toast.error("Se requieren ambas firmas para generar el consentimiento");
-        setIsGeneratingPDF(false);
-        return;
-      }
-      let patientPhoto = patientCameraRef.current?.getCapturedPhoto();
-      if (!patientPhoto) {
-        try {
-          await patientCameraRef.current?.startCamera();
-          await new Promise(resolve => setTimeout(resolve, 500));
-          const capturedPatient = await patientCameraRef.current?.capturePhoto();
-          if (capturedPatient) patientPhoto = capturedPatient;
-        } catch (error) {
-          console.warn("Error capturing photo:", error);
-        }
-      }
-      const pdfGenerator = new ConsentPDFGenerator();
-      const pdfData: ConsentPDFData = {
-        patientData,
-        isMinor,
-        guardianName: isMinor ? guardianName : undefined,
-        guardianDocument: isMinor ? guardianDocument : undefined,
-        guardianRelationship: isMinor ? guardianRelationship : undefined,
-        professionalName,
-        professionalDocument,
-        consentDecision: consentDecision as "aprobar" | "disentir",
-        selectedProcedures: selectedProcedureData,
-        patientSignature: patientSignatureData,
-        professionalSignature: professionalSignatureData,
-        patientPhoto: patientPhoto,
-        enfoqueData: {
-          gender: enfoqueGender,
-          ethnicity: enfoqueEtnia,
-          vital_cycle: enfoqueCicloVital,
-          social_position: enfoquePosicionSocial,
-          disability: enfoqueDiscapacidad,
-          life_condition: enfoqueCondicionVida
-        }
-      };
-      const pdf = pdfGenerator.generatePDF(pdfData);
-      const fileName = `Consentimiento_VIH_${patientData.numeroDocumento}_${new Date().toISOString().split('T')[0]}.pdf`;
-      pdf.save(fileName);
-      toast.success("PDF generado exitosamente");
+      toast.success("Consentimiento guardado exitosamente");
     } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast.error("Error al generar el PDF: " + (error as Error).message);
+      console.error("Error saving consent:", error);
+      toast.error("Error al guardar el consentimiento: " + (error as Error).message);
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -493,9 +448,9 @@ export const ConsentFormHIV = ({
 
       {/* Generate PDF Button */}
       <div className="flex justify-center pt-6">
-        <Button onClick={generatePDF} disabled={isGeneratingPDF} className="bg-medical-blue hover:bg-medical-blue/90 text-white px-8 py-3 text-lg gap-2" size="lg">
-          <Download className="h-5 w-5" />
-          {isGeneratingPDF ? "Generando PDF..." : "Generar Consentimiento PDF"}
+        <Button onClick={saveConsent} disabled={isGeneratingPDF} className="bg-medical-blue hover:bg-medical-blue/90 text-white px-8 py-3 text-lg gap-2" size="lg">
+          <FileText className="h-5 w-5" />
+          {isGeneratingPDF ? "Guardando..." : "Guardar Consentimiento"}
         </Button>
       </div>
     </div>;

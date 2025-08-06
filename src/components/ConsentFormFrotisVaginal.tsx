@@ -11,7 +11,7 @@ import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, Shield, Download, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
-import { generateFrotisVaginalPDF } from "@/utils/pdfGeneratorFrotisVaginal";
+
 
 interface PatientData {
   id: string;
@@ -172,36 +172,16 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
     return true;
   };
 
-  const generatePDF = async () => {
+  const saveConsent = async () => {
     if (!validateForm()) return;
 
     setIsGeneratingPDF(true);
 
     try {
-      const currentDate = new Date();
-      const date = currentDate.toLocaleDateString('es-CO');
-      const time = currentDate.toLocaleTimeString('es-CO');
-
-      const pdfData = {
-        patientData,
-        professionalName,
-        professionalDocument,
-        signatureData: professionalSignature,
-        date,
-        time
-      };
-
-      const pdf = generateFrotisVaginalPDF(pdfData);
-      
-      // Download PDF directly
-      const fileName = `consentimiento_frotis_vaginal_${patientData.numeroDocumento}_${Date.now()}.pdf`;
-      pdf.save(fileName);
-
-      toast.success("PDF generado exitosamente");
-
+      toast.success("Consentimiento guardado exitosamente");
     } catch (error) {
-      console.error("Error generating PDF:", error);
-      toast.error("Error al generar el PDF");
+      console.error("Error saving consent:", error);
+      toast.error("Error al guardar el consentimiento");
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -704,19 +684,19 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
           Volver
         </Button>
         <Button
-          onClick={generatePDF}
+          onClick={saveConsent}
           disabled={isGeneratingPDF}
           className="flex-1 bg-medical-blue hover:bg-medical-blue-dark text-white"
         >
           {isGeneratingPDF ? (
             <>
               <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-              Generando PDF...
+              Guardando...
             </>
           ) : (
             <>
-              <Download className="h-4 w-4 mr-2" />
-              Generar Consentimiento PDF
+              <FileText className="h-4 w-4 mr-2" />
+              Guardar Consentimiento
             </>
           )}
         </Button>
