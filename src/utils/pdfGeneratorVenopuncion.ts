@@ -60,63 +60,49 @@ export class VenopuncionPDFGenerator {
     this.drawGuardianData(data);
     this.drawProcedureData();
     this.drawConsentText();
+    this.drawDissentSection();
     this.drawSignatures(data);
     
     return this.pdf;
   }
 
   private drawHeader(data: VenopuncionPDFData) {
-    // Hospital logo and header
+    // Hospital header
+    this.pdf.setFontSize(10);
+    this.pdf.setFont('helvetica', 'bold');
+    
+    // Hospital name and logo area
+    this.pdf.text('E.S.E HOSPITAL LA MESA', this.pageWidth/2 - 30, this.margin + 8);
     this.pdf.setFontSize(8);
-    this.pdf.setFont('helvetica', 'bold');
+    this.pdf.text('PEDRO LEÓN ÁLVAREZ DÍAZ', this.pageWidth/2 - 25, this.margin + 12);
     
-    // Draw main border rectangle for header
-    this.pdf.rect(this.margin, this.margin, this.pageWidth - 2 * this.margin, 25);
+    // Format title
+    this.pdf.setFontSize(12);
+    this.pdf.text('FORMATO 37', this.pageWidth/2 - 15, this.margin + 20);
+    this.pdf.setFontSize(10);
+    this.pdf.text('CONSENTIMIENTO INFORMADO', this.pageWidth/2 - 30, this.margin + 25);
+    this.pdf.text('PARA TOMA DE MUESTRAS POR VENOPUNCIÓN', this.pageWidth/2 - 45, this.margin + 30);
     
-    // Left section - Hospital info
-    const leftBoxWidth = 50;
-    this.pdf.rect(this.margin, this.margin, leftBoxWidth, 25);
-    
-    this.pdf.setFontSize(9);
-    this.pdf.text('E.S.E', this.margin + 15, this.margin + 6);
-    this.pdf.text('HOSPITAL', this.margin + 10, this.margin + 10);
-    this.pdf.text('LA MESA', this.margin + 12, this.margin + 14);
+    // Contact info
     this.pdf.setFontSize(7);
-    this.pdf.text('PEDRO LEÓN ÁLVAREZ DÍAZ', this.margin + 2, this.margin + 18);
+    this.pdf.setFont('helvetica', 'normal');
+    this.pdf.text('La Mesa – Cundinamarca, Calle 8 No. 25 – 34', this.pageWidth/2 - 35, this.margin + 37);
+    this.pdf.text('Call Center: 3172601556 | Email: atencionalusuario@hospilamesa.gov.co', this.pageWidth/2 - 50, this.margin + 41);
     
-    // Center section - Format title
-    const centerX = this.margin + leftBoxWidth;
-    const centerWidth = this.pageWidth - 2 * this.margin - leftBoxWidth - 50;
-    this.pdf.rect(centerX, this.margin, centerWidth, 25);
+    // Code table in top right
+    const codeBoxX = this.pageWidth - this.margin - 40;
+    const codeBoxY = this.margin;
+    this.pdf.rect(codeBoxX, codeBoxY, 40, 20);
     
-    this.pdf.setFontSize(9);
-    this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('FORMATO 119', centerX + centerWidth/2 - 15, this.margin + 6);
-    this.pdf.text('CONSENTIMIENTO INFORMADO', centerX + centerWidth/2 - 25, this.margin + 10);
-    this.pdf.text('PARA TOMA DE MUESTRAS POR VENOPUNCIÓN', centerX + centerWidth/2 - 35, this.margin + 14);
-    
-    // Right section - Code table
-    const rightX = this.pageWidth - this.margin - 50;
-    this.pdf.rect(rightX, this.margin, 50, 25);
-    
-    // Code sub-sections
-    this.pdf.rect(rightX, this.margin, 25, 8);
-    this.pdf.rect(rightX + 25, this.margin, 25, 8);
     this.pdf.setFontSize(6);
-    this.pdf.text('Código', rightX + 2, this.margin + 5);
-    this.pdf.text('SC-M-09.119', rightX + 27, this.margin + 5);
+    this.pdf.text('Código: SC-M-09.37', codeBoxX + 2, codeBoxY + 5);
+    this.pdf.text('Versión: 02', codeBoxX + 2, codeBoxY + 9);
+    this.pdf.text('Fecha: 28-12-2022', codeBoxX + 2, codeBoxY + 13);
     
-    this.pdf.rect(rightX, this.margin + 8, 25, 8);
-    this.pdf.rect(rightX + 25, this.margin + 8, 25, 8);
-    this.pdf.text('Versión', rightX + 2, this.margin + 13);
-    this.pdf.text('01', rightX + 27, this.margin + 13);
+    // Separator line
+    this.pdf.line(this.margin, this.margin + 47, this.pageWidth - this.margin, this.margin + 47);
     
-    this.pdf.rect(rightX, this.margin + 16, 25, 9);
-    this.pdf.rect(rightX + 25, this.margin + 16, 25, 9);
-    this.pdf.text('Fecha', rightX + 2, this.margin + 21);
-    this.pdf.text('20-10-2024', rightX + 26, this.margin + 21);
-    
-    this.currentY = this.margin + 30;
+    this.currentY = this.margin + 52;
   }
 
   private drawPatientData(data: VenopuncionPDFData) {
@@ -281,31 +267,39 @@ export class VenopuncionPDFGenerator {
       },
       {
         label: 'DESCRIPCIÓN DEL PROCEDIMIENTO',
-        value: 'La venopunción es un procedimiento médico que consiste en la introducción de una aguja en una vena para extraer sangre que será analizada en el laboratorio. Se realiza previa asepsia de la zona y utilizando material estéril.'
+        value: 'Consiste en puncionar una vena, -generalmente de la zona central del antebrazo-, con una aguja estéril unida a un tubo colector para extraer o sacar una muestra de sangre.'
       },
       {
         label: 'PROPÓSITO',
-        value: 'Obtener muestras sanguíneas para la realización de análisis clínicos que permitan el diagnóstico, seguimiento o control de enfermedades.'
+        value: 'Analizar las muestras sanguíneas mediante pruebas de laboratorio clínico solicitadas por el médico tratante.'
       },
       {
         label: 'BENEFICIOS ESPERADOS',
-        value: 'Permite obtener información diagnóstica valiosa, detectar enfermedades tempranamente y hacer seguimiento a tratamientos médicos.'
+        value: 'Los resultados de la muestras permiten orientar y/o confirmar un diagnóstico y realizar el seguimiento de una enfermedad o condición en salud, evaluar la presencia o ausencia de algunas sustancias químicas, o dar pautas para el tratamiento.'
       },
       {
-        label: 'RIESGOS POSIBLES COMPLICACIONES',
-        value: 'Dolor leve en el sitio de punción, formación de hematomas, sangrado prolongado, infección localizada (muy poco frecuente), reacciones vasovagales (mareo, desmayo).'
+        label: 'RIESGOS',
+        value: 'Sangrado excesivo, desmayo o sensación de mareo.'
       },
       {
         label: 'IMPLICACIONES',
-        value: 'Molestia temporal en el sitio de punción, posible formación de pequeño hematoma que se resuelve espontáneamente en pocos días.'
+        value: 'Hematoma (acumulación de sangre debajo de la piel que se pone de color morado a negro), infección por la ruptura de la piel, punciones múltiples para localizar las venas, punción traumática.'
+      },
+      {
+        label: 'EFECTOS INEVITABLES',
+        value: 'Dolor en el sitio de punción, molestia por la presión ejercida con el torniquete, impresión fuerte al observar la sangre en el tubo contenedor.'
       },
       {
         label: 'ALTERNATIVAS RAZONABLES A ESTE PROCEDIMIENTO',
-        value: 'Según el examen solicitado, puede considerarse punción capilar (en dedo) para algunos análisis básicos.'
+        value: 'Ninguna.'
       },
       {
         label: 'POSIBLES CONSECUENCIAS EN CASO QUE DECIDA NO ACEPTAR EL PROCEDIMIENTO',
-        value: 'No se podrán realizar los análisis solicitados, lo que puede impedir o retrasar el diagnóstico y tratamiento médico adecuado.'
+        value: 'Impide a los médicos tratantes tener información valiosa para determinar, confirmar o ajustar su diagnóstico y tratamiento médico.'
+      },
+      {
+        label: 'RIESGOS EN FUNCIÓN DE LA SITUACIÓN CLÍNICA DEL PACIENTE',
+        value: '[Campo a completar según situación específica del paciente]'
       }
     ];
     
@@ -354,12 +348,11 @@ export class VenopuncionPDFGenerator {
     this.pdf.setFontSize(8);
     
     const consentTexts = [
-      'Yo, identificado(a) como aparece junto a mi firma/huella, hago constar que he recibido información clara relacionada con: Garantía de confidencialidad en que los mis datos responsable y demás información. Yo entiendo la naturaleza de la información proporcionada y la forma apropiada en que esta podrá ser comunicada a personas, o a las autoridades competentes según mi caso. También me informaron sobre el procedimiento en sí, su propósito, los beneficios esperados, los posibles riesgos o complicaciones en caso que decida no aceptar el procedimiento, las posibles molestias, la posibilidad de participación de personal en formación bajo supervisión.',
+      'Yo, identificado(a) como aparece junto a mi firma/huella, hago constar que he recibido información clara relacionada con: Garantía de confidencialidad de mis datos personales y demás información que yo entregue, con salvedad de la información que deba ser comunicada a personas, o a las autoridades competentes según mi caso. También me informaron sobre el procedimiento en sí, su propósito(s), los beneficios esperados, los posibles riesgos frecuentes o graves, las posibles consecuencias si decido no aceptar el procedimiento, las posibles molestias, la posibilidad de participación de personal en formación bajo supervisión.',
       '',
-      'Fui informado(a) también que: a) Puedo denegar mi consentimiento, sin que ello implique desmejora del trato que recibiré de parte del equipo de salud, b) puedo acceder a los servicios de salud en cualquier momento, aún luego de haber disentido.',
-      'En este momento este documento, aunque acepto será real(izados) la(s) intervención(es), puedo retirar mi consentimiento de manera parcial o total, cualquiera momento hasta el límite en donde el profesional, según su criterio técnico y científico y con justificar mi decisión; c) Que en caso tal que mi decisión sea anular o cancelar, mi consentimiento, dejaré constancia de ello por escrito firmado y con fecha del día.',
+      'Fui informado(a) también que: a) Puedo denegar mi consentimiento, sin que ello implique desmejora del trato que recibiré de parte del equipo de salud, y que puedo acceder a otros servicios en salud que requiera en tanto estén disponibles, b) Aunque firme en este momento este documento, aceptando me sea(n) realizada(s) la(s) intervención(es), puedo retirar mi consentimiento de manera parcial o total, en cualquier momento anterior a la realización de la intervención, y sin que para ello precise dar explicaciones o justificar mi decisión, c) Que en caso tal que mi decisión sea anular o cancelar, mi consentimiento, dejaré constancia de ella por escrito y firmada o con mi huella dactilar.',
       '',
-      'Actuando en nombre propio (X) y en calidad de representante legal ( ) de la(del) paciente cuyos nombres e identificación están registrados en el encabezado de este documento, autorizo al personal asistencial de esta institución, para que me/le realice el/los procedimiento(s) enseñida señalado(s) y, en caso de ser necesario, tome las medidas y conductas médicas necesarias para salvaguardar mi integridad física, de acuerdo a como se presenten las situaciones imprevistas en el curso del procedimiento.',
+      'Actuando en nombre propio [X] / en calidad de representante legal [ ] de la/del paciente cuyos nombres e identificación están registrados en el encabezado de este documento, autorizo al personal asistencial de esta institución, para que me/le realice el/los procedimiento(s) arriba señalado(s) y, en caso de ser necesario, tome las medidas y conductas médicas necesarias para salvaguardar mí integridad física, de acuerdo a como se presenten las situaciones imprevistas en el curso del procedimiento.',
       '',
       `En manifestación de aceptación firmo/pongo mi huella en este documento a los ${new Date().getDate()} días del mes de ${new Date().toLocaleDateString('es-ES', { month: 'long' })} de ${new Date().getFullYear()}`
     ];
@@ -374,6 +367,64 @@ export class VenopuncionPDFGenerator {
       const textHeight = lines.length * 4;
       
       if (this.currentY + textHeight > this.pageHeight - this.margin - 40) {
+        this.pdf.addPage();
+        this.currentY = this.margin;
+      }
+      
+      this.pdf.text(lines, this.margin + 2, this.currentY + 4);
+      this.currentY += textHeight;
+    }
+  }
+
+  private drawDissentSection() {
+    this.currentY += 10;
+    
+    // Check if we need a new page
+    if (this.currentY > this.pageHeight - 100) {
+      this.pdf.addPage();
+      this.currentY = this.margin;
+    }
+    
+    // Separator line
+    this.pdf.line(this.margin, this.currentY, this.pageWidth - this.margin, this.currentY);
+    this.currentY += 5;
+    
+    // Dissent section header
+    this.pdf.setFillColor(240, 240, 240);
+    this.pdf.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, 6, 'F');
+    
+    this.pdf.setFontSize(9);
+    this.pdf.setFont('helvetica', 'bold');
+    this.pdf.text('DECISIÓN DE DESISTIMIENTO', this.margin + 2, this.currentY + 4);
+    
+    this.currentY += 10;
+    
+    // Dissent text
+    this.pdf.setFont('helvetica', 'normal');
+    this.pdf.setFontSize(8);
+    
+    const dissentTexts = [
+      'Yo, ________________________, identificada(o) como aparece junto a mi firma/huella, actuando en nombre propio [X] / en calidad de representante legal [ ] de la/del paciente cuyo nombre e identificación están registrados en el encabezado de este documento, manifiesto -de forma libre, informada y consciente-, mi voluntad de retirar mi consentimiento respecto de la realización de la intervención/ del procedimiento arriba nombrado, que me/le había sido propuesta(o) realizarme (le). He sido informada(o) que, por causa de mi decisión, no cambia la disposición del equipo asistencial a proporcionarme (le) las alternativas de atención, con las limitaciones, que mi decisión genera; Manifiesto que me hago responsable de las consecuencias que puedan derivarse de esta decisión.',
+      '',
+      'En manifestación de aceptación firmo/pongo mi huella en este documento a los ______ días del mes de __________ de 20______',
+      '',
+      '_______________________________     ______________________________     ____________________________________',
+      'Firma paciente                      Firma Representante Legal           Nombre y documento de quien toma el',
+      '                                                                       consentimiento',
+      '',
+      'Documento: _____________________              Documento: ___________________              Documento: __________________________'
+    ];
+    
+    for (const text of dissentTexts) {
+      if (text === '') {
+        this.currentY += 3;
+        continue;
+      }
+      
+      const lines = this.pdf.splitTextToSize(text, this.pageWidth - 2 * this.margin - 4);
+      const textHeight = lines.length * 4;
+      
+      if (this.currentY + textHeight > this.pageHeight - this.margin - 20) {
         this.pdf.addPage();
         this.currentY = this.margin;
       }
