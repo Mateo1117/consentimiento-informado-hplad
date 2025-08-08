@@ -19,7 +19,7 @@ interface WebhookResponse {
 }
 
 class PatientApiService {
-  private webhookUrl: string = 'http://190.24.47.209:5678/webhook/consulta-paciente-consentimiento';
+  private webhookUrl: string = 'https://flow.mcmasociados.tech/webhook/G92PxmaZY4H2Mhbw/webhook4/consulta-paciente';
 
   constructor() {
     // Cargar configuración desde localStorage

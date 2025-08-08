@@ -41,7 +41,7 @@ export const ApiConfig = () => {
   const defaultEndpoints: ApiEndpoint[] = [
     {
       name: "consulta-paciente",
-      url: "http://190.24.47.209:5678/webhook-test/consulta-paciente-consentimiento",
+      url: "https://flow.mcmasociados.tech/webhook/G92PxmaZY4H2Mhbw/webhook4/consulta-paciente",
       description: "API para consultar información de pacientes por documento",
       method: "POST",
       status: "active"

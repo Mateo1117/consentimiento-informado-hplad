@@ -20,9 +20,21 @@ export const WebhookConfig = () => {
   const [newParamValue, setNewParamValue] = useState("");
 
   useEffect(() => {
-    // Obtener el webhook actual del servicio
-    const currentUrl = "http://190.24.47.209:5678/webhook-test/consulta-paciente-consentimiento";
-    setCurrentWebhook(currentUrl);
+    try {
+      const saved = localStorage.getItem('mcm_api_config');
+      if (saved) {
+        const config = JSON.parse(saved);
+        const ep = Array.isArray(config) ? config.find((e: any) => e.name === 'consulta-paciente') : null;
+        if (ep && ep.url) {
+          setCurrentWebhook(ep.url);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn('No se pudo cargar configuración local de API:', e);
+    }
+    // Fallback por defecto
+    setCurrentWebhook('https://flow.mcmasociados.tech/webhook/G92PxmaZY4H2Mhbw/webhook4/consulta-paciente');
   }, []);
 
   const copyToClipboard = (text: string) => {
@@ -72,12 +84,40 @@ export const WebhookConfig = () => {
       return;
     }
 
-    // Aquí actualizarías el servicio de patientApi
-    toast.success("Webhook actualizado correctamente");
-    toast.info("Reinicie la aplicación para aplicar los cambios");
-    setCurrentWebhook(newWebhook);
-    setNewWebhook("");
-    setTestResult(null);
+    try {
+      const key = 'mcm_api_config';
+      const saved = localStorage.getItem(key);
+      let endpoints: any[] = [];
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) endpoints = parsed;
+      }
+
+      // Actualizar o crear endpoint de consulta-paciente
+      const idx = endpoints.findIndex((e: any) => e.name === 'consulta-paciente');
+      const updatedEndpoint = {
+        name: 'consulta-paciente',
+        url: newWebhook.trim(),
+        description: 'API para consultar información de pacientes por documento',
+        method: 'POST',
+        status: 'active' as const,
+      };
+      if (idx >= 0) endpoints[idx] = { ...endpoints[idx], ...updatedEndpoint };
+      else endpoints.push(updatedEndpoint);
+
+      localStorage.setItem(key, JSON.stringify(endpoints));
+      // Notificar a los servicios que la config cambió
+      window.dispatchEvent(new CustomEvent('api-config-updated', { detail: { endpoints } }));
+
+      setCurrentWebhook(updatedEndpoint.url);
+      setNewWebhook('');
+      setTestResult(null);
+      toast.success('Webhook actualizado correctamente');
+    } catch (e) {
+      console.error('Error al actualizar webhook:', e);
+      toast.error('No se pudo guardar la configuración');
+      return;
+    }
   };
 
   const addTestParameter = () => {
