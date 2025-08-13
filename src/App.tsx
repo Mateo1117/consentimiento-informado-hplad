@@ -12,6 +12,7 @@ import ConsentManagement from "./pages/ConsentManagement";
 import AdminPanel from "./pages/AdminPanel";
 import Auth from "./pages/Auth";
 import DoctorRegistration from "./pages/DoctorRegistration";
+import { PublicConsentSigning } from "./pages/PublicConsentSigning";
 
 const queryClient = new QueryClient();
 
@@ -49,6 +50,7 @@ const App = () => (
                 <DoctorRegistration />
               </ProtectedRoute>
             } />
+            <Route path="/firmar/:token" element={<PublicConsentSigning />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

@@ -14,6 +14,72 @@ export type Database = {
   }
   public: {
     Tables: {
+      consents: {
+        Row: {
+          consent_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          patient_document_number: string | null
+          patient_document_type: string | null
+          patient_email: string | null
+          patient_name: string
+          patient_phone: string | null
+          patient_signature_data: string | null
+          payload: Json
+          pdf_size: number
+          pdf_url: string | null
+          share_expires_at: string | null
+          share_token: string
+          signed_at: string | null
+          signed_by_name: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          consent_type: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          patient_document_number?: string | null
+          patient_document_type?: string | null
+          patient_email?: string | null
+          patient_name: string
+          patient_phone?: string | null
+          patient_signature_data?: string | null
+          payload?: Json
+          pdf_size?: number
+          pdf_url?: string | null
+          share_expires_at?: string | null
+          share_token?: string
+          signed_at?: string | null
+          signed_by_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          consent_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          patient_document_number?: string | null
+          patient_document_type?: string | null
+          patient_email?: string | null
+          patient_name?: string
+          patient_phone?: string | null
+          patient_signature_data?: string | null
+          payload?: Json
+          pdf_size?: number
+          pdf_url?: string | null
+          share_expires_at?: string | null
+          share_token?: string
+          signed_at?: string | null
+          signed_by_name?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       professional_signatures: {
         Row: {
           created_at: string
@@ -85,7 +151,33 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_consent_by_token: {
+        Args: { p_token: string }
+        Returns: {
+          id: string
+          consent_type: string
+          payload: Json
+          patient_name: string
+          patient_document_type: string
+          patient_document_number: string
+          share_expires_at: string
+          status: string
+          signed_at: string
+          pdf_url: string
+        }[]
+      }
+      sign_consent_by_token: {
+        Args: {
+          p_token: string
+          p_signature_data: string
+          p_signed_by_name: string
+        }
+        Returns: {
+          id: string
+          signed_at: string
+          status: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
