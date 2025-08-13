@@ -37,7 +37,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
+import { consentService, type ConsentForm, isSupabaseConfigured } from "@/services/legacy-consent";
 import { format, subDays, subWeeks, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 
