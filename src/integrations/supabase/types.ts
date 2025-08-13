@@ -98,6 +98,7 @@ export type Database = {
       professional_signatures: {
         Row: {
           created_at: string
+          created_by: string | null
           id: string
           professional_document: string
           professional_name: string
@@ -106,6 +107,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          created_by?: string | null
           id?: string
           professional_document: string
           professional_name: string
@@ -114,6 +116,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          created_by?: string | null
           id?: string
           professional_document?: string
           professional_name?: string

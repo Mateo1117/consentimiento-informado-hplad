@@ -46,7 +46,13 @@ export interface ProfessionalSignature {
 export class ProfessionalSignatureService {
   static async saveSignature(signature: Omit<ProfessionalSignature, 'id' | 'created_at' | 'updated_at'>): Promise<ProfessionalSignature | null> {
     try {
-      // First, try to update existing signature
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('User not authenticated');
+        return null;
+      }
+
+      // First, try to update existing signature for this user
       const { data: existingData, error: updateError } = await supabase
         .from('professional_signatures')
         .update({
@@ -55,6 +61,7 @@ export class ProfessionalSignatureService {
           updated_at: new Date().toISOString()
         })
         .eq('professional_document', signature.professional_document)
+        .eq('created_by', user.id)
         .select()
         .single();
 
@@ -65,7 +72,10 @@ export class ProfessionalSignatureService {
       // If update failed (no existing record), insert new signature
       const { data, error } = await supabase
         .from('professional_signatures')
-        .insert([signature])
+        .insert([{
+          ...signature,
+          created_by: user.id
+        }])
         .select()
         .single();
 
