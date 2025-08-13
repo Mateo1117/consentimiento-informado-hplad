@@ -14,7 +14,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, AlertCircle, Shield, Download, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
-import { consentService, type ConsentForm as ConsentFormData } from "@/services/supabase";
+import { supabase } from "@/integrations/supabase/client";
 import { PhotoService } from "@/services/photoService";
 import { notificationService } from "@/services/notificationService";
 import { automationService } from "@/services/automationService";

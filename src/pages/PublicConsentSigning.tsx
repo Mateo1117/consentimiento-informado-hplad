@@ -29,21 +29,31 @@ export const PublicConsentSigning: React.FC = () => {
   const loadConsent = async () => {
     try {
       setLoading(true);
+      console.log('📱 Cargando consentimiento desde móvil, token:', token);
+      
       const data = await consentService.getConsentByToken(token!);
       
       if (!data) {
+        console.error('❌ Consentimiento no encontrado con token:', token);
         setError('Consentimiento no encontrado o enlace expirado');
         return;
       }
 
       if (data.status === 'signed') {
+        console.log('ℹ️ Consentimiento ya firmado');
         setError('Este consentimiento ya ha sido firmado');
         return;
       }
 
+      console.log('✅ Consentimiento cargado exitosamente:', {
+        id: data.id,
+        patient_name: data.patient_name,
+        status: data.status
+      });
+      
       setConsent(data);
     } catch (err) {
-      console.error('Error loading consent:', err);
+      console.error('❌ Error crítico cargando consentimiento:', err);
       setError('Error al cargar el consentimiento');
     } finally {
       setLoading(false);
@@ -63,6 +73,11 @@ export const PublicConsentSigning: React.FC = () => {
 
     setSigning(true);
     try {
+      console.log('🖊️ Iniciando proceso de firma desde móvil');
+      console.log('Token:', token);
+      console.log('Nombre firmante:', signedByName.trim());
+      console.log('Longitud firma:', signatureData.length);
+      
       const result = await consentService.signConsentByToken(
         token!,
         signatureData,
@@ -70,10 +85,20 @@ export const PublicConsentSigning: React.FC = () => {
       );
 
       if (result) {
-        setConsent(prev => ({ ...prev, status: 'signed', signed_at: new Date().toISOString() }));
+        console.log('✅ Firma exitosa desde móvil');
+        setConsent(prev => ({ 
+          ...prev, 
+          status: 'signed', 
+          signed_at: new Date().toISOString(),
+          signed_by_name: signedByName.trim() 
+        }));
+      } else {
+        console.error('❌ No se recibió respuesta de la firma');
+        toast.error('Error: No se pudo completar la firma');
       }
     } catch (error) {
-      console.error('Error signing consent:', error);
+      console.error('❌ Error crítico en proceso de firma:', error);
+      toast.error(`Error al firmar: ${error.message || 'Error desconocido'}`);
     } finally {
       setSigning(false);
     }

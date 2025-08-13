@@ -71,23 +71,31 @@ class ConsentService {
 
   async getConsentByToken(token: string) {
     try {
+      console.log('🔍 Buscando consentimiento con token:', token);
+      
       const { data, error } = await supabase
         .rpc('get_consent_by_token', { p_token: token });
 
       if (error) {
-        console.error('Error fetching consent by token:', error);
+        console.error('❌ Error RPC get_consent_by_token:', error);
         return null;
       }
 
+      console.log('✅ Consentimiento encontrado:', data?.[0] ? 'Sí' : 'No');
+      console.log('📋 Status del consentimiento:', data?.[0]?.status);
+      
       return data?.[0] || null;
     } catch (error) {
-      console.error('Error in getConsentByToken:', error);
+      console.error('❌ Error crítico en getConsentByToken:', error);
       return null;
     }
   }
 
   async signConsentByToken(token: string, signatureData: string, signedByName: string) {
     try {
+      console.log('Intentando firmar consentimiento con token:', token);
+      console.log('Datos de firma:', { signedByName, hasSignature: !!signatureData });
+      
       const { data, error } = await supabase
         .rpc('sign_consent_by_token', {
           p_token: token,
@@ -96,16 +104,17 @@ class ConsentService {
         });
 
       if (error) {
-        console.error('Error signing consent:', error);
-        toast.error('Error al firmar el consentimiento');
+        console.error('Error RPC sign_consent_by_token:', error);
+        toast.error(`Error al firmar el consentimiento: ${error.message}`);
         return null;
       }
 
+      console.log('Respuesta RPC exitosa:', data);
       toast.success('Consentimiento firmado exitosamente');
       return data?.[0] || null;
     } catch (error) {
       console.error('Error in signConsentByToken:', error);
-      toast.error('Error inesperado al firmar el consentimiento');
+      toast.error(`Error inesperado al firmar el consentimiento: ${error.message || 'Error desconocido'}`);
       return null;
     }
   }
