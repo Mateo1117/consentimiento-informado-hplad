@@ -10,9 +10,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { AuthenticatedHeader } from "@/components/AuthenticatedHeader"
-import { ArrowLeft, Search, FileText, Calendar, User, Eye, Download, Filter, Settings } from "lucide-react"
+import { ArrowLeft, Search, FileText, Calendar, User, Eye, Download, Filter, Camera, PenTool } from "lucide-react"
 import { toast } from "sonner"
-import { consentService, type ConsentForm, isSupabaseConfigured } from "@/services/legacy-consent";
+import { consentManagementService as consentService, isSupabaseConfigured, type ConsentManagementData as ConsentForm } from "@/services/consentManagementService";
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { useNavigate } from "react-router-dom"
@@ -24,10 +24,12 @@ export default function ConsentManagement() {
   const [isLoading, setIsLoading] = useState(true)
   const [selectedConsent, setSelectedConsent] = useState<ConsentForm | null>(null)
   
-  // Filtros simplificados
+  // Filtros mejorados
   const [filters, setFilters] = useState({
     documentType: "all",
-    documentNumber: ""
+    documentNumber: "",
+    patientName: "",
+    status: "all"
   })
 
   const documentTypes = [
@@ -37,7 +39,13 @@ export default function ConsentManagement() {
     { value: "CE", label: "Cédula de Extranjería (CE)" },
     { value: "PA", label: "Pasaporte (PA)" },
     { value: "MS", label: "Menor sin Identificación (MS)" }
-  ]
+  ];
+
+  const statusTypes = [
+    { value: "sent", label: "Enviado" },
+    { value: "signed", label: "Firmado" },
+    { value: "expired", label: "Expirado" }
+  ];
 
   useEffect(() => {
     // Check if Supabase is configured
@@ -70,52 +78,88 @@ export default function ConsentManagement() {
     }
   }
 
-  const applyFilters = () => {
-    let filtered = consents
-
-    if (filters.documentType && filters.documentType !== "all") {
-      filtered = filtered.filter(consent => consent.document_type === filters.documentType)
+  const applyFilters = async () => {
+    try {
+      setIsLoading(true);
+      
+      const searchFilters: any = {};
+      
+      if (filters.documentType && filters.documentType !== "all") {
+        searchFilters.documentType = filters.documentType;
+      }
+      
+      if (filters.documentNumber) {
+        searchFilters.documentNumber = filters.documentNumber;
+      }
+      
+      if (filters.patientName) {
+        searchFilters.patientName = filters.patientName;
+      }
+      
+      if (filters.status && filters.status !== "all") {
+        searchFilters.status = filters.status;
+      }
+      
+      const data = await consentService.searchConsents(searchFilters);
+      setFilteredConsents(data);
+    } catch (error) {
+      toast.error("Error al aplicar filtros");
+    } finally {
+      setIsLoading(false);
     }
-
-    if (filters.documentNumber) {
-      filtered = filtered.filter(consent => 
-        consent.document_number.toLowerCase().includes(filters.documentNumber.toLowerCase())
-      )
-    }
-
-    setFilteredConsents(filtered)
-  }
+  };
 
   const handleFilterChange = (key: string, value: string) => {
-    setFilters(prev => ({ ...prev, [key]: value }))
-  }
+    setFilters(prev => ({ ...prev, [key]: value }));
+  };
 
   const handleSearch = () => {
-    applyFilters()
-  }
+    applyFilters();
+  };
 
-  const clearFilters = () => {
+  const clearFilters = async () => {
     setFilters({
       documentType: "all",
-      documentNumber: ""
-    })
-    setFilteredConsents(consents) // Mostrar todos los consentimientos al limpiar filtros
-  }
+      documentNumber: "",
+      patientName: "",
+      status: "all"
+    });
+    
+    try {
+      setIsLoading(true);
+      const data = await consentService.getAllConsents();
+      setFilteredConsents(data);
+    } catch (error) {
+      toast.error("Error al limpiar filtros");
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd/MM/yyyy HH:mm", { locale: es })
   }
 
-  const getConsentStatusBadge = (decision: string) => {
-    return decision === "aprobar" ? (
-      <Badge className="bg-green-100 text-green-800 border-green-200">
-        ✓ Aprobado
-      </Badge>
-    ) : (
-      <Badge className="bg-red-100 text-red-800 border-red-200">
-        ✗ Denegado
-      </Badge>
-    )
+  const getConsentStatusBadge = (status: string, signed_at?: string) => {
+    if (status === 'signed') {
+      return (
+        <Badge className="bg-green-100 text-green-800 border-green-200">
+          ✓ Firmado
+        </Badge>
+      );
+    } else if (status === 'sent') {
+      return (
+        <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+          📤 Enviado
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge className="bg-gray-100 text-gray-800 border-gray-200">
+          📄 Pendiente
+        </Badge>
+      );
+    }
   }
 
   return (
@@ -140,7 +184,7 @@ export default function ConsentManagement() {
                 Gestión de Consentimientos
               </h1>
               <p className="text-medical-gray mt-2">
-                Consulta y administra todos los consentimientos informados generados
+                Consulta y administra todos los consentimientos informados generados (app y móvil)
               </p>
             </div>
           </div>
@@ -155,22 +199,22 @@ export default function ConsentManagement() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
               <div className="space-y-2">
                 <Label>Tipo de Documento</Label>
-                  <Select value={filters.documentType} onValueChange={(value) => handleFilterChange("documentType", value)}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Todos los tipos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos los tipos</SelectItem>
-                      {documentTypes.map((type) => (
-                        <SelectItem key={type.value} value={type.value}>
-                          {type.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <Select value={filters.documentType} onValueChange={(value) => handleFilterChange("documentType", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos los tipos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los tipos</SelectItem>
+                    {documentTypes.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="space-y-2">
@@ -182,22 +226,48 @@ export default function ConsentManagement() {
                 />
               </div>
 
-              <div className="flex items-end gap-2">
-                <Button
-                  onClick={handleSearch}
-                  className="bg-medical-blue hover:bg-medical-blue/90 text-white"
-                >
-                  <Search className="h-4 w-4 mr-2" />
-                  Buscar
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  onClick={clearFilters}
-                >
-                  Limpiar Filtros
-                </Button>
+              <div className="space-y-2">
+                <Label>Nombre del Paciente</Label>
+                <Input
+                  placeholder="Buscar por nombre..."
+                  value={filters.patientName}
+                  onChange={(e) => handleFilterChange("patientName", e.target.value)}
+                />
               </div>
+
+              <div className="space-y-2">
+                <Label>Estado</Label>
+                <Select value={filters.status} onValueChange={(value) => handleFilterChange("status", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos los estados" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los estados</SelectItem>
+                    {statusTypes.map((status) => (
+                      <SelectItem key={status.value} value={status.value}>
+                        {status.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="flex gap-2 mb-4">
+              <Button
+                onClick={handleSearch}
+                className="bg-medical-blue hover:bg-medical-blue/90 text-white"
+              >
+                <Search className="h-4 w-4 mr-2" />
+                Buscar
+              </Button>
+              
+              <Button
+                variant="outline"
+                onClick={clearFilters}
+              >
+                Limpiar Filtros
+              </Button>
             </div>
 
             <div className="text-sm text-medical-gray">
@@ -224,14 +294,6 @@ export default function ConsentManagement() {
                   <p className="text-yellow-700 mb-4">
                     Para usar el módulo de gestión de consentimientos, necesitas configurar las credenciales de Supabase.
                   </p>
-                  <div className="text-sm text-yellow-600 bg-yellow-100 p-3 rounded">
-                    <p className="font-medium mb-2">Pasos para configurar:</p>
-                    <ol className="list-decimal list-inside space-y-1">
-                      <li>Haz clic en el botón verde "Supabase" (arriba a la derecha)</li>
-                      <li>Sigue las instrucciones para conectar tu proyecto</li>
-                      <li>Ejecuta el script SQL proporcionado en tu base de datos</li>
-                    </ol>
-                  </div>
                 </div>
               </div>
             ) : isLoading ? (
@@ -242,7 +304,7 @@ export default function ConsentManagement() {
               <div className="text-center py-8 text-medical-gray">
                 <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>No se encontraron consentimientos</p>
-                {Object.values(filters).some(f => f) && (
+                {Object.values(filters).some(f => f !== "all" && f) && (
                   <p className="text-sm mt-2">Intenta ajustar los filtros de búsqueda</p>
                 )}
               </div>
@@ -254,9 +316,9 @@ export default function ConsentManagement() {
                       <TableHead>Fecha</TableHead>
                       <TableHead>Paciente</TableHead>
                       <TableHead>Documento</TableHead>
-                      <TableHead>Edad</TableHead>
-                      <TableHead>Centro de Salud</TableHead>
+                      <TableHead>Tipo Consentimiento</TableHead>
                       <TableHead>Estado</TableHead>
+                      <TableHead>Firma</TableHead>
                       <TableHead>Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -269,23 +331,42 @@ export default function ConsentManagement() {
                         <TableCell>
                           <div>
                             <p className="font-medium">
-                              {consent.patient_name} {consent.patient_surname}
+                              {consent.patient_name}
                             </p>
-                            <p className="text-sm text-medical-gray">{consent.eps}</p>
+                            {consent.patient_email && (
+                              <p className="text-sm text-medical-gray">{consent.patient_email}</p>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell>
                           <div>
-                            <p className="font-medium">{consent.document_type}</p>
-                            <p className="text-sm text-medical-gray">{consent.document_number}</p>
+                            <p className="font-medium">{consent.patient_document_type}</p>
+                            <p className="text-sm text-medical-gray">{consent.patient_document_number}</p>
                           </div>
                         </TableCell>
-                        <TableCell>{consent.age} años</TableCell>
                         <TableCell className="text-sm">
-                          {consent.healthcare_center}
+                          <Badge variant="secondary">
+                            {consent.consent_type}
+                          </Badge>
                         </TableCell>
                         <TableCell>
-                          {getConsentStatusBadge(consent.consent_decision)}
+                          {getConsentStatusBadge(consent.status, consent.signed_at || undefined)}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            {consent.patient_signature_data && (
+                              <div className="flex items-center gap-1 text-green-600">
+                                <PenTool className="h-4 w-4" />
+                                <span className="text-xs">Firmado</span>
+                              </div>
+                            )}
+                            {consent.patient_photo_url && (
+                              <div className="flex items-center gap-1 text-blue-600">
+                                <Camera className="h-4 w-4" />
+                                <span className="text-xs">Foto</span>
+                              </div>
+                            )}
+                          </div>
                         </TableCell>
                         <TableCell>
                           <Dialog>
@@ -338,112 +419,71 @@ function ConsentDetails({ consent }: { consent: ConsentForm }) {
         </h3>
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <strong>Nombre:</strong> {consent.patient_name} {consent.patient_surname}
+            <strong>Nombre:</strong> {consent.patient_name}
           </div>
           <div>
-            <strong>Documento:</strong> {consent.document_type} {consent.document_number}
+            <strong>Documento:</strong> {consent.patient_document_type} {consent.patient_document_number}
           </div>
-          <div>
-            <strong>Fecha de Nacimiento:</strong> {format(new Date(consent.birth_date), "dd/MM/yyyy")}
-          </div>
-          <div>
-            <strong>Edad:</strong> {consent.age} años
-          </div>
-          <div>
-            <strong>EPS:</strong> {consent.eps}
-          </div>
-          <div>
-            <strong>Teléfono:</strong> {consent.phone}
-          </div>
-          <div className="col-span-2">
-            <strong>Dirección:</strong> {consent.address}
-          </div>
-          <div className="col-span-2">
-            <strong>Centro de Salud:</strong> {consent.healthcare_center}
-          </div>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Acudiente (si aplica) */}
-      {consent.guardian_name && (
-        <>
-          <div>
-            <h3 className="font-semibold text-medical-blue mb-3">
-              Información del Acudiente
-            </h3>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <strong>Nombre:</strong> {consent.guardian_name}
-              </div>
-              <div>
-                <strong>Documento:</strong> {consent.guardian_document}
-              </div>
-              <div className="col-span-2">
-                <strong>Parentesco:</strong> {consent.guardian_relationship}
-              </div>
-            </div>
-          </div>
-          <Separator />
-        </>
-      )}
-
-      {/* Procedimientos */}
-      <div>
-        <h3 className="font-semibold text-medical-blue mb-3">
-          Procedimientos Seleccionados
-        </h3>
-        <div className="space-y-2">
-          {consent.selected_procedures.map((procedure, index) => (
-            <Badge key={index} variant="secondary" className="mr-2 mb-2">
-              {procedure}
-            </Badge>
-          ))}
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Enfoque Diferencial */}
-      <div>
-        <h3 className="font-semibold text-medical-blue mb-3">
-          Enfoque Diferencial
-        </h3>
-        <div className="grid grid-cols-2 gap-2 text-sm">
-          <div>Género: {consent.differential_approach.gender ? "Sí" : "No"}</div>
-          <div>Etnia: {consent.differential_approach.ethnicity ? "Sí" : "No"}</div>
-          <div>Ciclo Vital: {consent.differential_approach.vital_cycle ? "Sí" : "No"}</div>
-          <div>No Aplica: {consent.differential_approach.not_applicable ? "Sí" : "No"}</div>
-          <div>Posición Social: {consent.differential_approach.social_position ? "Sí" : "No"}</div>
-          <div>Discapacidad: {consent.differential_approach.disability ? "Sí" : "No"}</div>
-        </div>
-      </div>
-
-      <Separator />
-
-      {/* Decisión y Profesional */}
-      <div>
-        <h3 className="font-semibold text-medical-blue mb-3">
-          Decisión del Consentimiento
-        </h3>
-        <div className="space-y-2 text-sm">
-          <div>
-            <strong>Decisión:</strong> {consent.consent_decision === 'aprobar' ? 'APROBADO' : 'DENEGADO'}
-          </div>
-          <div>
-            <strong>Profesional:</strong> {consent.professional_name}
-          </div>
-          <div>
-            <strong>Documento del Profesional:</strong> {consent.professional_document}
-          </div>
-          {consent.additional_info && (
+          {consent.patient_email && (
             <div>
-              <strong>Información Adicional:</strong> {consent.additional_info}
+              <strong>Email:</strong> {consent.patient_email}
+            </div>
+          )}
+          {consent.patient_phone && (
+            <div>
+              <strong>Teléfono:</strong> {consent.patient_phone}
             </div>
           )}
         </div>
       </div>
+
+      <Separator />
+
+      {/* Información del Consentimiento */}
+      <div>
+        <h3 className="font-semibold text-medical-blue mb-3">
+          Información del Consentimiento
+        </h3>
+        <div className="space-y-2 text-sm">
+          <div>
+            <strong>Tipo:</strong> {consent.consent_type}
+          </div>
+          <div>
+            <strong>Estado:</strong> {consent.status}
+          </div>
+          {consent.signed_at && (
+            <div>
+              <strong>Fecha de Firma:</strong> {format(new Date(consent.signed_at), "dd/MM/yyyy HH:mm", { locale: es })}
+            </div>
+          )}
+          {consent.signed_by_name && (
+            <div>
+              <strong>Firmado por:</strong> {consent.signed_by_name}
+            </div>
+          )}
+          {consent.professional_name && (
+            <div>
+              <strong>Profesional:</strong> {consent.professional_name}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <Separator />
+
+      {/* Procedimientos y Payload */}
+      {consent.payload && (
+        <div>
+          <h3 className="font-semibold text-medical-blue mb-3">
+            Contenido del Consentimiento
+          </h3>
+          <div className="bg-gray-50 p-4 rounded-lg">
+            <pre className="text-sm overflow-auto max-h-40">
+              {JSON.stringify(consent.payload, null, 2)}
+            </pre>
+          </div>
+        </div>
+      )}
 
       <Separator />
 
@@ -453,14 +493,12 @@ function ConsentDetails({ consent }: { consent: ConsentForm }) {
           Firmas y Fotografías
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Paciente/Acudiente */}
+          {/* Paciente */}
           <div className="space-y-4">
-            <h4 className="font-medium text-sm">
-              {consent.guardian_name ? 'Acudiente' : 'Paciente'}
-            </h4>
-            <div className="flex gap-4">
+            <h4 className="font-medium text-sm">Paciente</h4>
+            <div className="space-y-3">
               {/* Firma */}
-              <div className="flex-1">
+              <div>
                 <Label className="text-xs text-gray-600">Firma</Label>
                 {consent.patient_signature_data ? (
                   <div className="border rounded-lg p-2 bg-gray-50">
@@ -477,7 +515,7 @@ function ConsentDetails({ consent }: { consent: ConsentForm }) {
                 )}
               </div>
               {/* Foto */}
-              <div className="flex-1">
+              <div>
                 <Label className="text-xs text-gray-600">Foto</Label>
                 {consent.patient_photo_url ? (
                   <div className="border rounded-lg p-2 bg-gray-50">
@@ -499,9 +537,9 @@ function ConsentDetails({ consent }: { consent: ConsentForm }) {
           {/* Profesional */}
           <div className="space-y-4">
             <h4 className="font-medium text-sm">Profesional</h4>
-            <div className="flex gap-4">
+            <div className="space-y-3">
               {/* Firma */}
-              <div className="flex-1">
+              <div>
                 <Label className="text-xs text-gray-600">Firma</Label>
                 {consent.professional_signature_data ? (
                   <div className="border rounded-lg p-2 bg-gray-50">
@@ -518,7 +556,7 @@ function ConsentDetails({ consent }: { consent: ConsentForm }) {
                 )}
               </div>
               {/* Foto */}
-              <div className="flex-1">
+              <div>
                 <Label className="text-xs text-gray-600">Foto</Label>
                 {consent.professional_photo_url ? (
                   <div className="border rounded-lg p-2 bg-gray-50">
@@ -547,13 +585,26 @@ function ConsentDetails({ consent }: { consent: ConsentForm }) {
           <Calendar className="h-4 w-4" />
           Información de Registro
         </h3>
-        <div className="text-sm">
-              <div>
-                <strong>Fecha de Creación:</strong> {consent.created_at && format(new Date(consent.created_at), "dd/MM/yyyy HH:mm", { locale: es })}
-              </div>
-          {consent.pdf_filename && (
+        <div className="text-sm space-y-1">
+          <div>
+            <strong>Fecha de Creación:</strong> {consent.created_at && format(new Date(consent.created_at), "dd/MM/yyyy HH:mm", { locale: es })}
+          </div>
+          {consent.updated_at && (
             <div>
-              <strong>Archivo PDF:</strong> {consent.pdf_filename}
+              <strong>Última Actualización:</strong> {format(new Date(consent.updated_at), "dd/MM/yyyy HH:mm", { locale: es })}
+            </div>
+          )}
+          {consent.share_expires_at && (
+            <div>
+              <strong>Enlace Expira:</strong> {format(new Date(consent.share_expires_at), "dd/MM/yyyy HH:mm", { locale: es })}
+            </div>
+          )}
+          {consent.pdf_url && (
+            <div>
+              <strong>PDF Generado:</strong> 
+              <a href={consent.pdf_url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline ml-2">
+                Ver PDF
+              </a>
             </div>
           )}
         </div>

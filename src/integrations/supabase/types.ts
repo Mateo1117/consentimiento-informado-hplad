@@ -25,10 +25,15 @@ export type Database = {
           patient_email: string | null
           patient_name: string
           patient_phone: string | null
+          patient_photo_url: string | null
           patient_signature_data: string | null
           payload: Json
           pdf_size: number
           pdf_url: string | null
+          professional_document: string | null
+          professional_name: string | null
+          professional_photo_url: string | null
+          professional_signature_data: string | null
           share_expires_at: string | null
           share_token: string
           signed_at: string | null
@@ -46,10 +51,15 @@ export type Database = {
           patient_email?: string | null
           patient_name: string
           patient_phone?: string | null
+          patient_photo_url?: string | null
           patient_signature_data?: string | null
           payload?: Json
           pdf_size?: number
           pdf_url?: string | null
+          professional_document?: string | null
+          professional_name?: string | null
+          professional_photo_url?: string | null
+          professional_signature_data?: string | null
           share_expires_at?: string | null
           share_token?: string
           signed_at?: string | null
@@ -67,10 +77,15 @@ export type Database = {
           patient_email?: string | null
           patient_name?: string
           patient_phone?: string | null
+          patient_photo_url?: string | null
           patient_signature_data?: string | null
           payload?: Json
           pdf_size?: number
           pdf_url?: string | null
+          professional_document?: string | null
+          professional_name?: string | null
+          professional_photo_url?: string | null
+          professional_signature_data?: string | null
           share_expires_at?: string | null
           share_token?: string
           signed_at?: string | null
