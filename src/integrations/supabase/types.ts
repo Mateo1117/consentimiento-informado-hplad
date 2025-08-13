@@ -185,11 +185,18 @@ export type Database = {
         }[]
       }
       sign_consent_by_token: {
-        Args: {
-          p_token: string
-          p_signature_data: string
-          p_signed_by_name: string
-        }
+        Args:
+          | {
+              p_token: string
+              p_signature_data: string
+              p_signed_by_name: string
+            }
+          | {
+              p_token: string
+              p_signature_data: string
+              p_signed_by_name: string
+              p_patient_photo_url?: string
+            }
         Returns: {
           id: string
           signed_at: string
