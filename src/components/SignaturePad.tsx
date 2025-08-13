@@ -36,13 +36,20 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(
       if (onSignatureChange) {
         setTimeout(() => {
           const signature = sigCanvas.current?.toDataURL();
-          if (signature && !sigCanvas.current?.isEmpty()) {
-            console.log('🖊️ Firma capturada automáticamente');
+          const isEmpty = sigCanvas.current?.isEmpty();
+          
+          console.log('🖊️ SignaturePad - Evento de fin de firma');
+          console.log('Canvas está vacío:', isEmpty);
+          console.log('Longitud de firma:', signature?.length || 0);
+          
+          if (signature && !isEmpty && signature.length > 100) {
+            console.log('✅ Firma válida capturada automáticamente');
             onSignatureChange(signature);
           } else {
+            console.log('❌ Firma inválida o vacía');
             onSignatureChange(null);
           }
-        }, 500); // Wait 500ms after user stops drawing
+        }, 300); // Reduced from 500ms to 300ms for better responsiveness
       }
     };
 
@@ -189,24 +196,22 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(
                 canvasProps={{
                   className: "w-full h-48 rounded cursor-crosshair",
                   style: { 
-                    background: 'transparent',
+                    background: 'white',
                     touchAction: 'none',
                     msTouchAction: 'none',
                     WebkitUserSelect: 'none',
                     MozUserSelect: 'none',
                     msUserSelect: 'none',
                     userSelect: 'none'
-                  },
-                  onTouchStart: (e: any) => e.preventDefault(),
-                  onTouchMove: (e: any) => e.preventDefault()
+                  }
                 }}
-                backgroundColor="transparent"
+                backgroundColor="white"
                 penColor="#1e40af"
-                minWidth={1}
-                maxWidth={3}
-                velocityFilterWeight={0.8}
-                dotSize={1}
-                throttle={16}
+                minWidth={2}
+                maxWidth={4}
+                velocityFilterWeight={0.7}
+                dotSize={2}
+                throttle={10}
                 clearOnResize={false}
               />
             </div>

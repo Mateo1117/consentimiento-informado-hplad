@@ -61,28 +61,37 @@ export const PublicConsentSigning: React.FC = () => {
   };
 
   const handleSign = async () => {
+    console.log('🖊️ Iniciando proceso de firma desde móvil');
+    console.log('Validando datos de entrada...');
+    console.log('Nombre firmante:', signedByName.trim());
+    console.log('Tiene signatureData:', !!signatureData);
+    console.log('Longitud signatureData:', signatureData?.length || 0);
+    
     if (!signedByName.trim()) {
+      console.error('❌ Error: Nombre firmante vacío');
       toast.error('Por favor ingrese su nombre completo');
       return;
     }
 
-    if (!signatureData) {
+    if (!signatureData || signatureData.length < 100) {
+      console.error('❌ Error: Firma inválida o vacía');
+      console.log('SignatureData:', signatureData?.substring(0, 50) + '...');
       toast.error('Por favor firme en el área designada');
       return;
     }
 
     setSigning(true);
     try {
-      console.log('🖊️ Iniciando proceso de firma desde móvil');
-      console.log('Token:', token);
-      console.log('Nombre firmante:', signedByName.trim());
-      console.log('Longitud firma:', signatureData.length);
+      console.log('📡 Enviando datos al servidor...');
+      console.log('Token usado:', token);
       
       const result = await consentService.signConsentByToken(
         token!,
         signatureData,
         signedByName.trim()
       );
+
+      console.log('📥 Respuesta del servidor:', result);
 
       if (result) {
         console.log('✅ Firma exitosa desde móvil');
@@ -92,13 +101,16 @@ export const PublicConsentSigning: React.FC = () => {
           signed_at: new Date().toISOString(),
           signed_by_name: signedByName.trim() 
         }));
+        toast.success('¡Consentimiento firmado exitosamente!');
       } else {
         console.error('❌ No se recibió respuesta de la firma');
-        toast.error('Error: No se pudo completar la firma');
+        toast.error('Error: No se pudo completar la firma. Intente nuevamente.');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error crítico en proceso de firma:', error);
-      toast.error(`Error al firmar: ${error.message || 'Error desconocido'}`);
+      const errorMessage = error?.message || 'Error desconocido';
+      console.error('Detalle del error:', errorMessage);
+      toast.error(`Error al firmar: ${errorMessage}`);
     } finally {
       setSigning(false);
     }
