@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,9 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { SignaturePad } from "@/components/SignaturePad";
+import { CameraCapture, CameraCaptureRef } from "@/components/CameraCapture";
 import { consentService } from "@/services/consentService";
+import { PhotoService } from "@/services/photoService";
 import { toast } from "sonner";
 import { CheckCircle, FileText, User, Calendar, AlertCircle } from "lucide-react";
 
@@ -19,6 +21,7 @@ export const PublicConsentSigning: React.FC = () => {
   const [signedByName, setSignedByName] = useState('');
   const [signatureData, setSignatureData] = useState<string>('');
   const [error, setError] = useState<string>('');
+  const cameraRef = useRef<CameraCaptureRef>(null);
 
   useEffect(() => {
     if (token) {
@@ -80,15 +83,32 @@ export const PublicConsentSigning: React.FC = () => {
       return;
     }
 
+    // Verificar que se haya capturado la foto
+    const capturedPhoto = cameraRef.current?.getCapturedPhoto();
+    if (!capturedPhoto) {
+      console.error('❌ Error: Foto del paciente no capturada');
+      toast.error('Por favor capture una foto antes de firmar');
+      return;
+    }
+
     setSigning(true);
     try {
       console.log('📡 Enviando datos al servidor...');
       console.log('Token usado:', token);
       
+      // Subir la foto del paciente
+      console.log('📸 Subiendo foto del paciente...');
+      const photoResult = await PhotoService.uploadPhoto(capturedPhoto, 'patient');
+      if (!photoResult) {
+        toast.error('Error al subir la foto del paciente');
+        return;
+      }
+      
       const result = await consentService.signConsentByToken(
         token!,
         signatureData,
-        signedByName.trim()
+        signedByName.trim(),
+        photoResult.url
       );
 
       console.log('📥 Respuesta del servidor:', result);
@@ -99,7 +119,8 @@ export const PublicConsentSigning: React.FC = () => {
           ...prev, 
           status: 'signed', 
           signed_at: new Date().toISOString(),
-          signed_by_name: signedByName.trim() 
+          signed_by_name: signedByName.trim(),
+          patient_photo_url: photoResult.url
         }));
         toast.success('¡Consentimiento firmado exitosamente!');
       } else {
@@ -250,9 +271,9 @@ export const PublicConsentSigning: React.FC = () => {
 
             <Separator />
 
-            {/* Signature Section */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold">Firma del Consentimiento</h3>
+            {/* Photo and Signature Section */}
+            <div className="space-y-6">
+              <h3 className="text-lg font-semibold">Captura de Foto y Firma</h3>
               
               <div>
                 <Label htmlFor="signed-by-name">Nombre completo del firmante *</Label>
@@ -262,6 +283,15 @@ export const PublicConsentSigning: React.FC = () => {
                   onChange={(e) => setSignedByName(e.target.value)}
                   placeholder="Ingrese su nombre completo"
                   className="mt-1"
+                />
+              </div>
+
+              <div>
+                <CameraCapture
+                  ref={cameraRef}
+                  title="Foto del Paciente"
+                  subtitle="Capture una foto clara del paciente para incluir en el consentimiento"
+                  required
                 />
               </div>
 
@@ -284,7 +314,7 @@ export const PublicConsentSigning: React.FC = () => {
                   size="lg"
                   className="w-full sm:w-auto"
                 >
-                  {signing ? 'Firmando...' : 'Firmar Consentimiento'}
+                  {signing ? 'Procesando...' : 'Firmar Consentimiento'}
                 </Button>
               </div>
             </div>
