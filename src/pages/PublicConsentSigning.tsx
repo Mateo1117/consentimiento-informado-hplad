@@ -107,7 +107,8 @@ export const PublicConsentSigning: React.FC = () => {
       const result = await consentService.signConsentByToken(
         token!,
         signatureData,
-        signedByName.trim()
+        signedByName.trim(),
+        photoResult.url
       );
 
       console.log('📥 Respuesta del servidor:', result);

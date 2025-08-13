@@ -91,16 +91,17 @@ class ConsentService {
     }
   }
 
-  async signConsentByToken(token: string, signatureData: string, signedByName: string) {
+  async signConsentByToken(token: string, signatureData: string, signedByName: string, patientPhotoUrl?: string) {
     try {
       console.log('Intentando firmar consentimiento con token:', token);
-      console.log('Datos de firma:', { signedByName, hasSignature: !!signatureData });
-      
+      console.log('Datos de firma:', { signedByName, hasSignature: !!signatureData, hasPhoto: !!patientPhotoUrl });
+
       const { data, error } = await supabase
         .rpc('sign_consent_by_token', {
           p_token: token,
           p_signature_data: signatureData,
-          p_signed_by_name: signedByName
+          p_signed_by_name: signedByName,
+          p_patient_photo_url: patientPhotoUrl
         });
 
       if (error) {
