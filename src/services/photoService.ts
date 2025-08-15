@@ -32,7 +32,7 @@ export class PhotoService {
       const blob = this.base64ToBlob(base64Image);
 
       const { data, error } = await supabase.storage
-        .from('signature-photos')
+        .from('photos')
         .upload(fileName, blob, {
           contentType: 'image/jpeg',
           upsert: false
@@ -45,7 +45,7 @@ export class PhotoService {
 
       // Get the public URL for the uploaded file
       const { data: urlData } = supabase.storage
-        .from('signature-photos')
+        .from('photos')
         .getPublicUrl(fileName);
 
       return {
@@ -62,7 +62,7 @@ export class PhotoService {
     try {
 
       const { error } = await supabase.storage
-        .from('signature-photos')
+        .from('photos')
         .remove([fileName]);
 
       if (error) {

@@ -477,10 +477,65 @@ function ConsentDetails({ consent }: { consent: ConsentForm }) {
           <h3 className="font-semibold text-medical-blue mb-3">
             Contenido del Consentimiento
           </h3>
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <pre className="text-sm overflow-auto max-h-40">
-              {JSON.stringify(consent.payload, null, 2)}
-            </pre>
+          <div className="bg-gray-50 p-4 rounded-lg space-y-4">
+            {(consent.payload as any)?.procedures && (
+              <div>
+                <h4 className="font-medium text-sm mb-2 text-medical-blue">Procedimientos:</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  {(consent.payload as any).procedures.map((proc: any, index: number) => (
+                    <li key={index}>{proc.name || proc}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
+            {(consent.payload as any)?.risks && (
+              <div>
+                <h4 className="font-medium text-sm mb-2 text-medical-blue">Riesgos:</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  {(consent.payload as any).risks.map((risk: string, index: number) => (
+                    <li key={index}>{risk}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
+            {(consent.payload as any)?.benefits && (
+              <div>
+                <h4 className="font-medium text-sm mb-2 text-medical-blue">Beneficios:</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  {(consent.payload as any).benefits.map((benefit: string, index: number) => (
+                    <li key={index}>{benefit}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
+            {(consent.payload as any)?.alternatives && (
+              <div>
+                <h4 className="font-medium text-sm mb-2 text-medical-blue">Alternativas:</h4>
+                <ul className="list-disc list-inside space-y-1 text-sm">
+                  {(consent.payload as any).alternatives.map((alt: string, index: number) => (
+                    <li key={index}>{alt}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            
+            {(consent.payload as any)?.decision && (
+              <div>
+                <h4 className="font-medium text-sm mb-2 text-medical-blue">Decisión:</h4>
+                <p className="text-sm">
+                  <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                    (consent.payload as any).decision === 'aprobar' 
+                      ? 'bg-green-100 text-green-800' 
+                      : 'bg-red-100 text-red-800'
+                  }`}>
+                    {(consent.payload as any).decision === 'aprobar' ? 'Aprobado' : 'Rechazado'}
+                  </span>
+                </p>
+              </div>
+            )}
           </div>
         </div>
       )}
