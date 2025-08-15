@@ -7,7 +7,7 @@ export type Json =
   | Json[]
 
 export type Database = {
-  // Allows to automatically instanciate createClient with right options
+  // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "12.2.12 (cd3cf9e)"
@@ -172,30 +172,30 @@ export type Database = {
       get_consent_by_token: {
         Args: { p_token: string }
         Returns: {
-          id: string
           consent_type: string
-          payload: Json
-          patient_name: string
-          patient_document_type: string
+          id: string
           patient_document_number: string
-          share_expires_at: string
-          status: string
-          signed_at: string
+          patient_document_type: string
+          patient_name: string
+          payload: Json
           pdf_url: string
+          share_expires_at: string
+          signed_at: string
+          status: string
         }[]
       }
       sign_consent_by_token: {
         Args:
           | {
-              p_token: string
+              p_patient_photo_url?: string
               p_signature_data: string
               p_signed_by_name: string
+              p_token: string
             }
           | {
-              p_token: string
               p_signature_data: string
               p_signed_by_name: string
-              p_patient_photo_url?: string
+              p_token: string
             }
         Returns: {
           id: string
