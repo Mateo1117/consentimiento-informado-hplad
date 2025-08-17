@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -444,30 +445,20 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            <div className="flex flex-row items-center gap-8">
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="consentDecision"
-                  value="aprobar"
-                  checked={consentDecision === "aprobar"}
-                  onChange={(e) => setConsentDecision(e.target.value as "aprobar")}
-                  className="w-5 h-5 text-green-600 border-green-600"
-                />
-                <span className="text-green-600 font-medium text-base">APROBAR el(los) procedimiento(s)</span>
-              </label>
-              <label className="flex items-center space-x-2 cursor-pointer">
-                <input
-                  type="radio"
-                  name="consentDecision"
-                  value="disentir"
-                  checked={consentDecision === "disentir"}
-                  onChange={(e) => setConsentDecision(e.target.value as "disentir")}
-                  className="w-5 h-5 text-red-600 border-red-600"
-                />
-                <span className="text-red-600 font-medium text-base">DISENTIR el(los) procedimiento(s)</span>
-              </label>
-            </div>
+            <RadioGroup 
+              value={consentDecision} 
+              onValueChange={(value: 'aprobar' | 'disentir') => setConsentDecision(value)}
+              className="flex flex-row items-center gap-8"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="aprobar" id="aprobar" className="w-5 h-5 text-green-600 border-green-600" />
+                <Label htmlFor="aprobar" className="text-green-600 font-medium text-base">APROBAR el(los) procedimiento(s)</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="disentir" id="disentir" className="w-5 h-5 text-red-600 border-red-600" />
+                <Label htmlFor="disentir" className="text-red-600 font-medium text-base">DISENTIR el(los) procedimiento(s)</Label>
+              </div>
+            </RadioGroup>
             
             <div className="bg-medical-blue-light/20 border border-medical-blue/20 rounded-lg p-4">
               <div className="flex items-start gap-3">
@@ -601,161 +592,120 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Patient Signature */}
-          <div>
-            <Label className="text-medical-blue block mb-2">
-              Firma del {isMinor ? 'Acudiente' : 'Paciente'} *
-            </Label>
-            <div className="border-2 border-dashed border-medical-blue/30 rounded-lg p-4">
-              <SignaturePad
-                ref={patientSignatureRef}
-                title={`Firma del ${isMinor ? 'Acudiente' : 'Paciente'}`}
-                subtitle={isMinor ? `Firma del acudiente ${guardianName}` : `Firma de ${patientData.nombre} ${patientData.apellidos}`}
-                required={true}
-              />
-              <div className="mt-4 flex gap-2">
-                <Button
-                  onClick={handlePatientSignature}
-                  variant="outline"
-                  size="sm"
-                  className="border-medical-blue text-medical-blue hover:bg-medical-blue/5"
-                >
-                  <CheckCircle className="h-4 w-4 mr-2" />
-                  Capturar Firma
-                </Button>
-                <Button
-                  onClick={() => {
-                    patientSignatureRef.current?.clear();
-                    setPatientSignature("");
-                  }}
-                  variant="outline"
-                  size="sm"
-                  className="border-gray-300"
-                >
-                  Limpiar
-                </Button>
-              </div>
-              {patientSignature && (
-                <div className="mt-2">
-                  <span className="text-sm text-medical-green flex items-center gap-1">
-                    <CheckCircle className="h-4 w-4" />
-                    Firma capturada exitosamente
-                  </span>
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Professional Signature */}
-          <div>
-            <div className="space-y-4">
-              {/* Header Section exactly as shown in image */}
-              <div>
-                <h3 className="text-blue-600 font-medium text-lg mb-1">Firma del Profesional *</h3>
-                <p className="text-gray-500 text-sm mb-4">Profesional Registrado</p>
-              </div>
-              
-              {/* Professional Selector */}
-              <div className="mb-4">
-                <ProfessionalSelector
-                  onProfessionalSelect={handleProfessionalSelect}
-                  onNewProfessional={handleNewProfessional}
-                  selectedDocument={professionalDocument}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <Label className="text-medical-blue font-medium">Firma del {isMinor ? 'Acudiente' : 'Paciente'} *</Label>
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <SignaturePad
+                  ref={patientSignatureRef}
+                  title={`Firma del ${isMinor ? 'Acudiente' : 'Paciente'}`}
+                  onSignatureChange={setPatientSignature}
                 />
-              </div>
-              
-              {/* Professional Information Display */}
-              {professionalName && professionalDocument && (
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
-                  <h4 className="font-medium text-blue-800 mb-2">Información del Profesional</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                    <div>
-                      <span className="font-medium text-blue-700">Nombre:</span>
-                      <p className="text-blue-900">{professionalName}</p>
-                    </div>
-                    <div>
-                      <span className="font-medium text-blue-700">Documento:</span>
-                      <p className="text-blue-900">{professionalDocument}</p>
+                <div className="mt-3 text-xs text-medical-gray space-y-1">
+                  <div>• Use su dedo o stylus</div>
+                  <div>• No levante su dedo o stylus</div>
+                  <div>• Use "Limpiar" para reiniciar la firma</div>
+                  <div>• Use "Guardar" para confirmar la firma</div>
+                </div>
+                
+                {/* Foto del Paciente */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <Label className="text-medical-blue font-medium">Foto del Paciente</Label>
+                  <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mt-2">
+                    <div className="flex flex-col items-center">
+                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-3">
+                        <span className="text-xl text-gray-400">📷</span>
+                      </div>
+                      <p className="text-gray-500 mb-3 text-sm">Cámara no activada</p>
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="mb-3"
+                        onClick={handlePhotoCapture}
+                      >
+                        <span className="w-4 h-4 mr-2">📷</span>
+                        Activar Cámara
+                      </Button>
+                      <p className="text-xs text-gray-400">
+                        La foto se tomará automáticamente al registrar la firma
+                      </p>
                     </div>
                   </div>
+                  <div className="mt-3 text-center">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={handlePhotoCapture}
+                    >
+                      Capturar Foto
+                    </Button>
+                  </div>
+                  {patientPhoto && (
+                    <div className="mt-2">
+                      <span className="text-sm text-medical-green flex items-center gap-1">
+                        <CheckCircle className="h-4 w-4" />
+                        Foto capturada exitosamente
+                      </span>
+                    </div>
+                  )}
                 </div>
-              )}
-              
-              <div className="border-2 border-dashed border-medical-blue/30 rounded-lg p-4">
-                <SignaturePad
-                  ref={professionalSignatureRef}
-                  title="Firma del Profesional"
-                  subtitle={`Firma de ${professionalName || 'Profesional'}`}
-                  required={true}
-                  isProfessional={true}
-                  professionalName={professionalName}
-                  professionalDocument={professionalDocument}
-                />
-                <div className="mt-4 flex gap-2">
-                  <Button
-                    onClick={handleProfessionalSignature}
-                    variant="outline"
-                    size="sm"
-                    className="border-medical-blue text-medical-blue hover:bg-medical-blue/5"
-                  >
-                    <CheckCircle className="h-4 w-4 mr-2" />
-                    Capturar Firma
-                  </Button>
-                  <Button
-                    onClick={() => {
-                      professionalSignatureRef.current?.clear();
-                      setProfessionalSignature("");
-                    }}
-                    variant="outline"
-                    size="sm"
-                    className="border-gray-300"
-                  >
-                    Limpiar
-                  </Button>
+              </div>
+            </div>
+
+            <div>
+              <div className="space-y-4">
+                {/* Header Section exactly as shown in image */}
+                <div>
+                  <h3 className="text-blue-600 font-medium text-lg mb-1">Firma del Profesional *</h3>
+                  <p className="text-gray-500 text-sm mb-4">Profesional Registrado</p>
                 </div>
-                {professionalSignature && (
-                  <div className="mt-2">
-                    <span className="text-sm text-medical-green flex items-center gap-1">
-                      <CheckCircle className="h-4 w-4" />
-                      Firma capturada exitosamente
-                    </span>
+                
+                {/* Professional Selector */}
+                <div className="mb-4">
+                  <ProfessionalSelector
+                    onProfessionalSelect={handleProfessionalSelect}
+                    onNewProfessional={handleNewProfessional}
+                    selectedDocument={professionalDocument}
+                  />
+                </div>
+                
+                {/* Professional Information Display */}
+                {professionalName && professionalDocument && (
+                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
+                    <h4 className="font-medium text-blue-800 mb-2">Información del Profesional</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                      <div>
+                        <span className="font-medium text-blue-700">Nombre:</span>
+                        <p className="text-blue-900">{professionalName}</p>
+                      </div>
+                      <div>
+                        <span className="font-medium text-blue-700">Documento:</span>
+                        <p className="text-blue-900">{professionalDocument}</p>
+                      </div>
+                    </div>
                   </div>
                 )}
+                
+                <div className="border rounded-lg p-4 bg-gray-50">
+                  <SignaturePad
+                    title="Firma del Profesional"
+                    onSignatureChange={setProfessionalSignature}
+                  />
+                  <div className="mt-3 text-xs text-medical-gray space-y-1">
+                    <div>• Use su dedo o stylus</div>
+                    <div>• No levante su dedo o stylus</div>
+                    <div>• Mantenga velocidad constante para firma</div>
+                    <div>• Use "Limpiar" para reiniciar la firma</div>
+                    <div>• Use "Guardar Firma" para almacenar la firma automáticamente</div>
+                    <div>• Use "Cargar Firma" para usar una firma previamente guardada</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Foto del Paciente */}
-      <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue">Foto del Paciente</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <CameraCapture
-              ref={cameraCaptureRef}
-              title="Captura de Foto del Paciente"
-              subtitle="Para verificación de identidad (opcional)"
-            />
-            <Button
-              onClick={handlePhotoCapture}
-              variant="outline"
-              className="border-medical-blue text-medical-blue hover:bg-medical-blue/5"
-            >
-              Capturar Foto
-            </Button>
-            {patientPhoto && (
-              <div className="mt-2">
-                <span className="text-sm text-medical-green flex items-center gap-1">
-                  <CheckCircle className="h-4 w-4" />
-                  Foto capturada exitosamente
-                </span>
-              </div>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Botones de Acción */}
       <Card className="border-medical-blue/20">
