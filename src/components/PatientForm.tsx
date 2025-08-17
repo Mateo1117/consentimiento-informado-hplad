@@ -61,11 +61,16 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
 
   const sedes = [
     "Hospital Pedro Leon Alvarez Diaz de la Mesa",
-    "Centro de salud Bojaca",
-    "Centro de salud el Rosal",
-    "Centro de salud el Sociego",
-    "Centro de salud Puente Piedra",
-    "Centro de salud Zipacon"
+    "Centro de salud Anapoima",
+    "Cachipay",
+    "San Antonio",
+    "La Paz",
+    "San Javier",
+    "Peña Negra",
+    "San Joaquín",
+    "La Esperanza",
+    "Tena",
+    "La Gran Vía"
   ];
 
   const handleSearch = async () => {
