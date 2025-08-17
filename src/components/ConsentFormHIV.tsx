@@ -410,6 +410,31 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
                   <div>• Use "Limpiar" para reiniciar la firma</div>
                   <div>• Use "Guardar" para confirmar la firma</div>
                 </div>
+                
+                {/* Foto del Paciente */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <Label className="text-medical-blue font-medium">Foto del Paciente</Label>
+                  <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mt-2">
+                    <div className="flex flex-col items-center">
+                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-3">
+                        <span className="text-xl text-gray-400">📷</span>
+                      </div>
+                      <p className="text-gray-500 mb-3 text-sm">Cámara no activada</p>
+                      <Button variant="outline" size="sm" className="mb-3">
+                        <Camera className="w-4 h-4 mr-2" />
+                        Activar Cámara
+                      </Button>
+                      <p className="text-xs text-gray-400">
+                        La foto se tomará automáticamente al registrar la firma
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-center">
+                    <Button variant="outline" size="sm">
+                      Capturar Foto
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -467,36 +492,6 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
         </CardContent>
       </Card>
 
-      {/* Foto del Paciente */}
-      <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue flex items-center gap-2">
-            📷 Foto del Paciente
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-8 text-center">
-            <div className="flex flex-col items-center">
-              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-4">
-                <span className="text-2xl text-gray-400">📷</span>
-              </div>
-              <p className="text-gray-500 mb-4">Cámara no activada</p>
-              <Button variant="outline" className="mb-4">
-                <Camera className="w-4 h-4 mr-2" />
-                Activar Cámara
-              </Button>
-              <p className="text-xs text-gray-400">
-                La foto se tomará automáticamente al registrar la firma
-              </p>
-            </div>
-          </div>
-          <div className="mt-4 text-center">
-            <Button variant="outline" size="sm">
-              Capturar Foto
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Share Consent Buttons */}
       <ShareConsentButtons
