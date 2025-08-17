@@ -100,6 +100,12 @@ export const ConsentFormHemocomponentes = ({
     setProfessionalDocument(professional.document);
     if (professional.signatureData) {
       setProfessionalSignature(professional.signatureData);
+      setTimeout(() => {
+        if (professionalSignatureRef.current) {
+          professionalSignatureRef.current.loadSignature(professional.signatureData);
+          toast.success("Firma del profesional cargada automáticamente");
+        }
+      }, 100);
     }
     setShowProfessionalForm(false);
   };

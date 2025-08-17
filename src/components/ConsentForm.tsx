@@ -116,6 +116,9 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
   const patientCameraRef = useRef<CameraCaptureRef>(null);
   const documentRef = useRef<HTMLDivElement>(null);
   
+  // States for signatures
+  const [professionalSignature, setProfessionalSignature] = useState<string>("");
+  
   // Determinar si es menor de edad
   const isMinor = patientData.edad < 18;
 
@@ -132,10 +135,16 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
     setProfessionalDocument(professional.document);
     setShowProfessionalForm(false);
     
-    // Load the signature automatically
-    setTimeout(() => {
-      professionalSignatureRef.current?.loadSignature(professional.signatureData);
-    }, 100);
+    // Store and load the signature automatically if it exists
+    if (professional.signatureData) {
+      setProfessionalSignature(professional.signatureData);
+      setTimeout(() => {
+        if (professionalSignatureRef.current) {
+          professionalSignatureRef.current.loadSignature(professional.signatureData);
+          toast.success("Firma del profesional cargada automáticamente");
+        }
+      }, 100);
+    }
   };
 
   const handleNewProfessional = () => {
