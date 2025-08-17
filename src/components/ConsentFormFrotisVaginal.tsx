@@ -695,8 +695,12 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
                 
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <SignaturePad
+                    ref={professionalSignatureRef}
                     title="Firma del Profesional"
                     onSignatureChange={setProfessionalSignature}
+                    isProfessional={true}
+                    professionalName={professionalName}
+                    professionalDocument={professionalDocument}
                   />
                   <div className="mt-3 text-xs text-medical-gray space-y-1">
                     <div>• Use su dedo o stylus</div>

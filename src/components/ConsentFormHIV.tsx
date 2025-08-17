@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Download, ArrowLeft, TestTube, Camera, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
-import { SignaturePad } from './SignaturePad';
+import { SignaturePad, SignatureRef } from './SignaturePad';
 import { CameraCapture } from './CameraCapture';
 import { ProfessionalSelector } from './ProfessionalSelector';
 import { generateHIVPDF } from '@/utils/pdfGeneratorHIV';
@@ -54,6 +54,9 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
     document: ''
   });
   const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
+  
+  // Refs para SignaturePads
+  const professionalSignatureRef = useRef<SignatureRef>(null);
 
   const generatePDF = () => {
     if (!professionalData.name || !professionalData.document) {
@@ -98,7 +101,13 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
     });
     if (professional.signatureData) {
       setProfessionalSignature(professional.signatureData);
-      toast.success("Firma del profesional cargada automáticamente");
+      // Cargar la firma visualmente en el SignaturePad
+      setTimeout(() => {
+        if (professionalSignatureRef.current) {
+          professionalSignatureRef.current.loadSignature(professional.signatureData);
+          toast.success("Firma del profesional cargada automáticamente");
+        }
+      }, 100);
     }
   };
 
@@ -474,8 +483,12 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
                 
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <SignaturePad 
+                    ref={professionalSignatureRef}
                     title="Firma del Profesional" 
                     onSignatureChange={setProfessionalSignature}
+                    isProfessional={true}
+                    professionalName={professionalData.name}
+                    professionalDocument={professionalData.document}
                   />
                   <div className="mt-3 text-xs text-medical-gray space-y-1">
                     <div>• Use su dedo o stylus</div>
