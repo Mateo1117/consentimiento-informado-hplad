@@ -29,6 +29,13 @@ class ConsentService {
         return null;
       }
 
+      // Get professional signature data for the authenticated user
+      const { data: professionalSignature } = await supabase
+        .from('professional_signatures')
+        .select('*')
+        .eq('created_by', user.user.id)
+        .single();
+
       const expiresAt = data.shareExpiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // Default: 7 días
 
       const { data: consent, error } = await supabase
@@ -43,7 +50,11 @@ class ConsentService {
           consent_type: data.consentType,
           payload: data.payload,
           share_expires_at: expiresAt,
-          status: 'sent'
+          status: 'sent',
+          // Automatically include professional data if available
+          professional_name: professionalSignature?.professional_name || null,
+          professional_document: professionalSignature?.professional_document || null,
+          professional_signature_data: professionalSignature?.signature_data || null
         })
         .select('id, share_token, share_expires_at')
         .single();

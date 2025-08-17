@@ -52,39 +52,51 @@ export class ProfessionalSignatureService {
         return null;
       }
 
-      // First, try to update existing signature for this user
-      const { data: existingData, error: updateError } = await supabase
+      // Check if a signature already exists for this user (regardless of document)
+      const { data: existingSignature } = await supabase
         .from('professional_signatures')
-        .update({
-          professional_name: signature.professional_name,
-          signature_data: signature.signature_data,
-          updated_at: new Date().toISOString()
-        })
-        .eq('professional_document', signature.professional_document)
+        .select('*')
         .eq('created_by', user.id)
-        .select()
         .single();
 
-      if (existingData && !updateError) {
-        return existingData;
+      if (existingSignature) {
+        // Update existing signature
+        const { data, error } = await supabase
+          .from('professional_signatures')
+          .update({
+            professional_name: signature.professional_name,
+            professional_document: signature.professional_document,
+            signature_data: signature.signature_data,
+            updated_at: new Date().toISOString()
+          })
+          .eq('created_by', user.id)
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error updating professional signature:', error);
+          return null;
+        }
+
+        return data;
+      } else {
+        // Insert new signature
+        const { data, error } = await supabase
+          .from('professional_signatures')
+          .insert([{
+            ...signature,
+            created_by: user.id
+          }])
+          .select()
+          .single();
+
+        if (error) {
+          console.error('Error saving professional signature:', error);
+          return null;
+        }
+
+        return data;
       }
-
-      // If update failed (no existing record), insert new signature
-      const { data, error } = await supabase
-        .from('professional_signatures')
-        .insert([{
-          ...signature,
-          created_by: user.id
-        }])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('Error saving professional signature:', error);
-        return null;
-      }
-
-      return data;
     } catch (error) {
       console.error('Error in saveSignature:', error);
       return null;
