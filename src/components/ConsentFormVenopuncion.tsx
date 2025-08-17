@@ -11,6 +11,7 @@ import { CameraCapture, CameraCaptureRef } from "./CameraCapture";
 import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, Shield, Download, TestTube, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { ShareConsentButtons } from './ShareConsentButtons';
 import { toast } from "sonner";
 import { generateVenopuncionPDF } from "@/utils/pdfGeneratorVenopuncion";
 
@@ -476,6 +477,37 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
                   title="Firma del Paciente"
                   onSignatureChange={handlePatientSignatureChange}
                 />
+                <div className="mt-3 text-xs text-medical-gray space-y-1">
+                  <div>• Use su dedo o stylus</div>
+                  <div>• No levante su dedo o stylus</div>
+                  <div>• Use "Limpiar" para reiniciar la firma</div>
+                  <div>• Use "Guardar" para confirmar la firma</div>
+                </div>
+                
+                {/* Foto del Paciente */}
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <Label className="text-medical-blue font-medium">Foto del Paciente</Label>
+                  <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mt-2">
+                    <div className="flex flex-col items-center">
+                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-3">
+                        <span className="text-xl text-gray-400">📷</span>
+                      </div>
+                      <p className="text-gray-500 mb-3 text-sm">Cámara no activada</p>
+                      <Button variant="outline" size="sm" className="mb-3">
+                        <span className="w-4 h-4 mr-2">📷</span>
+                        Activar Cámara
+                      </Button>
+                      <p className="text-xs text-gray-400">
+                        La foto se tomará automáticamente al registrar la firma
+                      </p>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-center">
+                    <Button variant="outline" size="sm">
+                      Capturar Foto
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -557,6 +589,28 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
           </div>
         </CardContent>
       </Card>
+
+      {/* Share Consent Buttons */}
+      <ShareConsentButtons
+        consentData={{
+          patientName: `${patientData.nombre} ${patientData.apellidos}`,
+          patientDocumentType: patientData.tipoDocumento,
+          patientDocumentNumber: patientData.numeroDocumento,
+          patientEmail: patientData.eps, 
+          patientPhone: patientData.telefono,
+          consentType: 'VENOPUNCION',
+          payload: {
+            procedures: ['Toma de Muestras por Venopunción'],
+            risks: ['Dolor temporal en el sitio de punción', 'Sangrado mínimo', 'Hematoma (moretón)', 'Mareo o desmayo en personas sensibles'],
+            benefits: ['Obtener información diagnóstica precisa y confiable para el manejo médico adecuado'],
+            alternatives: ['Punción arterial o muestras de orina/saliva según el tipo de análisis'],
+            decision: consentDecision
+          }
+        }}
+        onConsentCreated={(shareableConsent) => {
+          console.log('Enlace de consentimiento creado:', shareableConsent);
+        }}
+      />
 
       {/* Botones de Acción */}
       <Card className="border-medical-blue/20">

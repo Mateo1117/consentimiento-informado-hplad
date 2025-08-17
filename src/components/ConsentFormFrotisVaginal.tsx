@@ -11,6 +11,7 @@ import { CameraCapture, CameraCaptureRef } from "./CameraCapture";
 import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, Shield, Download, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { ShareConsentButtons } from './ShareConsentButtons';
 import { toast } from "sonner";
 
 
@@ -712,6 +713,28 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         </CardContent>
       </Card>
 
+
+      {/* Share Consent Buttons */}
+      <ShareConsentButtons
+        consentData={{
+          patientName: `${patientData.nombre} ${patientData.apellidos}`,
+          patientDocumentType: patientData.tipoDocumento,
+          patientDocumentNumber: patientData.numeroDocumento,
+          patientEmail: patientData.eps,
+          patientPhone: patientData.telefono,
+          consentType: 'FROTIS_VAGINAL',
+          payload: {
+            procedures: ['Toma de Muestra Frotis Vaginal - Cultivo Recto-Vaginal'],
+            risks: ['Ardor, dolor, picazón o incomodidad al momento de introducir el espéculo y el aplicador'],
+            benefits: ['Orientar y/o confirmar un diagnóstico y realizar seguimiento oportuno de una condición en salud'],
+            alternatives: ['Ninguna'],
+            decision: consentDecision
+          }
+        }}
+        onConsentCreated={(shareableConsent) => {
+          console.log('Enlace de consentimiento creado:', shareableConsent);
+        }}
+      />
 
       {/* Botones de Acción */}
       <Card className="border-medical-blue/20">

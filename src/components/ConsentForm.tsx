@@ -12,6 +12,7 @@ import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, AlertCircle, Shield, Download, CheckCircle } from "lucide-react";
+import { ShareConsentButtons } from './ShareConsentButtons';
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import { consentService, type ConsentFormData } from "@/services/legacy-consent";
@@ -770,6 +771,28 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
         </Card>
         </div>
       </div>
+
+      {/* Share Consent Buttons */}
+      <ShareConsentButtons
+        consentData={{
+          patientName: `${patientData.nombre} ${patientData.apellidos}`,
+          patientDocumentType: patientData.tipoDocumento,
+          patientDocumentNumber: patientData.numeroDocumento,
+          patientEmail: patientData.eps,
+          patientPhone: patientData.telefono,
+          consentType: 'GENERAL',
+          payload: {
+            procedures: selectedProcedures,
+            risks: ['Riesgos específicos según los procedimientos seleccionados'],
+            benefits: ['Beneficios específicos según los procedimientos seleccionados'],
+            alternatives: ['Alternativas específicas según los procedimientos seleccionados'],
+            decision: consentDecision
+          }
+        }}
+        onConsentCreated={(shareableConsent) => {
+          console.log('Enlace de consentimiento creado:', shareableConsent);
+        }}
+      />
 
       {/* Botones de acción */}
       <div className="flex gap-4 justify-between">

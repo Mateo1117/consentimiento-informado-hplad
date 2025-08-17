@@ -10,6 +10,7 @@ import { CameraCapture, CameraCaptureRef } from "./CameraCapture";
 import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, Shield, Download, Heart, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { ShareConsentButtons } from './ShareConsentButtons';
 import { toast } from "sonner";
 
 interface PatientData {
@@ -489,6 +490,28 @@ export const ConsentFormHemocomponentes = ({
           </div>
         </CardContent>
       </Card>
+
+      {/* Share Consent Buttons */}
+      <ShareConsentButtons
+        consentData={{
+          patientName: `${patientData.nombre} ${patientData.apellidos}`,
+          patientDocumentType: patientData.tipoDocumento,
+          patientDocumentNumber: patientData.numeroDocumento,
+          patientEmail: patientData.eps,
+          patientPhone: patientData.telefono,
+          consentType: 'HEMOCOMPONENTES',
+          payload: {
+            procedures: ['Administración de Hemocomponentes y/o Hemoderivados'],
+            risks: ['Reacciones febriles', 'Reacciones alérgicas', 'Infecciones transmisibles', 'Sobrecarga de volumen'],
+            benefits: ['Tratamiento de anemias severas', 'Reposición de factores de coagulación', 'Soporte en procedimientos quirúrgicos'],
+            alternatives: ['Alternativas farmacológicas según el caso'],
+            decision: consentDecision
+          }
+        }}
+        onConsentCreated={(shareableConsent) => {
+          console.log('Enlace de consentimiento creado:', shareableConsent);
+        }}
+      />
 
       {/* Botones de Acción */}
       <Card className="border-medical-blue/20">

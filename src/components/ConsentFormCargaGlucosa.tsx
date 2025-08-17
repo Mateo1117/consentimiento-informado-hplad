@@ -11,6 +11,7 @@ import { CameraCapture, CameraCaptureRef } from "./CameraCapture";
 import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, Shield, Download, TestTube2, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { ShareConsentButtons } from './ShareConsentButtons';
 import { toast } from "sonner";
 import { generateCargaGlucosaPDF } from "@/utils/pdfGeneratorCargaGlucosa";
 
@@ -712,6 +713,28 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         </CardContent>
       </Card>
 
+
+      {/* Share Consent Buttons */}
+      <ShareConsentButtons
+        consentData={{
+          patientName: `${patientData.nombre} ${patientData.apellidos}`,
+          patientDocumentType: patientData.tipoDocumento,
+          patientDocumentNumber: patientData.numeroDocumento,
+          patientEmail: patientData.eps,
+          patientPhone: patientData.telefono,
+          consentType: 'CARGA_GLUCOSA',
+          payload: {
+            procedures: ['Carga Oral de Glucosa'],
+            risks: ['Molestias digestivas', 'Náuseas', 'Vómito', 'Reacciones alérgicas (raras)'],
+            benefits: ['Diagnóstico preciso de diabetes gestacional o intolerancia a la glucosa'],
+            alternatives: ['Medición de glucosa en ayunas'],
+            decision: consentDecision
+          }
+        }}
+        onConsentCreated={(shareableConsent) => {
+          console.log('Enlace de consentimiento creado:', shareableConsent);
+        }}
+      />
 
       {/* Action Buttons */}
       <Card className="border-medical-blue/20">
