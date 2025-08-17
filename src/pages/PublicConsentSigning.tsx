@@ -50,8 +50,10 @@ export const PublicConsentSigning: React.FC = () => {
 
       console.log('✅ Consentimiento cargado exitosamente:', {
         id: data.id,
-        patient_name: data.patient_name,
-        status: data.status
+        patient_name_masked: data.patient_name_masked,
+        status: data.status,
+        access_count: data.access_count,
+        requires_verification: data.requires_verification
       });
       
       setConsent(data);
@@ -208,20 +210,20 @@ export const PublicConsentSigning: React.FC = () => {
           <CardContent className="space-y-6">
             {/* Patient Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-              <div>
-                <Label className="text-sm font-medium text-muted-foreground">Paciente</Label>
-                <div className="flex items-center mt-1">
-                  <User className="w-4 h-4 mr-2 text-muted-foreground" />
-                  <span className="font-medium">{consent.patient_name}</span>
-                </div>
-              </div>
-              {consent.patient_document_number && (
                 <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Documento</Label>
-                  <p className="mt-1">
-                    {consent.patient_document_type} {consent.patient_document_number}
-                  </p>
+                  <Label className="text-sm font-medium text-muted-foreground">Paciente</Label>
+                  <div className="flex items-center mt-1">
+                    <User className="w-4 h-4 mr-2 text-muted-foreground" />
+                    <span className="font-medium">{consent.patient_name_masked}</span>
+                  </div>
                 </div>
+                {consent.patient_document_masked && (
+                  <div>
+                    <Label className="text-sm font-medium text-muted-foreground">Documento</Label>
+                    <p className="mt-1">
+                      {consent.patient_document_type} {consent.patient_document_masked}
+                    </p>
+                  </div>
               )}
             </div>
 

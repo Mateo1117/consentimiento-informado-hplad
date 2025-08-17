@@ -14,6 +14,50 @@ export type Database = {
   }
   public: {
     Tables: {
+      consent_access_logs: {
+        Row: {
+          access_type: string
+          accessed_at: string | null
+          consent_id: string | null
+          error_message: string | null
+          id: string
+          ip_address: unknown | null
+          share_token: string
+          success: boolean | null
+          user_agent: string | null
+        }
+        Insert: {
+          access_type: string
+          accessed_at?: string | null
+          consent_id?: string | null
+          error_message?: string | null
+          id?: string
+          ip_address?: unknown | null
+          share_token: string
+          success?: boolean | null
+          user_agent?: string | null
+        }
+        Update: {
+          access_type?: string
+          accessed_at?: string | null
+          consent_id?: string | null
+          error_message?: string | null
+          id?: string
+          ip_address?: unknown | null
+          share_token?: string
+          success?: boolean | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_access_logs_consent_id_fkey"
+            columns: ["consent_id"]
+            isOneToOne: false
+            referencedRelation: "consents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consents: {
         Row: {
           consent_type: string
@@ -184,6 +228,22 @@ export type Database = {
           status: string
         }[]
       }
+      get_consent_by_token_secure: {
+        Args: { p_ip_address?: unknown; p_token: string; p_user_agent?: string }
+        Returns: {
+          access_count: number
+          consent_type: string
+          id: string
+          patient_document_masked: string
+          patient_document_type: string
+          patient_name_masked: string
+          payload: Json
+          requires_verification: boolean
+          share_expires_at: string
+          signed_at: string
+          status: string
+        }[]
+      }
       sign_consent_by_token: {
         Args:
           | {
@@ -200,6 +260,24 @@ export type Database = {
         Returns: {
           id: string
           signed_at: string
+          status: string
+        }[]
+      }
+      sign_consent_by_token_secure: {
+        Args: {
+          p_ip_address?: unknown
+          p_patient_photo_url?: string
+          p_signature_data: string
+          p_signed_by_name: string
+          p_token: string
+          p_user_agent?: string
+          p_verification_code?: string
+        }
+        Returns: {
+          id: string
+          patient_photo_url: string
+          signed_at: string
+          signed_by_name: string
           status: string
         }[]
       }

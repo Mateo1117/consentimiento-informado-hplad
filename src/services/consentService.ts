@@ -84,20 +84,28 @@ class ConsentService {
     try {
       console.log('🔍 Buscando consentimiento con token:', token);
       
+      // Use the new secure function with IP and user agent tracking
       const { data, error } = await supabase
-        .rpc('get_consent_by_token', { p_token: token });
+        .rpc('get_consent_by_token_secure', { 
+          p_token: token,
+          p_ip_address: null, // Will be null from frontend, could be enhanced with server-side implementation
+          p_user_agent: navigator.userAgent
+        });
 
       if (error) {
-        console.error('❌ Error RPC get_consent_by_token:', error);
+        console.error('❌ Error RPC get_consent_by_token_secure:', error);
+        toast.error(`Error al acceder al consentimiento: ${error.message}`);
         return null;
       }
 
       console.log('✅ Consentimiento encontrado:', data?.[0] ? 'Sí' : 'No');
       console.log('📋 Status del consentimiento:', data?.[0]?.status);
+      console.log('🔒 Datos enmascarados para seguridad');
       
       return data?.[0] || null;
     } catch (error) {
       console.error('❌ Error crítico en getConsentByToken:', error);
+      toast.error('Error de acceso al consentimiento');
       return null;
     }
   }
@@ -107,22 +115,26 @@ class ConsentService {
       console.log('Intentando firmar consentimiento con token:', token);
       console.log('Datos de firma:', { signedByName, hasSignature: !!signatureData, hasPhoto: !!patientPhotoUrl });
 
+      // Use the new secure signing function with enhanced security
       const { data, error } = await supabase
-        .rpc('sign_consent_by_token', {
+        .rpc('sign_consent_by_token_secure', {
           p_token: token,
           p_signature_data: signatureData,
           p_signed_by_name: signedByName,
-          p_patient_photo_url: patientPhotoUrl
+          p_patient_photo_url: patientPhotoUrl,
+          p_verification_code: null, // Future enhancement for OTP verification
+          p_ip_address: null, // Will be null from frontend
+          p_user_agent: navigator.userAgent
         });
 
       if (error) {
-        console.error('Error RPC sign_consent_by_token:', error);
+        console.error('Error RPC sign_consent_by_token_secure:', error);
         toast.error(`Error al firmar el consentimiento: ${error.message}`);
         return null;
       }
 
       console.log('Respuesta RPC exitosa:', data);
-      toast.success('Consentimiento firmado exitosamente');
+      toast.success('Consentimiento firmado exitosamente con verificación de seguridad');
       return data?.[0] || null;
     } catch (error) {
       console.error('Error in signConsentByToken:', error);
