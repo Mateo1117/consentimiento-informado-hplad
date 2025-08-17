@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
+import { logger } from "@/utils/logger";
 
 type ConsentRow = Database['public']['Tables']['consents']['Row'];
 
@@ -13,7 +14,7 @@ export interface ConsentManagementData extends ConsentRow {
 class ConsentManagementService {
   async getAllConsents(): Promise<ConsentManagementData[]> {
     try {
-      console.log('📋 Cargando todos los consentimientos desde la tabla real...');
+      logger.info('Loading all consents from database...');
       
       const { data, error } = await supabase
         .from('consents')
@@ -21,11 +22,11 @@ class ConsentManagementService {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('❌ Error fetching consents:', error);
+        logger.error('Error fetching consents:', { error: error.message });
         throw new Error('Error al obtener los consentimientos');
       }
 
-      console.log('✅ Consentimientos cargados:', data?.length || 0);
+      logger.info('Consents loaded successfully', { count: data?.length || 0 });
       
       // Process data for display
       const processedData = data?.map(consent => ({
@@ -36,7 +37,7 @@ class ConsentManagementService {
 
       return processedData;
     } catch (error) {
-      console.error('❌ Error in getAllConsents:', error);
+      logger.error('Error in getAllConsents:', error);
       throw error;
     }
   }
@@ -50,7 +51,7 @@ class ConsentManagementService {
         .order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error fetching consents by status:', error);
+        logger.error('Error fetching consents by status:', { error: error.message, status });
         throw new Error('Error al filtrar consentimientos');
       }
 
@@ -60,7 +61,7 @@ class ConsentManagementService {
         status_badge: this.getStatusBadge(consent),
       })) || [];
     } catch (error) {
-      console.error('Error in getConsentsByStatus:', error);
+      logger.error('Error in getConsentsByStatus:', error);
       throw error;
     }
   }
@@ -103,7 +104,7 @@ class ConsentManagementService {
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
-        console.error('Error searching consents:', error);
+        logger.error('Error searching consents:', { error: error.message });
         throw new Error('Error al buscar consentimientos');
       }
 
@@ -113,7 +114,7 @@ class ConsentManagementService {
         status_badge: this.getStatusBadge(consent),
       })) || [];
     } catch (error) {
-      console.error('Error in searchConsents:', error);
+      logger.error('Error in searchConsents:', error);
       throw error;
     }
   }
@@ -139,7 +140,7 @@ class ConsentManagementService {
         .single();
 
       if (error) {
-        console.error('Error fetching consent by ID:', error);
+        logger.error('Error fetching consent by ID:', { error: error.message, id });
         return null;
       }
 
@@ -149,7 +150,7 @@ class ConsentManagementService {
         status_badge: this.getStatusBadge(data),
       };
     } catch (error) {
-      console.error('Error in getConsentById:', error);
+      logger.error('Error in getConsentById:', error);
       return null;
     }
   }

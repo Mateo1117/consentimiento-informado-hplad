@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Camera, CameraOff, RotateCcw } from 'lucide-react';
 import { toast } from 'sonner';
+import { logger } from '@/utils/logger';
 
 export interface CameraCaptureRef {
   capturePhoto: () => Promise<string | null>;
@@ -26,7 +27,7 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
     const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
 
     const startCamera = useCallback(async () => {
-      console.log("🎥 Starting camera...");
+      logger.debug("Starting camera...");
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: 640, height: 480, facingMode: 'user' }
@@ -36,10 +37,10 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
           videoRef.current.srcObject = stream;
           streamRef.current = stream;
           setIsCameraActive(true);
-          console.log("✅ Camera started successfully");
+          logger.debug("Camera started successfully");
         }
       } catch (error) {
-        console.error('❌ Error accessing camera:', error);
+        logger.error('Error accessing camera:', error);
         toast.error('No se pudo acceder a la cámara. Verifique los permisos.');
       }
     }, []);
@@ -53,14 +54,14 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
     }, []);
 
     const capturePhoto = useCallback(async (): Promise<string | null> => {
-      console.log("📸 CameraCapture.capturePhoto called", {
+      logger.debug("Camera capture photo called", {
         hasVideo: !!videoRef.current,
         hasCanvas: !!canvasRef.current,
         isCameraActive
       });
       
       if (!videoRef.current || !canvasRef.current || !isCameraActive) {
-        console.log("❌ Camera not ready for capture");
+        logger.warn("Camera not ready for capture");
         return null;
       }
 
@@ -69,13 +70,13 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
       const context = canvas.getContext('2d');
 
       if (!context) {
-        console.log("❌ No canvas context available");
+        logger.error("No canvas context available");
         return null;
       }
 
       // Wait for video to be ready
       if (video.videoWidth === 0 || video.videoHeight === 0) {
-        console.log("❌ Video not ready, dimensions:", video.videoWidth, video.videoHeight);
+        logger.warn("Video not ready", { width: video.videoWidth, height: video.videoHeight });
         return null;
       }
 
@@ -89,14 +90,14 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
             const reader = new FileReader();
             reader.onload = () => {
               const base64String = reader.result as string;
-              console.log("✅ Photo captured successfully, size:", base64String.length);
+              logger.debug("Photo captured successfully");
               setCapturedPhoto(base64String);
               // Keep camera active - don't stop it
               resolve(base64String);
             };
             reader.readAsDataURL(blob);
           } else {
-            console.log("❌ Failed to create blob from canvas");
+            logger.error("Failed to create blob from canvas");
             resolve(null);
           }
         }, 'image/jpeg', 0.9); // Increase quality
@@ -104,7 +105,7 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
     }, [isCameraActive]);
 
     const getCapturedPhoto = useCallback(() => {
-      console.log("📱 getCapturedPhoto called, has photo:", !!capturedPhoto);
+      logger.debug("Getting captured photo", { hasPhoto: !!capturedPhoto });
       return capturedPhoto;
     }, [capturedPhoto]);
 
