@@ -244,6 +244,18 @@ export type Database = {
           status: string
         }[]
       }
+      insert_audit_log: {
+        Args: {
+          p_access_type: string
+          p_consent_id: string
+          p_error_message?: string
+          p_ip_address?: unknown
+          p_share_token: string
+          p_success?: boolean
+          p_user_agent?: string
+        }
+        Returns: undefined
+      }
       sign_consent_by_token: {
         Args:
           | {
