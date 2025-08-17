@@ -256,6 +256,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      is_admin_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       sign_consent_by_token: {
         Args:
           | {
