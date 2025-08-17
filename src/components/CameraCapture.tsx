@@ -192,10 +192,6 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
               </div>
             )}
           </div>
-          
-          <p className="text-xs text-muted-foreground text-center">
-            La foto se tomará automáticamente al registrar la firma
-          </p>
         </CardContent>
       </Card>
     );
