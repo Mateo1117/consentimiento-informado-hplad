@@ -132,7 +132,7 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
             <p className="text-sm text-muted-foreground">{subtitle}</p>
           )}
         </CardHeader>
-        <CardContent className="p-4">
+        <CardContent>
           <div className="relative bg-muted rounded-lg overflow-hidden w-full h-64 min-h-[280px]">
             {capturedPhoto ? (
               <img 
