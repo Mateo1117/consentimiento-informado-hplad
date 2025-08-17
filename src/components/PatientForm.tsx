@@ -62,15 +62,15 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
   const sedes = [
     "Hospital Pedro Leon Alvarez Diaz de la Mesa",
     "Centro de salud Anapoima",
-    "Cachipay",
-    "San Antonio",
-    "La Paz",
-    "San Javier",
-    "Peña Negra",
-    "San Joaquín",
-    "La Esperanza",
-    "Tena",
-    "La Gran Vía"
+    "Centro de salud Cachipay",
+    "Centro de salud San Antonio",
+    "Centro de salud La Paz",
+    "Centro de salud San Javier",
+    "Centro de salud Peña Negra",
+    "Centro de salud San Joaquín",
+    "Centro de salud La Esperanza",
+    "Centro de salud Tena",
+    "Centro de salud La Gran Vía"
   ];
 
   const handleSearch = async () => {
