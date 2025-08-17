@@ -359,41 +359,6 @@ export const ConsentFormHemocomponentes = ({
         </CardContent>
       </Card>
 
-      {/* Información del Profesional */}
-      <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue flex items-center gap-2">
-            <span className="text-medical-blue">✋</span>
-            Información del Profesional
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="professionalName" className="text-medical-gray font-medium">Nombre del Profesional *</Label>
-              <Input
-                id="professionalName"
-                value={professionalName}
-                onChange={(e) => setProfessionalName(e.target.value)}
-                className="border-medical-blue/20 focus:border-medical-blue"
-                placeholder="Nombre completo del profesional"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="professionalDocument" className="text-medical-gray font-medium">Documento del Profesional *</Label>
-              <Input
-                id="professionalDocument"
-                value={professionalDocument}
-                onChange={(e) => setProfessionalDocument(e.target.value)}
-                className="border-medical-blue/20 focus:border-medical-blue"
-                placeholder="Número de documento"
-                required
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Firmas Digitales */}
       <Card className="border-medical-blue/20">

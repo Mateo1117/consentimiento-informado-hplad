@@ -526,69 +526,6 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         </Card>
       )}
 
-      {/* Información del Profesional */}
-      <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue flex items-center gap-2">
-            <span className="text-medical-blue">✋</span>
-            Información del Profesional
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {!showProfessionalForm && professionalName && (
-            <div className="bg-medical-green/10 p-4 rounded-lg border border-medical-green/20">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h4 className="font-semibold text-medical-green">Profesional Seleccionado</h4>
-                  <p className="text-sm text-gray-600">{professionalName} - {professionalDocument}</p>
-                </div>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={clearProfessional}
-                  className="border-medical-green/20 text-medical-green hover:bg-medical-green/5"
-                >
-                  Cambiar
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {showProfessionalForm && (
-            <>
-              <ProfessionalSelector
-                onProfessionalSelect={handleProfessionalSelect}
-                onNewProfessional={() => setShowProfessionalForm(true)}
-                selectedDocument={professionalDocument}
-              />
-              <Separator />
-            </>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="professionalName" className="text-medical-blue">Nombre del Profesional *</Label>
-              <Input
-                id="professionalName"
-                value={professionalName}
-                onChange={(e) => setProfessionalName(e.target.value)}
-                placeholder="Nombre completo del profesional"
-                className="border-medical-blue/20 focus:border-medical-blue"
-              />
-            </div>
-            <div>
-              <Label htmlFor="professionalDocument" className="text-medical-blue">Documento del Profesional *</Label>
-              <Input
-                id="professionalDocument"
-                value={professionalDocument}
-                onChange={(e) => setProfessionalDocument(e.target.value)}
-                placeholder="Número de documento"
-                className="border-medical-blue/20 focus:border-medical-blue"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Firmas Digitales */}
       <Card className="border-medical-blue/20">

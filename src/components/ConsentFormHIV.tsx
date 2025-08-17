@@ -361,41 +361,6 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
         </CardContent>
       </Card>
 
-      {/* Profesional Information */}
-      <Card className="border-medical-blue/20">
-        <CardHeader>
-          <CardTitle className="text-medical-blue flex items-center gap-2">
-            <span className="text-medical-blue">✋</span>
-            Información del Profesional
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="professionalName" className="text-medical-gray font-medium">Nombre del Profesional *</Label>
-              <Input
-                id="professionalName"
-                value={professionalData.name}
-                onChange={(e) => setProfessionalData(prev => ({ ...prev, name: e.target.value }))}
-                className="border-medical-blue/20 focus:border-medical-blue"
-                placeholder="Nombre completo del profesional"
-                required
-              />
-            </div>
-            <div>
-              <Label htmlFor="professionalDocument" className="text-medical-gray font-medium">Documento del Profesional *</Label>
-              <Input
-                id="professionalDocument"
-                value={professionalData.document}
-                onChange={(e) => setProfessionalData(prev => ({ ...prev, document: e.target.value }))}
-                className="border-medical-blue/20 focus:border-medical-blue"
-                placeholder="Número de documento"
-                required
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* Firmas Digitales */}
       <Card className="border-medical-blue/20">
