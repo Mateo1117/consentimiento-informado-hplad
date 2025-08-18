@@ -59,44 +59,74 @@ export const PublicConsentSigning: React.FC = () => {
   };
 
   const handleSign = async () => {
+    console.log('🖊️ Iniciando proceso de firma desde móvil');
+    console.log('Validando datos de entrada...');
+    console.log('Nombre firmante:', signedByName.trim());
+    console.log('Tiene signatureData:', !!signatureData);
+    console.log('Longitud signatureData:', signatureData?.length || 0);
+    
     if (!signedByName.trim()) {
+      console.error('❌ Error: Nombre firmante vacío');
       toast.error('Por favor ingrese su nombre completo');
       return;
     }
 
-    if (!signatureData) {
-      toast.error('Por favor proporcione su firma');
+    if (!signatureData || signatureData.length < 100) {
+      console.error('❌ Error: Firma inválida o vacía');
+      console.log('SignatureData:', signatureData?.substring(0, 50) + '...');
+      toast.error('Por favor firme en el área designada');
+      return;
+    }
+
+    // Verificar que se haya capturado la foto
+    const capturedPhoto = cameraRef.current?.getCapturedPhoto();
+    if (!capturedPhoto) {
+      console.error('❌ Error: Foto del paciente no capturada');
+      toast.error('Por favor capture una foto antes de firmar');
       return;
     }
 
     setSigning(true);
     try {
-      // Capture patient photo
-      const capturedPhoto = cameraRef.current?.getCapturedPhoto();
-      let patientPhotoUrl = undefined;
-
-      if (capturedPhoto) {
-        const uploadResult = await PhotoService.uploadPhoto(capturedPhoto, 'patient');
-        if (uploadResult) {
-          patientPhotoUrl = uploadResult.url;
-        }
+      console.log('📡 Enviando datos al servidor...');
+      console.log('Token usado:', token);
+      
+      // Subir la foto del paciente
+      console.log('📸 Subiendo foto del paciente...');
+      const photoResult = await PhotoService.uploadPhoto(capturedPhoto, 'patient');
+      if (!photoResult) {
+        toast.error('Error al subir la foto del paciente');
+        return;
       }
-
-      // Sign the consent
+      
       const result = await consentService.signConsentByToken(
         token!,
         signatureData,
         signedByName.trim(),
-        patientPhotoUrl
+        photoResult.url
       );
 
+      console.log('📥 Respuesta del servidor:', result);
+
       if (result) {
-        toast.success('Consentimiento firmado exitosamente');
-        setConsent(prev => ({ ...prev, status: 'signed', signed_at: new Date().toISOString() }));
+        console.log('✅ Firma exitosa desde móvil');
+        setConsent(prev => ({ 
+          ...prev, 
+          status: 'signed', 
+          signed_at: new Date().toISOString(),
+          signed_by_name: signedByName.trim(),
+          patient_photo_url: photoResult.url
+        }));
+        toast.success('¡Consentimiento firmado exitosamente!');
+      } else {
+        console.error('❌ No se recibió respuesta de la firma');
+        toast.error('Error: No se pudo completar la firma. Intente nuevamente.');
       }
     } catch (error: any) {
-      console.error('Error signing consent:', error);
-      toast.error(error.message || 'Error al firmar el consentimiento');
+      console.error('❌ Error crítico en proceso de firma:', error);
+      const errorMessage = error?.message || 'Error desconocido';
+      console.error('Detalle del error:', errorMessage);
+      toast.error(`Error al firmar: ${errorMessage}`);
     } finally {
       setSigning(false);
     }
