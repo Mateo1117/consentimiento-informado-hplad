@@ -181,17 +181,24 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(({
             onEnd={() => {
               // Auto-capture signature when user finishes drawing
               setTimeout(() => {
-                const signatureData = signatureRef.current?.toDataURL();
-                const isEmpty = signatureRef.current?.isEmpty();
+                if (!signatureRef.current) return;
                 
-                if (signatureData && !isEmpty && signatureData.length > 100) {
+                const isEmpty = signatureRef.current.isEmpty();
+                console.log('🖊️ SignaturePad - Detectando fin de firma');
+                console.log('Canvas está vacío:', isEmpty);
+                
+                if (!isEmpty) {
+                  const signatureData = signatureRef.current.toDataURL();
+                  console.log('✅ Firma válida detectada, longitud:', signatureData.length);
+                  console.log('Muestra firma:', signatureData.substring(0, 100) + '...');
                   setHasSignature(true);
                   onSignatureChange?.(signatureData);
                 } else {
+                  console.log('❌ Firma vacía detectada');
                   setHasSignature(false);
                   onSignatureChange?.(null);
                 }
-              }, 300);
+              }, 100);
             }}
           />
         </div>

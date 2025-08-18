@@ -72,14 +72,19 @@ export const PublicConsentSigning: React.FC = () => {
       return;
     }
 
-    if (!signatureData || signatureData.length < 50) {
-      console.error('❌ Error: Firma inválida o vacía');
-      console.log('SignatureData actual:', signatureData?.substring(0, 100) + '...');
+    console.log('📝 Validando signatureData:', {
+      exists: !!signatureData,
+      length: signatureData?.length || 0,
+      preview: signatureData?.substring(0, 50) + '...'
+    });
+    
+    if (!signatureData || signatureData.length < 30) {
+      console.error('❌ Error: Firma inválida o muy corta');
       toast.error('Por favor firme en el área designada');
       return;
     }
     
-    console.log('✅ Firma válida detectada, longitud:', signatureData.length);
+    console.log('✅ Firma válida detectada, continuando...');
 
     // Intentar capturar la foto del paciente (opcional)
     const capturedPhoto = cameraRef.current?.getCapturedPhoto();
@@ -335,7 +340,7 @@ export const PublicConsentSigning: React.FC = () => {
               <div className="flex flex-col space-y-4">
                 <Button
                   onClick={handleSign}
-                  disabled={signing || !signedByName.trim() || !signatureData}
+                  disabled={signing || !signedByName.trim()}
                   className="w-full"
                   size="lg"
                 >
