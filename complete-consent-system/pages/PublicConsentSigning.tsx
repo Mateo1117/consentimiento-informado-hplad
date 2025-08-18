@@ -72,19 +72,21 @@ export const PublicConsentSigning: React.FC = () => {
       return;
     }
 
-    if (!signatureData || signatureData.length < 100) {
+    if (!signatureData || signatureData.length < 50) {
       console.error('❌ Error: Firma inválida o vacía');
-      console.log('SignatureData:', signatureData?.substring(0, 50) + '...');
+      console.log('SignatureData actual:', signatureData?.substring(0, 100) + '...');
       toast.error('Por favor firme en el área designada');
       return;
     }
+    
+    console.log('✅ Firma válida detectada, longitud:', signatureData.length);
 
-    // Verificar que se haya capturado la foto
+    // Intentar capturar la foto del paciente (opcional)
     const capturedPhoto = cameraRef.current?.getCapturedPhoto();
+    console.log('📸 Estado de la foto:', !!capturedPhoto);
+    
     if (!capturedPhoto) {
-      console.error('❌ Error: Foto del paciente no capturada');
-      toast.error('Por favor capture una foto antes de firmar');
-      return;
+      console.warn('⚠️ No se capturó foto del paciente, continuando sin foto');
     }
 
     setSigning(true);
@@ -92,19 +94,21 @@ export const PublicConsentSigning: React.FC = () => {
       console.log('📡 Enviando datos al servidor...');
       console.log('Token usado:', token);
       
-      // Subir la foto del paciente
-      console.log('📸 Subiendo foto del paciente...');
-      const photoResult = await PhotoService.uploadPhoto(capturedPhoto, 'patient');
-      if (!photoResult) {
-        toast.error('Error al subir la foto del paciente');
-        return;
+      // Subir la foto del paciente si existe
+      let photoResult = null;
+      if (capturedPhoto) {
+        console.log('📸 Subiendo foto del paciente...');
+        photoResult = await PhotoService.uploadPhoto(capturedPhoto, 'patient');
+        if (!photoResult) {
+          console.warn('⚠️ Error al subir la foto, continuando sin foto');
+        }
       }
       
       const result = await consentService.signConsentByToken(
         token!,
         signatureData,
         signedByName.trim(),
-        photoResult.url
+        photoResult?.url
       );
 
       console.log('📥 Respuesta del servidor:', result);
@@ -116,7 +120,7 @@ export const PublicConsentSigning: React.FC = () => {
           status: 'signed', 
           signed_at: new Date().toISOString(),
           signed_by_name: signedByName.trim(),
-          patient_photo_url: photoResult.url
+          patient_photo_url: photoResult?.url
         }));
         toast.success('¡Consentimiento firmado exitosamente!');
       } else {
