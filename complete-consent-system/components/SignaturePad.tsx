@@ -179,26 +179,36 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(({
               className: 'signature-canvas w-full h-full'
             }}
             onEnd={() => {
-              // Auto-capture signature when user finishes drawing
+              // Captura inmediata de la firma
+              console.log('🖊️ EVENTO onEnd - Usuario terminó de firmar');
+              
+              if (!signatureRef.current) {
+                console.error('❌ No hay referencia al canvas');
+                return;
+              }
+              
+              // Esperar un momento para que se complete el trazo
               setTimeout(() => {
-                if (!signatureRef.current) return;
-                
-                const isEmpty = signatureRef.current.isEmpty();
-                console.log('🖊️ SignaturePad - Detectando fin de firma');
-                console.log('Canvas está vacío:', isEmpty);
+                const isEmpty = signatureRef.current?.isEmpty();
+                console.log('📊 Estado del canvas:');
+                console.log('- Canvas vacío:', isEmpty);
                 
                 if (!isEmpty) {
-                  const signatureData = signatureRef.current.toDataURL();
-                  console.log('✅ Firma válida detectada, longitud:', signatureData.length);
-                  console.log('Muestra firma:', signatureData.substring(0, 100) + '...');
+                  const signatureData = signatureRef.current?.toDataURL();
+                  console.log('✅ CAPTURANDO FIRMA:');
+                  console.log('- Longitud:', signatureData?.length || 0);
+                  console.log('- Tipo válido:', signatureData?.startsWith('data:image/png;base64,'));
+                  console.log('- Muestra:', signatureData?.substring(0, 50) + '...');
+                  
                   setHasSignature(true);
-                  onSignatureChange?.(signatureData);
+                  onSignatureChange?.(signatureData || null);
+                  console.log('📤 Firma enviada al componente padre');
                 } else {
-                  console.log('❌ Firma vacía detectada');
+                  console.log('❌ Canvas detectado como vacío');
                   setHasSignature(false);
                   onSignatureChange?.(null);
                 }
-              }, 100);
+              }, 50); // Reducido a 50ms para respuesta más rápida
             }}
           />
         </div>

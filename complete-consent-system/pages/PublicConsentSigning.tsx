@@ -72,19 +72,31 @@ export const PublicConsentSigning: React.FC = () => {
       return;
     }
 
-    console.log('📝 Validando signatureData:', {
-      exists: !!signatureData,
-      length: signatureData?.length || 0,
-      preview: signatureData?.substring(0, 50) + '...'
-    });
+    // Validación más permisiva de la firma
+    console.log('📝 VALIDANDO FIRMA - Estado actual:');
+    console.log('- signatureData existe:', !!signatureData);
+    console.log('- signatureData longitud:', signatureData?.length || 0);
+    console.log('- signatureData tipo:', typeof signatureData);
     
-    if (!signatureData || signatureData.length < 30) {
-      console.error('❌ Error: Firma inválida o muy corta');
-      toast.error('Por favor firme en el área designada');
+    // Verificar si es una firma válida (más permisivo)
+    const isValidSignature = signatureData && 
+                           typeof signatureData === 'string' && 
+                           signatureData.startsWith('data:image/png;base64,') &&
+                           signatureData.length > 100;
+    
+    console.log('- Es firma válida:', isValidSignature);
+    
+    if (!isValidSignature) {
+      console.error('❌ FIRMA INVÁLIDA - Motivos posibles:');
+      console.error('- No hay datos de firma:', !signatureData);
+      console.error('- Tipo incorrecto:', typeof signatureData !== 'string');
+      console.error('- No es base64:', !signatureData?.startsWith('data:image/png;base64,'));
+      console.error('- Muy corta:', (signatureData?.length || 0) <= 100);
+      toast.error('Error: Firma no detectada correctamente. Intente limpiar y firmar nuevamente.');
       return;
     }
     
-    console.log('✅ Firma válida detectada, continuando...');
+    console.log('✅ FIRMA VÁLIDA - Continuando con el proceso...');
 
     // Intentar capturar la foto del paciente (opcional)
     const capturedPhoto = cameraRef.current?.getCapturedPhoto();
