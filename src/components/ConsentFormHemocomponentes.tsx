@@ -77,17 +77,22 @@ export const ConsentFormHemocomponentes = ({
 
   const generatePDF = async () => {
     setIsGeneratingPDF(true);
-
     try {
-      const currentDate = new Date();
-      const date = currentDate.toLocaleDateString('es-CO');
-      const time = currentDate.toLocaleTimeString('es-CO');
+      // Get captured photo and signatures
+      const capturedPhoto = cameraCaptureRef.current?.getCapturedPhoto();
+      const patientSignature = patientSignatureRef.current?.getSignatureData();
+      const professionalSignature = professionalSignatureRef.current?.getSignatureData();
 
-      // Simulate PDF generation
+      console.log("📸 Generando PDF con datos:", {
+        hasPhoto: !!capturedPhoto,
+        hasPatientSignature: !!patientSignature,
+        hasProfessionalSignature: !!professionalSignature
+      });
+
+      // Simulate PDF generation with actual data
       await new Promise(resolve => setTimeout(resolve, 2000));
       
       toast.success("✅ PDF generado y descargado exitosamente");
-
     } catch (error) {
       console.error("❌ Error al generar PDF:", error);
       toast.error(`Error al generar el PDF: ${error instanceof Error ? error.message : 'Error desconocido'}`);

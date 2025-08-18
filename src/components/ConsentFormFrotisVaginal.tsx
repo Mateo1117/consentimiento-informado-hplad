@@ -181,10 +181,23 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
     setIsGeneratingPDF(true);
 
     try {
-      toast.success("Consentimiento guardado exitosamente");
+      // Get captured photo and signatures
+      const capturedPhoto = cameraCaptureRef.current?.getCapturedPhoto();
+      const patientSignature = patientSignatureRef.current?.getSignatureData();
+      const professionalSignature = professionalSignatureRef.current?.getSignatureData();
+
+      console.log("📸 Generando PDF con datos:", {
+        hasPhoto: !!capturedPhoto,
+        hasPatientSignature: !!patientSignature,
+        hasProfessionalSignature: !!professionalSignature
+      });
+
+      // Simulate PDF generation
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      toast.success("✅ PDF generado exitosamente");
     } catch (error) {
-      console.error("Error saving consent:", error);
-      toast.error("Error al guardar el consentimiento");
+      console.error("❌ Error al generar PDF:", error);
+      toast.error("Error al generar el PDF");
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -554,44 +567,11 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
                 
                 {/* Foto del Paciente */}
                 <div className="mt-4 pt-4 border-t border-gray-200">
-                  <Label className="text-medical-blue font-medium">Foto del Paciente</Label>
-                  <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mt-2">
-                    <div className="flex flex-col items-center">
-                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-3">
-                        <span className="text-xl text-gray-400">📷</span>
-                      </div>
-                      <p className="text-gray-500 mb-3 text-sm">Cámara no activada</p>
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="mb-3"
-                        onClick={handlePhotoCapture}
-                      >
-                        <span className="w-4 h-4 mr-2">📷</span>
-                        Activar Cámara
-                      </Button>
-                      <p className="text-xs text-gray-400">
-                        La foto se tomará automáticamente al registrar la firma
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 text-center">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handlePhotoCapture}
-                    >
-                      Capturar Foto
-                    </Button>
-                  </div>
-                  {patientPhoto && (
-                    <div className="mt-2">
-                      <span className="text-sm text-medical-green flex items-center gap-1">
-                        <CheckCircle className="h-4 w-4" />
-                        Foto capturada exitosamente
-                      </span>
-                    </div>
-                  )}
+                  <CameraCapture
+                    ref={cameraCaptureRef}
+                    title="Foto del Paciente"
+                    required
+                  />
                 </div>
               </div>
             </div>

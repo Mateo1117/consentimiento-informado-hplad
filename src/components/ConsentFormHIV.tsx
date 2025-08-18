@@ -9,7 +9,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Download, ArrowLeft, TestTube, Camera, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { SignaturePad, SignatureRef } from './SignaturePad';
-import { CameraCapture } from './CameraCapture';
+import { CameraCapture, CameraCaptureRef } from './CameraCapture';
 import { ProfessionalSelector } from './ProfessionalSelector';
 import { generateHIVPDF } from '@/utils/pdfGeneratorHIV';
 import { ShareConsentButtons } from './ShareConsentButtons';
@@ -55,8 +55,10 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
   });
   const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
   
-  // Refs para SignaturePads
+  // Refs para SignaturePads y CameraCapture
+  const signatureRef = useRef<SignatureRef>(null);
   const professionalSignatureRef = useRef<SignatureRef>(null);
+  const cameraRef = useRef<CameraCaptureRef>(null);
 
   const generatePDF = () => {
     if (!professionalData.name || !professionalData.document) {
@@ -65,6 +67,10 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
     }
 
     try {
+      // Get captured photo and signature
+      const capturedPhoto = cameraRef.current?.getCapturedPhoto();
+      const patientSignatureData = signatureRef.current?.getSignatureData();
+
       const pdfData = {
         patientData,
         guardianData: formData.nombreAcudiente ? {
@@ -75,9 +81,9 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
         } : null,
         professionalName: professionalData.name,
         professionalDocument: professionalData.document,
-        patientSignature,
+        patientSignature: patientSignatureData,
         professionalSignature,
-        patientPhoto,
+        patientPhoto: capturedPhoto,
         consentDecision,
         date: formData.fecha,
         time: formData.hora
@@ -375,6 +381,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
               <Label className="text-medical-blue font-medium">Firma del Paciente *</Label>
               <div className="border rounded-lg p-4 bg-gray-50">
                 <SignaturePad 
+                  ref={signatureRef}
                   title="Firma del Paciente" 
                   onSignatureChange={setPatientSignature}
                 />
@@ -387,27 +394,11 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
                 
                 {/* Foto del Paciente */}
                 <div className="mt-4 pt-4 border-t border-gray-200">
-                  <Label className="text-medical-blue font-medium">Foto del Paciente</Label>
-                  <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mt-2">
-                    <div className="flex flex-col items-center">
-                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-3">
-                        <span className="text-xl text-gray-400">📷</span>
-                      </div>
-                      <p className="text-gray-500 mb-3 text-sm">Cámara no activada</p>
-                      <Button variant="outline" size="sm" className="mb-3">
-                        <Camera className="w-4 h-4 mr-2" />
-                        Activar Cámara
-                      </Button>
-                      <p className="text-xs text-gray-400">
-                        La foto se tomará automáticamente al registrar la firma
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 text-center">
-                    <Button variant="outline" size="sm">
-                      Capturar Foto
-                    </Button>
-                  </div>
+                  <CameraCapture
+                    ref={cameraRef}
+                    title="Foto del Paciente"
+                    required
+                  />
                 </div>
               </div>
             </div>
