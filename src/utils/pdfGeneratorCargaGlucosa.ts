@@ -7,6 +7,7 @@ interface PatientData {
   numeroDocumento: string;
   fechaNacimiento: string;
   edad: number;
+  sexo: string;
   eps: string;
   telefono: string;
   direccion: string;
@@ -60,16 +61,14 @@ export class CargaGlucosaPDFGenerator {
     this.drawGuardianData(data);
     this.drawProcedureData();
     
-    // Only draw consent text and signatures if patient approves
     if (data.consentDecision === 'aprobar') {
+      // Patient accepts: draw consent section with signatures
       this.drawConsentText();
       this.drawSignatures(data);
+    } else {
+      // Patient declines: only draw dissent section
+      this.drawDissentSection(data);
     }
-    
-    // Add second page for withdrawal decision
-    this.pdf.addPage();
-    this.currentY = this.margin;
-    this.drawWithdrawalPage(data);
     
     return this.pdf;
   }
@@ -161,7 +160,7 @@ export class CargaGlucosaPDFGenerator {
     this.pdf.setFont('helvetica', 'normal');
     currentX = this.margin;
     const patientName = `${data.patientData.nombre} ${data.patientData.apellidos}`;
-    const sexo = 'M'; // This would need to be added to patient data
+    const sexo = data.patientData.sexo || 'N/D';
     const fechaHora = `${data.date} ${data.time}`;
     
     const dataValues = [
@@ -590,6 +589,93 @@ En manifestación de aceptación firmo/pongo mi huella en este documento a los $
       'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
     ];
     return months[month - 1] || 'enero';
+  }
+
+  private drawDissentSection(data: CargaGlucosaPDFData) {
+    this.currentY += 10;
+    
+    // Check if we need a new page
+    if (this.currentY > this.pageHeight - 100) {
+      this.pdf.addPage();
+      this.currentY = this.margin;
+    }
+    
+    // Separator line
+    this.pdf.line(this.margin, this.currentY, this.pageWidth - this.margin, this.currentY);
+    this.currentY += 5;
+    
+    // Dissent section header
+    this.pdf.setFillColor(240, 240, 240);
+    this.pdf.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, 6, 'F');
+    
+    this.pdf.setFontSize(9);
+    this.pdf.setFont('helvetica', 'bold');
+    this.pdf.text('DECISIÓN DE DESISTIMIENTO', this.margin + 2, this.currentY + 4);
+    
+    this.currentY += 10;
+    
+    // Dissent text
+    this.pdf.setFont('helvetica', 'normal');
+    this.pdf.setFontSize(8);
+    
+    const patientName = data.guardianData ? data.guardianData.name : `${data.patientData.nombre} ${data.patientData.apellidos}`;
+    const document = data.guardianData ? data.guardianData.document : data.patientData.numeroDocumento;
+    
+    const dissentTexts = [
+      `Yo, ${patientName}, identificada(o) como aparece junto a mi firma/huella, actuando en nombre propio ${!data.guardianData ? '[X]' : '[ ]'} / en calidad de representante legal ${data.guardianData ? '[X]' : '[ ]'} de la/del paciente cuyo nombre e identificación están registrados en el encabezado de este documento, manifiesto -de forma libre, informada y consciente-, mi voluntad de retirar mi consentimiento respecto de la realización de la intervención/ del procedimiento arriba nombrado, que me/le había sido propuesta(o) realizarme (le). He sido informada(o) que, por causa de mi decisión, no cambia la disposición del equipo asistencial a proporcionarme (le) las alternativas de atención, con las limitaciones, que mi decisión genera; Manifiesto que me hago responsable de las consecuencias que puedan derivarse de esta decisión.`,
+      '',
+      `Fecha: ${new Date().getDate()} días del mes de ${new Date().toLocaleDateString('es-ES', { month: 'long' })} de ${new Date().getFullYear()}`
+    ];
+    
+    for (const text of dissentTexts) {
+      if (text === '') {
+        this.currentY += 3;
+        continue;
+      }
+      
+      const lines = this.pdf.splitTextToSize(text, this.pageWidth - 2 * this.margin - 4);
+      const textHeight = lines.length * 4;
+      
+      if (this.currentY + textHeight > this.pageHeight - this.margin - 40) {
+        this.pdf.addPage();
+        this.currentY = this.margin;
+      }
+      
+      this.pdf.text(lines, this.margin + 2, this.currentY + 4);
+      this.currentY += textHeight;
+    }
+    
+    // Dissent signature (only if patient dissents)
+    if (data.consentDecision === 'disentir') {
+      this.currentY += 10;
+      
+      if (this.currentY > this.pageHeight - 50) {
+        this.pdf.addPage();
+        this.currentY = this.margin;
+      }
+      
+      // Signature box for dissent
+      const boxWidth = 80;
+      const boxHeight = 30;
+      this.pdf.rect(this.margin, this.currentY, boxWidth, boxHeight);
+      
+      // Add patient signature for dissent
+      if (data.patientSignature && 
+          typeof data.patientSignature === 'string' && 
+          data.patientSignature.length > 50 && 
+          data.patientSignature.startsWith('data:image/png;base64,')) {
+        try {
+          this.pdf.addImage(data.patientSignature, 'PNG', this.margin + 2, this.currentY + 2, boxWidth - 4, 25);
+        } catch (error) {
+          console.error('Error adding dissent signature:', error);
+        }
+      }
+      
+      this.pdf.setFontSize(8);
+      this.pdf.text('Firma paciente', this.margin + 2, this.currentY + boxHeight + 4);
+      this.pdf.text(`Documento: ${document}`, this.margin + 2, this.currentY + boxHeight + 8);
+      this.pdf.text('Decisión: DISENTIÓ el procedimiento', this.margin + 2, this.currentY + boxHeight + 12);
+    }
   }
 
   private calculateTextHeight(text: string, maxWidth: number): number {

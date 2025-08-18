@@ -7,6 +7,7 @@ interface PatientData {
   numeroDocumento: string;
   fechaNacimiento: string;
   edad: number;
+  sexo: string;
   eps: string;
   telefono: string;
   direccion: string;
@@ -60,14 +61,14 @@ export class VenopuncionPDFGenerator {
     this.drawGuardianData(data);
     this.drawProcedureData();
     
-    // Only draw consent text and signatures if patient approves
     if (data.consentDecision === 'aprobar') {
+      // Patient accepts: draw consent section with signatures
       this.drawConsentText();
       this.drawSignatures(data);
+    } else {
+      // Patient declines: only draw dissent section
+      this.drawDissentSection(data);
     }
-    
-    // Always draw dissent section (will handle both approve and dissent cases)
-    this.drawDissentSection(data);
     
     return this.pdf;
   }
@@ -159,7 +160,7 @@ export class VenopuncionPDFGenerator {
     this.pdf.setFont('helvetica', 'normal');
     currentX = this.margin;
     const patientName = `${data.patientData.nombre} ${data.patientData.apellidos}`;
-    const sexo = 'M'; // This would need to be added to patient data
+    const sexo = data.patientData.sexo || 'N/D';
     const fechaHora = `${data.date} ${data.time}`;
     
     const dataValues = [

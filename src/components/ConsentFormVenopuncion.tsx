@@ -23,6 +23,7 @@ interface PatientData {
   numeroDocumento: string;
   fechaNacimiento: string;
   edad: number;
+  sexo?: string;
   eps: string;
   telefono: string;
   direccion: string;
@@ -95,7 +96,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
       
       // Datos para el PDF - usar datos reales si existen
       const pdfData = {
-        patientData: patientData,
+        patientData: { ...patientData, sexo: patientData.sexo || 'N/D' },
         guardianData: isMinor ? {
           name: guardianName || "ACUDIENTE TEST",
           document: guardianDocument || "87654321",

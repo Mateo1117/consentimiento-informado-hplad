@@ -61,14 +61,14 @@ export class HIVPDFGenerator {
     this.drawGuardianData(data);
     this.drawProcedureData();
     
-    // Only draw consent text and signatures if patient approves
     if (data.consentDecision === 'aprobar') {
+      // Patient accepts: draw consent section with signatures
       this.drawConsentText();
       this.drawSignatures(data);
+    } else {
+      // Patient declines: only draw dissent section
+      this.drawDissentSection(data);
     }
-    
-    // Always draw dissent section (will handle both approve and dissent cases)
-    this.drawDissentSection(data);
     
     return this.pdf;
   }

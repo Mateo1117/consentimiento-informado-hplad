@@ -6,6 +6,7 @@ export interface ConsentForm {
   document_number: string
   birth_date: string
   age: number
+  sexo?: string
   eps: string
   phone: string
   address: string
