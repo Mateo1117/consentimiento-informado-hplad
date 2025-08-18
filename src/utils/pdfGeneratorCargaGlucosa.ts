@@ -74,7 +74,7 @@ export class CargaGlucosaPDFGenerator {
   }
 
   private drawHeader(data: CargaGlucosaPDFData) {
-    // Hospital logo and header
+    // E.S.E HOSPITAL LA MESA - PEDRO LEÓN ÁLVAREZ DÍAZ
     this.pdf.setFontSize(8);
     this.pdf.setFont('helvetica', 'bold');
     

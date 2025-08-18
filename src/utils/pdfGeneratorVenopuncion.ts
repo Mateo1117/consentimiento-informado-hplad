@@ -74,7 +74,7 @@ export class VenopuncionPDFGenerator {
   }
 
   private drawHeader(data: VenopuncionPDFData) {
-    // Hospital logo and header with table format
+    // E.S.E HOSPITAL LA MESA - PEDRO LEÓN ÁLVAREZ DÍAZ
     this.pdf.setFontSize(8);
     this.pdf.setFont('helvetica', 'bold');
     

@@ -18,37 +18,44 @@ interface GuardianData {
   name: string;
   document: string;
   relationship: string;
+  phone: string;
 }
 
-interface FrotisVaginalPDFData {
+interface HemocomponentesPDFData {
   patientData: PatientData;
   guardianData?: GuardianData | null;
   professionalName: string;
   professionalDocument: string;
-  patientSignature: string;
-  professionalSignature: string;
+  patientSignature: string | null;
+  professionalSignature: string | null;
   patientPhoto?: string | null;
   consentDecision: "aprobar" | "disentir";
   date: string;
   time: string;
 }
 
-export class FrotisVaginalPDFGenerator {
+export class HemocomponentesPDFGenerator {
   private pdf: jsPDF;
   private pageWidth: number;
   private pageHeight: number;
   private margin: number;
   private currentY: number;
+  private lineHeight: number;
 
   constructor() {
-    this.pdf = new jsPDF();
+    this.pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
     this.pageWidth = this.pdf.internal.pageSize.getWidth();
     this.pageHeight = this.pdf.internal.pageSize.getHeight();
-    this.margin = 20;
+    this.margin = 10;
     this.currentY = this.margin;
+    this.lineHeight = 4;
   }
 
-  generate(data: FrotisVaginalPDFData): jsPDF {
+  generate(data: HemocomponentesPDFData): jsPDF {
     this.drawHeader(data);
     this.drawPatientData(data);
     this.drawGuardianData(data);
@@ -66,8 +73,8 @@ export class FrotisVaginalPDFGenerator {
     return this.pdf;
   }
 
-  private drawHeader(data: FrotisVaginalPDFData) {
-    // E.S.E HOSPITAL LA MESA - PEDRO LEÓN ÁLVAREZ DÍAZ - Formato estandarizado
+  private drawHeader(data: HemocomponentesPDFData) {
+    // E.S.E HOSPITAL LA MESA - PEDRO LEÓN ÁLVAREZ DÍAZ
     this.pdf.setFontSize(8);
     this.pdf.setFont('helvetica', 'bold');
     
@@ -92,9 +99,9 @@ export class FrotisVaginalPDFGenerator {
     
     this.pdf.setFontSize(9);
     this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('FORMATO 319', centerX + centerWidth/2 - 15, this.margin + 6);
+    this.pdf.text('FORMATO 320', centerX + centerWidth/2 - 15, this.margin + 6);
     this.pdf.text('CONSENTIMIENTO INFORMADO', centerX + centerWidth/2 - 25, this.margin + 10);
-    this.pdf.text('PARA FROTIS VAGINAL', centerX + centerWidth/2 - 25, this.margin + 14);
+    this.pdf.text('PARA TRANSFUSIÓN DE HEMOCOMPONENTES', centerX + centerWidth/2 - 35, this.margin + 14);
     
     // Right section - Code table
     const rightX = this.pageWidth - this.margin - 50;
@@ -105,7 +112,7 @@ export class FrotisVaginalPDFGenerator {
     this.pdf.rect(rightX + 25, this.margin, 25, 8);
     this.pdf.setFontSize(6);
     this.pdf.text('Código', rightX + 2, this.margin + 5);
-    this.pdf.text('SC-M-09.319', rightX + 27, this.margin + 5);
+    this.pdf.text('SC-M-09.320', rightX + 27, this.margin + 5);
     
     this.pdf.rect(rightX, this.margin + 8, 25, 8);
     this.pdf.rect(rightX + 25, this.margin + 8, 25, 8);
@@ -115,12 +122,12 @@ export class FrotisVaginalPDFGenerator {
     this.pdf.rect(rightX, this.margin + 16, 25, 9);
     this.pdf.rect(rightX + 25, this.margin + 16, 25, 9);
     this.pdf.text('Fecha', rightX + 2, this.margin + 21);
-    this.pdf.text('16-06-2022', rightX + 26, this.margin + 21);
+    this.pdf.text('15-03-2023', rightX + 26, this.margin + 21);
     
     this.currentY = this.margin + 30;
   }
 
-  private drawPatientData(data: FrotisVaginalPDFData) {
+  private drawPatientData(data: HemocomponentesPDFData) {
     // Patient data section - FORMATO ESTANDARIZADO
     this.pdf.setFillColor(240, 240, 240);
     this.pdf.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, 6, 'F');
@@ -203,37 +210,64 @@ export class FrotisVaginalPDFGenerator {
     this.currentY = docTableY + 20;
   }
 
-  private drawGuardianData(data: FrotisVaginalPDFData) {
-    if (data.guardianData) {
-      this.pdf.setFontSize(9);
+  private drawGuardianData(data: HemocomponentesPDFData) {
+    if (!data.guardianData) return;
+    
+    // Guardian section header
+    this.pdf.setFillColor(240, 240, 240);
+    this.pdf.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, 6, 'F');
+    
+    this.pdf.setFontSize(9);
+    this.pdf.setFont('helvetica', 'bold');
+    this.pdf.text('DATOS DEL ACUDIENTE O REPRESENTANTE', this.margin + 2, this.currentY + 4);
+    
+    this.currentY += 8;
+    
+    // Guardian table
+    const guardianTableY = this.currentY;
+    const guardianHeaders = ['NOMBRE COMPLETO:', 'DOCUMENTO:'];
+    const guardianColWidths = [100, 80];
+    
+    let currentX = this.margin;
+    for (let i = 0; i < guardianHeaders.length; i++) {
+      this.pdf.rect(currentX, guardianTableY, guardianColWidths[i], 8);
       this.pdf.setFont('helvetica', 'bold');
-      this.pdf.text('DATOS DEL ACUDIENTE (Para menores de edad)', this.margin, this.currentY);
-      this.currentY += 5;
-      
-      this.pdf.setFont('helvetica', 'normal');
-      this.pdf.setFontSize(8);
-      
-      const guardianTableData = [
-        ['NOMBRE COMPLETO:', data.guardianData.name],
-        ['DOCUMENTO:', data.guardianData.document],
-        ['PARENTESCO:', data.guardianData.relationship]
-      ];
-      
-      const rowHeight = 6;
-      const colWidth = (this.pageWidth - 2 * this.margin) / 2;
-      
-      guardianTableData.forEach(([label, value]) => {
-        this.pdf.rect(this.margin, this.currentY, colWidth, rowHeight);
-        this.pdf.rect(this.margin + colWidth, this.currentY, colWidth, rowHeight);
-        
-        this.pdf.text(label, this.margin + 2, this.currentY + 4);
-        this.pdf.text(value, this.margin + colWidth + 2, this.currentY + 4);
-        
-        this.currentY += rowHeight;
-      });
-      
-      this.currentY += 5;
+      this.pdf.text(guardianHeaders[i], currentX + 2, guardianTableY + 5);
+      currentX += guardianColWidths[i];
     }
+    
+    // Guardian data
+    currentX = this.margin;
+    const guardianValues = [data.guardianData.name, data.guardianData.document];
+    
+    for (let i = 0; i < guardianValues.length; i++) {
+      this.pdf.rect(currentX, guardianTableY + 8, guardianColWidths[i], 8);
+      this.pdf.setFont('helvetica', 'normal');
+      this.pdf.text(guardianValues[i], currentX + 1, guardianTableY + 13);
+      currentX += guardianColWidths[i];
+    }
+    
+    // Phone and relationship
+    this.currentY = guardianTableY + 18;
+    const phoneRelTableY = this.currentY;
+    
+    currentX = this.margin;
+    this.pdf.rect(currentX, phoneRelTableY, 100, 8);
+    this.pdf.setFont('helvetica', 'bold');
+    this.pdf.text('TELÉFONO:', currentX + 2, phoneRelTableY + 5);
+    
+    this.pdf.rect(currentX + 100, phoneRelTableY, 80, 8);
+    this.pdf.text('VÍNCULO O PARENTESCO CON EL PACIENTE:', currentX + 102, phoneRelTableY + 5);
+    
+    // Phone and relationship data
+    this.pdf.rect(currentX, phoneRelTableY + 8, 100, 8);
+    this.pdf.setFont('helvetica', 'normal');
+    this.pdf.text(data.guardianData.phone || '', currentX + 1, phoneRelTableY + 13);
+    
+    this.pdf.rect(currentX + 100, phoneRelTableY + 8, 80, 8);
+    this.pdf.text(data.guardianData.relationship, currentX + 101, phoneRelTableY + 13);
+    
+    this.currentY = phoneRelTableY + 20;
   }
 
   private drawProcedureData() {
@@ -251,39 +285,39 @@ export class FrotisVaginalPDFGenerator {
     const procedureData = [
       {
         label: 'PROCEDIMIENTO',
-        value: 'TOMA DE MUESTRA PARA FROTIS VAGINAL - CULTIVO RECTO-VAGINAL'
+        value: 'TRANSFUSIÓN DE HEMOCOMPONENTES'
       },
       {
         label: 'DESCRIPCIÓN DEL PROCEDIMIENTO',
-        value: 'Se toma una muestra de secreción de flujo del área vaginal o rectal, utilizando aplicadores, solución salina, tubo de ensayo, medio de cultivo, laminillas, espéculo. Este material utilizado es totalmente desechable. En el caso de ser menor de edad o no haber tenido relaciones sexuales no se utilizará espéculo para la toma de la muestra.'
+        value: 'La transfusión de hemocomponentes consiste en la administración intravenosa de productos sanguíneos (glóbulos rojos, plaquetas, plasma fresco congelado) para el tratamiento de diversas condiciones médicas que requieren el reemplazo o suplemento de componentes sanguíneos.'
       },
       {
         label: 'PROPÓSITO',
-        value: 'Detectar agentes infecciosos en el área vaginal o rectal para orientar diagnóstico y tratamiento médico.'
+        value: 'Restaurar o mantener niveles adecuados de componentes sanguíneos para el tratamiento de anemias, trastornos de coagulación, hemorragias o deficiencias específicas.'
       },
       {
         label: 'BENEFICIOS ESPERADOS',
-        value: 'Orientar y/o confirmar un diagnóstico y realizar seguimiento oportuno de una condición en salud, que permita dar pautas de tratamiento oportuno.'
+        value: 'Mejora de los niveles de hemoglobina, corrección de trastornos de coagulación, control de hemorragias, mejoría de la oxigenación tisular y estabilización hemodinámica.'
       },
       {
         label: 'RIESGOS',
-        value: 'Frotis vaginal: Ardor, dolor, picazón o incomodidad al momento de introducir el espéculo y el aplicador. Sangrado leve durante o después del procedimiento.'
+        value: 'Reacciones transfusionales (fiebre, escalofríos, urticaria), reacciones alérgicas, sobrecarga circulatoria, transmisión de infecciones (muy raro con controles actuales), incompatibilidad sanguínea, hemólisis.'
       },
       {
         label: 'IMPLICACIONES',
-        value: 'Sangrado, dolor pélvico, laceración cervicouterina. Molestia durante la inserción del espéculo.'
+        value: 'Requiere monitoreo continuo durante la transfusión, posible necesidad de pretratamiento con medicamentos antialérgicos, tiempo prolongado de administración.'
       },
       {
         label: 'EFECTOS INEVITABLES',
-        value: 'Molestia temporal durante la toma de la muestra, especialmente al introducir el espéculo.'
+        value: 'Punción venosa, molestia en el sitio de infusión, tiempo de permanencia hospitalaria extendido.'
       },
       {
         label: 'ALTERNATIVAS RAZONABLES A ESTE PROCEDIMIENTO',
-        value: 'Ninguna'
+        value: 'Tratamiento con medicamentos estimulantes de la producción sanguínea, suplementos de hierro, factores de coagulación sintéticos (según el caso específico).'
       },
       {
         label: 'POSIBLES CONSECUENCIAS EN CASO QUE DECIDA NO ACEPTAR EL PROCEDIMIENTO',
-        value: 'Imposibilidad de detectar infecciones vaginales o rectales, lo que puede llevar a complicaciones de salud no tratadas.'
+        value: 'Progresión de la anemia, empeoramiento de trastornos de coagulación, riesgo de hemorragias graves, deterioro del estado general de salud, posible compromiso vital.'
       },
       {
         label: 'RIESGOS EN FUNCIÓN DE LA SITUACIÓN CLÍNICA DEL PACIENTE',
@@ -319,22 +353,52 @@ export class FrotisVaginalPDFGenerator {
   }
 
   private drawConsentText() {
-    this.pdf.setFontSize(9);
-    this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('CONSENTIMIENTO INFORMADO', this.margin, this.currentY);
     this.currentY += 5;
     
+    // Consent section header
+    this.pdf.setFillColor(240, 240, 240);
+    this.pdf.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, 6, 'F');
+    
+    this.pdf.setFontSize(9);
+    this.pdf.setFont('helvetica', 'bold');
+    this.pdf.text('CONSENTIMIENTO', this.margin + 2, this.currentY + 4);
+    
+    this.currentY += 10;
+    
+    // Consent text
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(8);
     
-    const consentText = `Declaro que he sido informado(a) sobre el procedimiento, sus beneficios, riesgos y alternativas. He tenido la oportunidad de hacer preguntas y todas han sido respondidas satisfactoriamente. Entiendo que ningún procedimiento está exento de riesgos. Autorizo la realización del procedimiento descrito.`;
+    const consentTexts = [
+      'Yo, identificado(a) como aparece junto a mi firma/huella, hago constar que he recibido información clara relacionada con: Garantía de confidencialidad de mis datos personales y demás información que yo entregue, con salvedad de la información que deba ser comunicada a personas, o a las autoridades competentes según mi caso. También me informaron sobre el procedimiento en sí, su propósito(s), los beneficios esperados, los posibles riesgos frecuentes o graves, las posibles consecuencias si decido no aceptar el procedimiento, las posibles molestias, la posibilidad de participación de personal en formación bajo supervisión.',
+      '',
+      'Fui informado(a) también que: a) Puedo denegar mi consentimiento, sin que ello implique desmejora del trato que recibiré de parte del equipo de salud, y que puedo acceder a otros servicios en salud que requiera en tanto estén disponibles, b) Aunque firme en este momento este documento, aceptando me sea(n) realizada(s) la(s) intervención(es), puedo retirar mi consentimiento de manera parcial o total, en cualquier momento anterior a la realización de la intervención, y sin que para ello precise dar explicaciones o justificar mi decisión, c) Que en caso tal que mi decisión sea anular o cancelar, mi consentimiento, dejaré constancia de ella por escrito y firmada o con mi huella dactilar.',
+      '',
+      'Actuando en nombre propio [X] / en calidad de representante legal [ ] de la/del paciente cuyos nombres e identificación están registrados en el encabezado de este documento, autorizo al personal asistencial de esta institución, para que me/le realice el/los procedimiento(s) arriba señalado(s) y, en caso de ser necesario, tome las medidas y conductas médicas necesarias para salvaguardar mí integridad física, de acuerdo a como se presenten las situaciones imprevistas en el curso del procedimiento.',
+      '',
+      `En manifestación de aceptación firmo/pongo mi huella en este documento a los ${new Date().getDate()} días del mes de ${new Date().toLocaleDateString('es-ES', { month: 'long' })} de ${new Date().getFullYear()}`
+    ];
     
-    const lines = this.pdf.splitTextToSize(consentText, this.pageWidth - 2 * this.margin);
-    this.pdf.text(lines, this.margin, this.currentY);
-    this.currentY += lines.length * 4 + 10;
+    for (const text of consentTexts) {
+      if (text === '') {
+        this.currentY += 3;
+        continue;
+      }
+      
+      const lines = this.pdf.splitTextToSize(text, this.pageWidth - 2 * this.margin - 4);
+      const textHeight = lines.length * 4;
+      
+      if (this.currentY + textHeight > this.pageHeight - this.margin - 40) {
+        this.pdf.addPage();
+        this.currentY = this.margin;
+      }
+      
+      this.pdf.text(lines, this.margin + 2, this.currentY + 4);
+      this.currentY += textHeight;
+    }
   }
 
-  private drawSignatures(data: FrotisVaginalPDFData) {
+  private drawSignatures(data: HemocomponentesPDFData) {
     // Add space for signatures
     this.currentY += 10;
     
@@ -421,10 +485,10 @@ export class FrotisVaginalPDFGenerator {
     // Date and time
     this.pdf.setFontSize(8);
     this.pdf.text(`Fecha: ${data.date} - Hora: ${data.time}`, this.margin, this.currentY);
-    this.pdf.text(`Decisión: ${data.consentDecision === 'aprobar' ? 'APROBÓ el procedimiento' : 'DISENTIÓ el procedimiento'}`, this.margin, this.currentY + 5);
+    this.pdf.text(`Decisión: APROBÓ el procedimiento`, this.margin, this.currentY + 5);
   }
 
-  private drawDissentSection(data: FrotisVaginalPDFData) {
+  private drawDissentSection(data: HemocomponentesPDFData) {
     this.currentY += 10;
     
     // Check if we need a new page
@@ -478,14 +542,13 @@ export class FrotisVaginalPDFGenerator {
     this.pdf.text(dateLines, this.margin + 2, this.currentY + 4);
     this.currentY += dateLines.length * 4 + 10;
     
-    // Signature section for withdrawal
-    const document = data.guardianData ? data.guardianData.document : data.patientData.numeroDocumento;
-    const boxWidth = 80;
+    // Three signatures for dissent
+    const boxWidth = 60;
     const boxHeight = 30;
+    const spacing = 5;
     
+    // Patient signature
     this.pdf.rect(this.margin, this.currentY, boxWidth, boxHeight);
-    
-    // Add patient signature for dissent
     if (data.patientSignature && 
         typeof data.patientSignature === 'string' && 
         data.patientSignature.length > 50 && 
@@ -497,10 +560,36 @@ export class FrotisVaginalPDFGenerator {
       }
     }
     
-    this.pdf.setFontSize(8);
-    this.pdf.text('Firma paciente', this.margin + 2, this.currentY + boxHeight + 4);
-    this.pdf.text(`Documento: ${document}`, this.margin + 2, this.currentY + boxHeight + 8);
-    this.pdf.text('Decisión: DISENTIÓ el procedimiento', this.margin + 2, this.currentY + boxHeight + 12);
+    this.pdf.setFontSize(7);
+    this.pdf.text('Firma Paciente', this.margin + 2, this.currentY + boxHeight + 3);
+    this.pdf.text(`Doc: ${data.patientData.numeroDocumento}`, this.margin + 2, this.currentY + boxHeight + 7);
+    
+    // Professional signature
+    const profX = this.margin + boxWidth + spacing;
+    this.pdf.rect(profX, this.currentY, boxWidth, boxHeight);
+    if (data.professionalSignature && 
+        typeof data.professionalSignature === 'string' &&
+        data.professionalSignature.length > 50 && 
+        data.professionalSignature.startsWith('data:image/png;base64,')) {
+      try {
+        this.pdf.addImage(data.professionalSignature, 'PNG', profX + 2, this.currentY + 2, boxWidth - 4, 25);
+      } catch (error) {
+        console.error('Error adding professional dissent signature:', error);
+      }
+    }
+    
+    this.pdf.text('Firma Profesional', profX + 2, this.currentY + boxHeight + 3);
+    this.pdf.text(`Doc: ${data.professionalDocument}`, profX + 2, this.currentY + boxHeight + 7);
+    
+    // Witness signature
+    const witnessX = profX + boxWidth + spacing;
+    this.pdf.rect(witnessX, this.currentY, boxWidth, boxHeight);
+    this.pdf.text('Nombre y documento de quien', witnessX + 2, this.currentY + boxHeight + 3);
+    this.pdf.text('toma el consentimiento', witnessX + 2, this.currentY + boxHeight + 7);
+    this.pdf.text('Documento: _____________', witnessX + 2, this.currentY + boxHeight + 11);
+    
+    this.currentY += boxHeight + 20;
+    this.pdf.text('Decisión: DISENTIÓ el procedimiento', this.margin, this.currentY);
   }
 
   private calculateTextHeight(text: string, maxWidth: number): number {
@@ -509,7 +598,7 @@ export class FrotisVaginalPDFGenerator {
   }
 }
 
-export function generateFrotisVaginalPDF(data: FrotisVaginalPDFData): jsPDF {
-  const generator = new FrotisVaginalPDFGenerator();
+export function generateHemocomponentesPDF(data: HemocomponentesPDFData): jsPDF {
+  const generator = new HemocomponentesPDFGenerator();
   return generator.generate(data);
 }
