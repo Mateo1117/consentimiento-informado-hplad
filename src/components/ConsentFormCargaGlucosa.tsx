@@ -12,6 +12,7 @@ import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, Shield, Download, TestTube2, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { ShareConsentButtons } from './ShareConsentButtons';
+import { ConsentFormWrapper } from './ConsentFormWrapper';
 import { toast } from "sonner";
 import { generateCargaGlucosaPDF } from "@/utils/pdfGeneratorCargaGlucosa";
 
@@ -174,10 +175,8 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
     return true;
   };
 
-  const generatePDF = async () => {
+  const generatePDF = async (): Promise<Blob> => {
     console.log("🚀 INICIANDO GENERACIÓN DE PDF - FORZADO");
-    
-    setIsGeneratingPDF(true);
 
     try {
       const currentDate = new Date();
@@ -227,21 +226,19 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
       
       const pdf = generateCargaGlucosaPDF(pdfData);
       
-      console.log("💾 Descargando PDF...");
+      console.log("📄 PDF generado exitosamente");
       
-      // Download PDF directly
-      const fileName = `consentimiento_carga_glucosa_${pdfData.patientData.numeroDocumento}_${Date.now()}.pdf`;
-      pdf.save(fileName);
-
-      toast.success("✅ PDF generado y descargado exitosamente");
-      console.log("✅ PDF descargado:", fileName);
+      // Return the blob instead of downloading directly
+      return pdf.output('blob');
 
     } catch (error) {
       console.error("❌ Error detallado al generar PDF:", error);
-      toast.error(`Error al generar el PDF: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-    } finally {
-      setIsGeneratingPDF(false);
+      throw error;
     }
+  };
+
+  const getHTMLContent = (): string => {
+    return document.getElementById('consent-form-content')?.innerHTML || '';
   };
 
   const handleProfessionalSelect = (professional: any) => {
@@ -268,6 +265,23 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
   };
 
   return (
+    <ConsentFormWrapper
+      consentType="Carga de Glucosa"
+      patientData={{
+        nombre: patientData.nombre,
+        apellidos: patientData.apellidos,
+        tipoDocumento: patientData.tipoDocumento,
+        numeroDocumento: patientData.numeroDocumento,
+        telefono: patientData.telefono,
+        email: patientData.centroSalud
+      }}
+      onGeneratePDF={generatePDF}
+      onGetHTMLContent={getHTMLContent}
+      professionalData={{
+        name: professionalName,
+        document: professionalDocument
+      }}
+    >
     <div id="consent-form-content" className="space-y-6">
       {/* Header */}
       <Card className="border-medical-blue/20">
@@ -749,34 +763,10 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
             >
               Volver
             </Button>
-            
-            <Button
-              onClick={generatePDF}
-              disabled={isGeneratingPDF || !isFormComplete()}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              size="lg"
-            >
-              {isGeneratingPDF ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Generando PDF...
-                </>
-              ) : (
-                <>
-                  <FileText className="h-4 w-4" />
-                  Guardar Consentimiento
-                </>
-              )}
-            </Button>
           </div>
-          
-          {!isFormComplete() && (
-            <p className="text-center text-sm text-green-600 mt-3">
-              ✅ Listo para generar el PDF
-            </p>
-          )}
         </CardContent>
       </Card>
     </div>
+    </ConsentFormWrapper>
   );
 };

@@ -13,6 +13,7 @@ import { CameraCapture, CameraCaptureRef } from './CameraCapture';
 import { ProfessionalSelector } from './ProfessionalSelector';
 import { generateHIVPDF } from '@/utils/pdfGeneratorHIV';
 import { ShareConsentButtons } from './ShareConsentButtons';
+import { ConsentFormWrapper } from './ConsentFormWrapper';
 
 interface PatientData {
   id: string;
@@ -60,10 +61,9 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
   const professionalSignatureRef = useRef<SignatureRef>(null);
   const cameraRef = useRef<CameraCaptureRef>(null);
 
-  const generatePDF = () => {
+  const generatePDF = async (): Promise<Blob> => {
     if (!professionalData.name || !professionalData.document) {
-      toast.error('Por favor complete los datos del profesional');
-      return;
+      throw new Error('Por favor complete los datos del profesional');
     }
 
     try {
@@ -90,14 +90,15 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
       };
 
       const pdf = generateHIVPDF(pdfData);
-      const fileName = `Consentimiento_VIH_${patientData.nombre}_${patientData.apellidos}_${formData.fecha}.pdf`;
-      pdf.save(fileName);
-      
-      toast.success('PDF de consentimiento para VIH generado exitosamente');
+      return pdf.output('blob');
     } catch (error) {
       console.error('Error generating PDF:', error);
-      toast.error('Error al generar el PDF');
+      throw error;
     }
+  };
+
+  const getHTMLContent = (): string => {
+    return document.getElementById('consent-form-content')?.innerHTML || '';
   };
 
   const handleProfessionalSelect = (professional: any) => {
@@ -126,6 +127,20 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
   };
 
   return (
+    <ConsentFormWrapper
+      consentType="VIH"
+      patientData={{
+        nombre: patientData.nombre,
+        apellidos: patientData.apellidos,
+        tipoDocumento: patientData.tipoDocumento,
+        numeroDocumento: patientData.numeroDocumento,
+        telefono: patientData.telefono,
+        email: patientData.centroSalud
+      }}
+      onGeneratePDF={generatePDF}
+      onGetHTMLContent={getHTMLContent}
+      professionalData={professionalData}
+    >
     <div id="consent-form-content" className="space-y-6">
       {/* Header */}
       <Card className="border-medical-blue/20">
@@ -506,18 +521,10 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
             >
               Volver
             </Button>
-            
-            <Button
-              onClick={generatePDF}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg gap-2"
-              size="lg"
-            >
-              <Download className="w-4 h-4" />
-              Guardar Consentimiento
-            </Button>
           </div>
         </CardContent>
       </Card>
     </div>
+    </ConsentFormWrapper>
   );
 };

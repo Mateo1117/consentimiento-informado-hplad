@@ -12,6 +12,7 @@ import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, Shield, Download, TestTube, CheckCircle, ChevronDown, ChevronUp, Camera, RotateCcw } from "lucide-react";
 import { ShareConsentButtons } from './ShareConsentButtons';
+import { ConsentFormWrapper } from './ConsentFormWrapper';
 import { toast } from "sonner";
 import { generateVenopuncionPDF } from "@/utils/pdfGeneratorVenopuncion";
 
@@ -80,11 +81,9 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
     }
   };
 
-  const generatePDF = async () => {
+  const generatePDF = async (): Promise<Blob> => {
     console.log("🚀 INICIANDO GENERACIÓN DE PDF VENOPUNCIÓN");
     
-    setIsGeneratingPDF(true);
-
     try {
       const currentDate = new Date();
       const date = currentDate.toLocaleDateString('es-CO');
@@ -123,21 +122,20 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
       
       const pdf = generateVenopuncionPDF(pdfData);
       
-      console.log("💾 Descargando PDF...");
+      console.log("📄 PDF generado exitosamente");
       
-      // Download PDF directly
-      const fileName = `consentimiento_venopuncion_${pdfData.patientData.numeroDocumento}_${Date.now()}.pdf`;
-      pdf.save(fileName);
-
-      toast.success("✅ PDF generado y descargado exitosamente");
-      console.log("✅ PDF descargado:", fileName);
+      // Return the blob instead of downloading directly
+      return pdf.output('blob');
 
     } catch (error) {
       console.error("❌ Error detallado al generar PDF:", error);
-      toast.error(`Error al generar el PDF: ${error instanceof Error ? error.message : 'Error desconocido'}`);
-    } finally {
-      setIsGeneratingPDF(false);
+      throw error;
     }
+  };
+
+  const getHTMLContent = (): string => {
+    // Return the HTML content that represents this consent form
+    return document.getElementById('consent-form-content')?.innerHTML || '';
   };
 
   const handleProfessionalSelect = (professional: any) => {
@@ -168,7 +166,24 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
   };
 
   return (
-    <div className="space-y-6">
+    <ConsentFormWrapper
+      consentType="Venopunción"
+      patientData={{
+        nombre: patientData.nombre,
+        apellidos: patientData.apellidos,
+        tipoDocumento: patientData.tipoDocumento,
+        numeroDocumento: patientData.numeroDocumento,
+        telefono: patientData.telefono,
+        email: patientData.centroSalud // Using centroSalud as email fallback since no email field
+      }}
+      onGeneratePDF={generatePDF}
+      onGetHTMLContent={getHTMLContent}
+      professionalData={{
+        name: professionalName,
+        document: professionalDocument
+      }}
+    >
+    <div id="consent-form-content" className="space-y-6">
       {/* Header */}
       <Card className="border-medical-blue/20">
         <CardHeader className="bg-gradient-to-r from-medical-blue/5 to-medical-blue-light/5 pb-4">
@@ -617,28 +632,10 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
             >
               Volver
             </Button>
-            
-            <Button
-              onClick={generatePDF}
-              disabled={isGeneratingPDF}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              size="lg"
-            >
-              {isGeneratingPDF ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4" />
-                  Guardar Consentimiento
-                </>
-              )}
-            </Button>
           </div>
         </CardContent>
       </Card>
     </div>
+    </ConsentFormWrapper>
   );
 };
