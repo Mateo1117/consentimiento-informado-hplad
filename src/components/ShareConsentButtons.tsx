@@ -105,6 +105,24 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
     <div className="space-y-4 p-4 border rounded-lg bg-muted/50">
       <h3 className="font-semibold text-sm">Compartir Consentimiento</h3>
       
+      {/* Patient Information */}
+      <div className="space-y-2 p-3 bg-background border rounded-md">
+        <h4 className="font-medium text-sm text-foreground">Información del Paciente:</h4>
+        <div className="space-y-1 text-sm text-muted-foreground">
+          <p><span className="font-medium">Nombre:</span> {consentData.patientName}</p>
+          {consentData.patientDocumentType && consentData.patientDocumentNumber && (
+            <p><span className="font-medium">Documento:</span> {consentData.patientDocumentType} {consentData.patientDocumentNumber}</p>
+          )}
+          {patientEmail && (
+            <p><span className="font-medium">Email:</span> {patientEmail}</p>
+          )}
+          {patientPhone && (
+            <p><span className="font-medium">Teléfono:</span> {patientPhone}</p>
+          )}
+          <p><span className="font-medium">Tipo:</span> {consentData.consentType}</p>
+        </div>
+      </div>
+      
       <div className="space-y-2">
         <Label className="text-sm text-muted-foreground">Enlace de firma:</Label>
         <div className="flex items-center space-x-2">

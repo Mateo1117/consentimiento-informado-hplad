@@ -50,10 +50,9 @@ export const PublicConsentSigning: React.FC = () => {
 
       console.log('✅ Consentimiento cargado exitosamente:', {
         id: data.id,
-        patient_name_masked: data.patient_name_masked,
+        patient_name: data.patient_name,
         status: data.status,
-        access_count: data.access_count,
-        requires_verification: data.requires_verification
+        consent_type: data.consent_type
       });
       
       setConsent(data);
@@ -214,17 +213,17 @@ export const PublicConsentSigning: React.FC = () => {
                   <Label className="text-sm font-medium text-muted-foreground">Paciente</Label>
                   <div className="flex items-center mt-1">
                     <User className="w-4 h-4 mr-2 text-muted-foreground" />
-                    <span className="font-medium">{consent.patient_name_masked}</span>
+                    <span className="font-medium">{consent.patient_name}</span>
                   </div>
                 </div>
-                {consent.patient_document_masked && (
-                  <div>
-                    <Label className="text-sm font-medium text-muted-foreground">Documento</Label>
-                    <p className="mt-1">
-                      {consent.patient_document_type} {consent.patient_document_masked}
-                    </p>
-                  </div>
-              )}
+                 {consent.patient_document_number && (
+                   <div>
+                     <Label className="text-sm font-medium text-muted-foreground">Documento</Label>
+                     <p className="mt-1">
+                       {consent.patient_document_type} {consent.patient_document_number}
+                     </p>
+                   </div>
+               )}
             </div>
 
             <Separator />
