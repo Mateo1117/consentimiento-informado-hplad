@@ -267,20 +267,23 @@ export type Database = {
         }[]
       }
       get_consent_by_token_secure: {
-        Args:
-          | { p_ip_address?: string; p_token: string; p_user_agent?: string }
-          | { p_ip_address?: unknown; p_token: string; p_user_agent?: string }
+        Args: { p_ip_address?: string; p_token: string; p_user_agent?: string }
         Returns: {
-          access_count: number
           consent_type: string
           id: string
-          patient_document_masked: string
+          patient_document_number: string
           patient_document_type: string
-          patient_name_masked: string
+          patient_email: string
+          patient_name: string
+          patient_phone: string
+          patient_photo_url: string
           payload: Json
-          requires_verification: boolean
+          professional_document: string
+          professional_name: string
+          professional_signature_data: string
           share_expires_at: string
           signed_at: string
+          signed_by_name: string
           status: string
         }[]
       }
@@ -320,30 +323,18 @@ export type Database = {
         }[]
       }
       sign_consent_by_token_secure: {
-        Args:
-          | {
-              p_ip_address?: string
-              p_patient_photo_url?: string
-              p_signature_data: string
-              p_signed_by_name: string
-              p_token: string
-              p_user_agent?: string
-              p_verification_code?: string
-            }
-          | {
-              p_ip_address?: unknown
-              p_patient_photo_url?: string
-              p_signature_data: string
-              p_signed_by_name: string
-              p_token: string
-              p_user_agent?: string
-              p_verification_code?: string
-            }
+        Args: {
+          p_ip_address?: string
+          p_patient_photo_url?: string
+          p_signature_data: string
+          p_signed_by_name: string
+          p_token: string
+          p_user_agent?: string
+          p_verification_code?: string
+        }
         Returns: {
           id: string
-          patient_photo_url: string
           signed_at: string
-          signed_by_name: string
           status: string
         }[]
       }
