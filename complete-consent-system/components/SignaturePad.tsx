@@ -15,6 +15,7 @@ export interface SignatureRef {
 
 interface SignaturePadProps {
   title?: string;
+  subtitle?: string;
   required?: boolean;
   onSignatureChange?: (signature: string | null) => void;
   isProfessional?: boolean;
@@ -24,6 +25,7 @@ interface SignaturePadProps {
 
 export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(({
   title = "Firma",
+  subtitle,
   required = false,
   onSignatureChange,
   isProfessional = false,
@@ -163,6 +165,9 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(({
         <CardTitle className="text-sm font-medium">
           {title} {required && <span className="text-red-500">*</span>}
         </CardTitle>
+        {subtitle && (
+          <p className="text-sm text-gray-500">{subtitle}</p>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="border-2 border-dashed border-gray-300 rounded-lg p-2">
@@ -173,7 +178,21 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(({
               height: 200,
               className: 'signature-canvas w-full h-full'
             }}
-            onEnd={handleEnd}
+            onEnd={() => {
+              // Auto-capture signature when user finishes drawing
+              setTimeout(() => {
+                const signatureData = signatureRef.current?.toDataURL();
+                const isEmpty = signatureRef.current?.isEmpty();
+                
+                if (signatureData && !isEmpty && signatureData.length > 100) {
+                  setHasSignature(true);
+                  onSignatureChange?.(signatureData);
+                } else {
+                  setHasSignature(false);
+                  onSignatureChange?.(null);
+                }
+              }, 300);
+            }}
           />
         </div>
         

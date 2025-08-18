@@ -59,11 +59,12 @@ export const PublicConsentSigning: React.FC = () => {
   };
 
   const handleSign = async () => {
-    console.log('🖊️ Iniciando proceso de firma desde móvil');
+    console.log('🖊️ Iniciando proceso de firma desde móvil - CORREGIDO');
     console.log('Validando datos de entrada...');
     console.log('Nombre firmante:', signedByName.trim());
     console.log('Tiene signatureData:', !!signatureData);
     console.log('Longitud signatureData:', signatureData?.length || 0);
+    console.log('Muestra signatureData:', signatureData?.substring(0, 100) + '...');
     
     if (!signedByName.trim()) {
       console.error('❌ Error: Nombre firmante vacío');
@@ -321,10 +322,10 @@ export const PublicConsentSigning: React.FC = () => {
               <Separator />
 
               <SignaturePad
-                ref={signatureRef}
-                title="Firma Digital"
-                required={true}
+                title="Firma del Paciente"
+                subtitle="Por favor firme en el área siguiente"
                 onSignatureChange={setSignatureData}
+                required
               />
 
               <div className="flex flex-col space-y-4">
