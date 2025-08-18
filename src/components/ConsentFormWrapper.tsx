@@ -37,11 +37,11 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
 
   const handleSaveAndGenerate = async () => {
     try {
+      // Get HTML content for storage first
+      const htmlContent = onGetHTMLContent();
+      
       // Generate PDF
       const pdfBlob = await onGeneratePDF();
-      
-      // Get HTML content for storage
-      const htmlContent = onGetHTMLContent();
       
       // Save to database with PDF
       const result = await saveConsent({

@@ -50,8 +50,8 @@ export default function ConsentManagement() {
   ];
 
   const sourceTypes = [
-    { value: "app", label: "Aplicación Web" },
-    { value: "mobile", label: "Dispositivo Móvil" }
+    { value: "web", label: "Aplicación Web" },
+    { value: "app", label: "Dispositivo Móvil" }
   ];
 
   useEffect(() => {
@@ -208,7 +208,7 @@ export default function ConsentManagement() {
   };
 
   const getSourceBadge = (source: string) => {
-    if (source === 'app') {
+    if (source === 'web') {
       return (
         <Badge className="bg-blue-100 text-blue-800 border-blue-200">
           <Monitor className="h-3 w-3 mr-1" />
@@ -431,7 +431,7 @@ export default function ConsentManagement() {
                           </Badge>
                         </TableCell>
                         <TableCell className="text-sm">
-                          {getSourceBadge(consent.source || 'mobile')}
+                          {getSourceBadge(consent.source || 'app')}
                         </TableCell>
                         <TableCell>
                           {getConsentStatusBadge(consent.status, consent.signed_at || undefined)}
@@ -491,7 +491,7 @@ export default function ConsentManagement() {
                               </Button>
                             )}
 
-                            {consent.source === 'app' && (
+                            {consent.source === 'web' && (
                               <Button
                                 variant="outline"
                                 size="sm"

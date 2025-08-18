@@ -64,7 +64,7 @@ class AppConsentService {
           status: 'signed', // App consents are immediately signed
           signed_at: new Date().toISOString(),
           signed_by_name: data.patientName,
-          source: 'app'
+          source: 'web'
         })
         .select()
         .single();
@@ -135,7 +135,7 @@ class AppConsentService {
         .from('consents')
         .select('*')
         .eq('created_by', user.id)
-        .eq('source', 'app')
+        .eq('source', 'web')
         .order('created_at', { ascending: false });
 
       if (error) {
