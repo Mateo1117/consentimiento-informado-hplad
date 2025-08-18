@@ -189,11 +189,46 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
       console.log("📸 Generando PDF con datos:", {
         hasPhoto: !!capturedPhoto,
         hasPatientSignature: !!patientSignature,
-        hasProfessionalSignature: !!professionalSignature
+        hasProfessionalSignature: !!professionalSignature,
+        selectedProcedures: selectedProcedures
       });
 
-      // Simulate PDF generation
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Import the PDF generator dynamically
+      const { generateFrotisVaginalPDF } = await import('@/utils/pdfGeneratorFrotisVaginal');
+
+      const pdfData = {
+        patientData: {
+          nombre: patientData.nombre,
+          apellidos: patientData.apellidos,
+          tipoDocumento: patientData.tipoDocumento,
+          numeroDocumento: patientData.numeroDocumento,
+          fechaNacimiento: patientData.fechaNacimiento,
+          edad: patientData.edad,
+          sexo: 'N/D', // Add sexo field
+          eps: patientData.eps,
+          telefono: patientData.telefono,
+          direccion: patientData.direccion,
+          centroSalud: patientData.centroSalud
+        },
+        guardianData: isMinor ? {
+          name: guardianName,
+          document: guardianDocument,
+          relationship: guardianRelationship
+        } : null,
+        professionalName,
+        professionalDocument,
+        patientSignature: patientSignature || '',
+        professionalSignature: professionalSignature || '',
+        patientPhoto: capturedPhoto,
+        consentDecision,
+        date: new Date().toISOString().split('T')[0],
+        time: new Date().toLocaleTimeString('es-CO', { hour12: false })
+      };
+
+      const pdf = generateFrotisVaginalPDF(pdfData);
+      const fileName = `Consentimiento_FrotisVaginal_${patientData.nombre}_${new Date().toISOString().split('T')[0]}.pdf`;
+      pdf.save(fileName);
+      
       toast.success("✅ PDF generado exitosamente");
     } catch (error) {
       console.error("❌ Error al generar PDF:", error);
@@ -310,12 +345,23 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
           <div className="space-y-4">
             <div 
               className="flex items-start space-x-3 p-3 rounded-lg border border-medical-blue/20 bg-medical-blue/5 cursor-pointer hover:bg-medical-blue/10 transition-colors"
-              onClick={() => setIsProcedureInfoExpanded(!isProcedureInfoExpanded)}
+              onClick={() => {
+                setIsProcedureInfoExpanded(!isProcedureInfoExpanded);
+                if (!selectedProcedures.includes("frotis_vaginal")) {
+                  handleProcedureChange("frotis_vaginal");
+                }
+              }}
             >
               <Checkbox
                 id="procedimiento-frotis"
-                checked={isProcedureInfoExpanded}
-                onCheckedChange={(checked) => setIsProcedureInfoExpanded(checked as boolean)}
+                checked={selectedProcedures.includes("frotis_vaginal")}
+                onCheckedChange={(checked) => {
+                  if (checked) {
+                    handleProcedureChange("frotis_vaginal");
+                  } else {
+                    handleProcedureChange("frotis_vaginal");
+                  }
+                }}
                 className="mt-1 data-[state=checked]:bg-medical-blue data-[state=checked]:border-medical-blue"
               />
               <div className="flex-1">
