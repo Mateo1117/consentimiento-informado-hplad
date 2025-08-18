@@ -523,34 +523,47 @@ export class CargaGlucosaPDFGenerator {
     
     this.currentY += 15;
     
-    // Withdrawal text
+    // Withdrawal text with patient name filled
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(9);
     
-    const withdrawalText = `Yo, identificado(a) como aparece junto a mi firma/huella, actuando en nombre propio ( ) en calidad de representante legal ( ) del(del) paciente cuya nombre e identificación registrada en el encabezado de procedimiento arriba nombrado, que me/le había sido propuesto(a) realizar(me/le). He sido informado(a) que, con esta decisión, renuncio - de forma libre, informada y consciente, mi voluntad de retirar mi consentimiento respecto de la realización de la intervención del procedimiento arriba nombrado, que me/le había sido propuesto(a) realizar(me/le). He sido informado(a) que, con esta decisión, renuncio la disposición del equipo asistencial a proporcionarme (le) las alternativas de atención, con las limitaciones, que mi decisión genera. Manifiesto que me hago responsable de las consecuencias que puedan derivarse de esta decisión.
+    const patientName = data.guardianData ? data.guardianData.name : `${data.patientData.nombre} ${data.patientData.apellidos}`;
+    const withdrawalText = `Yo, ${patientName}, identificado(a) como aparece junto a mi firma/huella, actuando en nombre propio ${!data.guardianData ? '(X)' : '( )'} en calidad de representante legal ${data.guardianData ? '(X)' : '( )'} del(del) paciente cuya nombre e identificación registrada en el encabezado de procedimiento arriba nombrado, que me/le había sido propuesto(a) realizar(me/le). He sido informado(a) que, con esta decisión, renuncio - de forma libre, informada y consciente, mi voluntad de retirar mi consentimiento respecto de la realización de la intervención del procedimiento arriba nombrado, que me/le había sido propuesto(a) realizar(me/le). He sido informado(a) que, con esta decisión, renuncio la disposición del equipo asistencial a proporcionarme (le) las alternativas de atención, con las limitaciones, que mi decisión genera. Manifiesto que me hago responsable de las consecuencias que puedan derivarse de esta decisión.
 
-En manifestación de aceptación firmo/pongo mi huella en este documento a los _______ días del mes de __________ de 20_____`;
+En manifestación de aceptación firmo/pongo mi huella en este documento a los ${data.date.split('-')[2]} días del mes de ${this.getMonthName(parseInt(data.date.split('-')[1]))} de ${data.date.split('-')[0]}`;
     
     const lines = this.pdf.splitTextToSize(withdrawalText, this.pageWidth - 2 * this.margin - 4);
     this.pdf.text(lines, this.margin + 2, this.currentY);
     
     this.currentY += lines.length * 4 + 20;
     
-    // Signature boxes for withdrawal
+    // Signature boxes for withdrawal with actual signatures if available
     const boxWidth = 60;
-    const boxHeight = 20;
+    const boxHeight = 25;
     const startX = this.margin + 10;
     
-    // Patient signature
+    // Patient/Guardian signature
     this.pdf.rect(startX, this.currentY, boxWidth, boxHeight);
+    if (data.patientSignature && data.consentDecision === 'disentir') {
+      try {
+        this.pdf.addImage(data.patientSignature, 'PNG', startX + 2, this.currentY + 2, boxWidth - 4, boxHeight - 4);
+      } catch (error) {
+        console.error('Error adding patient signature to withdrawal:', error);
+      }
+    }
     this.pdf.setFontSize(8);
-    this.pdf.text('_________________________', startX + 5, this.currentY + boxHeight - 5);
-    this.pdf.text('Firma paciente', startX + 15, this.currentY + boxHeight + 5);
+    this.pdf.text(data.guardianData ? 'Firma Acudiente' : 'Firma paciente', startX + 10, this.currentY + boxHeight + 5);
     
     // Professional signature
     this.pdf.rect(startX + boxWidth + 10, this.currentY, boxWidth, boxHeight);
-    this.pdf.text('_________________________', startX + boxWidth + 15, this.currentY + boxHeight - 5);
-    this.pdf.text('Firma Representante legal:', startX + boxWidth + 10, this.currentY + boxHeight + 5);
+    if (data.professionalSignature && data.consentDecision === 'disentir') {
+      try {
+        this.pdf.addImage(data.professionalSignature, 'PNG', startX + boxWidth + 12, this.currentY + 2, boxWidth - 4, boxHeight - 4);
+      } catch (error) {
+        console.error('Error adding professional signature to withdrawal:', error);
+      }
+    }
+    this.pdf.text('Firma Profesional:', startX + boxWidth + 10, this.currentY + boxHeight + 5);
     
     // Professional details
     this.pdf.rect(startX + 2 * (boxWidth + 10), this.currentY, boxWidth, boxHeight);
@@ -559,11 +572,20 @@ En manifestación de aceptación firmo/pongo mi huella en este documento a los _
     
     this.currentY += boxHeight + 20;
     
-    // Document numbers
+    // Document numbers with actual data
     const docY = this.currentY;
-    this.pdf.text('Documento:___________________', startX, docY);
-    this.pdf.text('Documento: ___________________', startX + boxWidth + 10, docY);
-    this.pdf.text('Documento: ___________________', startX + 2 * (boxWidth + 10), docY);
+    const patientDoc = data.guardianData ? data.guardianData.document : data.patientData.numeroDocumento;
+    this.pdf.text(`Documento: ${patientDoc}`, startX, docY);
+    this.pdf.text(`Documento: ${data.professionalDocument}`, startX + boxWidth + 10, docY);
+    this.pdf.text(`Documento: ${patientDoc}`, startX + 2 * (boxWidth + 10), docY);
+  }
+  
+  private getMonthName(month: number): string {
+    const months = [
+      'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+      'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+    ];
+    return months[month - 1] || 'enero';
   }
 
   private calculateTextHeight(text: string, maxWidth: number): number {

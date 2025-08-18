@@ -26,24 +26,35 @@ export const CameraCapture = forwardRef<CameraCaptureRef, CameraCaptureProps>(
     const [isCameraActive, setIsCameraActive] = useState(false);
     const [capturedPhoto, setCapturedPhoto] = useState<string | null>(null);
 
-    const startCamera = useCallback(async () => {
-      logger.debug("Starting camera...");
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 640, height: 480, facingMode: 'user' }
-        });
-        
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          streamRef.current = stream;
-          setIsCameraActive(true);
-          logger.debug("Camera started successfully");
+  const startCamera = useCallback(async () => {
+    logger.debug("Starting camera...");
+    
+    // Stop any existing stream first
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { 
+          facingMode: "user", 
+          width: { ideal: 640, min: 320 }, 
+          height: { ideal: 480, min: 240 } 
         }
-      } catch (error) {
-        logger.error('Error accessing camera:', error);
-        toast.error('No se pudo acceder a la cámara. Verifique los permisos.');
+      });
+      
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        streamRef.current = stream;
+        setIsCameraActive(true);
+        logger.debug("Camera started successfully");
       }
-    }, []);
+    } catch (error) {
+      logger.error('Error accessing camera:', error);
+      toast.error('No se pudo acceder a la cámara. Verifique los permisos.');
+    }
+  }, []);
 
     const stopCamera = useCallback(() => {
       if (streamRef.current) {
