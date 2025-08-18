@@ -47,6 +47,7 @@ const ConsentimientoInformado = () => {
         numeroDocumento: formData.documento,
         fechaNacimiento: formData.fechaNacimiento,
         edad: parseInt(formData.edad) || 0,
+        sexo: formData.sexo || 'N/D', // Use form value or default
         eps: formData.eapb,
         telefono: '',
         direccion: '',
