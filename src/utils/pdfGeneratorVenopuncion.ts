@@ -59,8 +59,14 @@ export class VenopuncionPDFGenerator {
     this.drawPatientData(data);
     this.drawGuardianData(data);
     this.drawProcedureData();
-    this.drawConsentText();
-    this.drawSignatures(data);
+    
+    // Only draw consent text and signatures if patient approves
+    if (data.consentDecision === 'aprobar') {
+      this.drawConsentText();
+      this.drawSignatures(data);
+    }
+    
+    // Always draw dissent section (will handle both approve and dissent cases)
     this.drawDissentSection(data);
     
     return this.pdf;

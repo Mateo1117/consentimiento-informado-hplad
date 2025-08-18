@@ -59,8 +59,12 @@ export class CargaGlucosaPDFGenerator {
     this.drawPatientData(data);
     this.drawGuardianData(data);
     this.drawProcedureData();
-    this.drawConsentText();
-    this.drawSignatures(data);
+    
+    // Only draw consent text and signatures if patient approves
+    if (data.consentDecision === 'aprobar') {
+      this.drawConsentText();
+      this.drawSignatures(data);
+    }
     
     // Add second page for withdrawal decision
     this.pdf.addPage();

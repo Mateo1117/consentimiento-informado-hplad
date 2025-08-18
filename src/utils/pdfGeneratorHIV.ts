@@ -60,9 +60,15 @@ export class HIVPDFGenerator {
     this.drawPatientData(data);
     this.drawGuardianData(data);
     this.drawProcedureData();
-    this.drawConsentText();
-    this.drawSignatures(data);
-    this.drawDissentSection();
+    
+    // Only draw consent text and signatures if patient approves
+    if (data.consentDecision === 'aprobar') {
+      this.drawConsentText();
+      this.drawSignatures(data);
+    }
+    
+    // Always draw dissent section (will handle both approve and dissent cases)
+    this.drawDissentSection(data);
     
     return this.pdf;
   }
@@ -479,7 +485,7 @@ export class HIVPDFGenerator {
     this.pdf.text(`Decisión: ${data.consentDecision === 'aprobar' ? 'APROBÓ el procedimiento' : 'DISENTIÓ el procedimiento'}`, this.margin, this.currentY + 5);
   }
 
-  private drawDissentSection() {
+  private drawDissentSection(data: HIVPDFData) {
     this.currentY += 10;
     
     // Check if we need a new page
@@ -509,14 +515,76 @@ export class HIVPDFGenerator {
     const dissentTexts = [
       'Yo, ________________________, identificada(o) como aparece junto a mi firma/huella, actuando en nombre propio [X] / en calidad de representante legal [ ] de la/del paciente cuyo nombre e identificación están registrados en el encabezado de este documento, manifiesto -de forma libre, informada y consciente-, mi voluntad de retirar mi consentimiento respecto de la realización de la intervención/ del procedimiento arriba nombrado, que me/le había sido propuesta(o) realizarme (le). He sido informada(o) que, por causa de mi decisión, no cambia la disposición del equipo asistencial a proporcionarme (le) las alternativas de atención, con las limitaciones, que mi decisión genera; Manifiesto que me hago responsable de las consecuencias que puedan derivarse de esta decisión.',
       '',
-      'En manifestación de aceptación firmo/pongo mi huella en este documento a los ______ días del mes de __________ de 20______',
-      '',
-      '_______________________________     ______________________________     ____________________________________',
-      'Firma paciente                      Firma Representante Legal           Nombre y documento de quien toma el',
-      '                                                                       consentimiento',
-      '',
-      'Documento: _____________________              Documento: ___________________              Documento: __________________________'
+      'En manifestación de aceptación firmo/pongo mi huella en este documento a los ______ días del mes de __________ de 20______'
     ];
+    
+    for (const text of dissentTexts) {
+      if (text === '') {
+        this.currentY += 3;
+        continue;
+      }
+      
+      const lines = this.pdf.splitTextToSize(text, this.pageWidth - 2 * this.margin - 4);
+      const textHeight = lines.length * 4;
+      
+      if (this.currentY + textHeight > this.pageHeight - this.margin - 40) {
+        this.pdf.addPage();
+        this.currentY = this.margin;
+      }
+      
+      this.pdf.text(lines, this.margin + 2, this.currentY + 4);
+      this.currentY += textHeight;
+    }
+    
+    this.currentY += 10;
+    
+    // Signature section for withdrawal - fill if patient dissents
+    if (data.consentDecision === 'disentir') {
+      // Create signature boxes
+      const boxWidth = 55;
+      const boxHeight = 25;
+      const startX = this.margin + 5;
+      
+      // Patient/Guardian signature
+      this.pdf.rect(startX, this.currentY + 40, boxWidth, boxHeight);
+      if (data.patientSignature) {
+        try {
+          this.pdf.addImage(data.patientSignature, 'PNG', startX + 2, this.currentY + 42, boxWidth - 4, boxHeight - 4);
+        } catch (error) {
+          console.error('Error adding patient signature to withdrawal:', error);
+        }
+      }
+      
+      // Professional signature
+      this.pdf.rect(startX + boxWidth + 10, this.currentY + 40, boxWidth, boxHeight);
+      if (data.professionalSignature) {
+        try {
+          this.pdf.addImage(data.professionalSignature, 'PNG', startX + boxWidth + 12, this.currentY + 42, boxWidth - 4, boxHeight - 4);
+        } catch (error) {
+          console.error('Error adding professional signature to withdrawal:', error);
+        }
+      }
+      
+      // Professional details box
+      this.pdf.rect(startX + 2 * (boxWidth + 10), this.currentY + 40, boxWidth, boxHeight);
+      
+      dissentTexts.push(
+        '',
+        data.guardianData ? 'Firma Acudiente                     Firma Profesional                   Nombre y documento de quien toma el' : 'Firma Paciente                      Firma Profesional                   Nombre y documento de quien toma el',
+        '                                                                            consentimiento',
+        '',
+        `Documento: ${data.guardianData ? data.guardianData.document : data.patientData.numeroDocumento}              Documento: ${data.professionalDocument}              Documento: ${data.guardianData ? data.guardianData.document : data.patientData.numeroDocumento}`
+      );
+    } else {
+      dissentTexts.push(
+        '',
+        '_______________________________     ______________________________     ____________________________________',
+        'Firma paciente                      Firma Representante Legal           Nombre y documento de quien toma el',
+        '                                                                       consentimiento',
+        '',
+        'Documento: _____________________              Documento: ___________________              Documento: __________________________'
+      );
+    }
     
     for (const text of dissentTexts) {
       if (text === '') {
