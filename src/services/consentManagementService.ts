@@ -73,6 +73,7 @@ class ConsentManagementService {
     startDate?: string;
     endDate?: string;
     status?: string;
+    source?: string;
   }): Promise<ConsentManagementData[]> {
     try {
       let query = supabase.from('consents').select('*');
@@ -91,6 +92,10 @@ class ConsentManagementService {
 
       if (filters.status) {
         query = query.eq('status', filters.status);
+      }
+
+      if (filters.source) {
+        query = query.eq('source', filters.source);
       }
 
       if (filters.startDate) {

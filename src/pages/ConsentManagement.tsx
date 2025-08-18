@@ -10,9 +10,10 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { AuthenticatedHeader } from "@/components/AuthenticatedHeader"
-import { ArrowLeft, Search, FileText, Calendar, User, Eye, Download, Filter, Camera, PenTool } from "lucide-react"
+import { ArrowLeft, Search, FileText, Calendar, User, Eye, Download, Filter, Camera, PenTool, Trash2, Monitor, Smartphone } from "lucide-react"
 import { toast } from "sonner"
 import { consentManagementService as consentService, isSupabaseConfigured, type ConsentManagementData as ConsentForm } from "@/services/consentManagementService";
+import { appConsentService } from "@/services/appConsentService"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
 import { useNavigate } from "react-router-dom"
@@ -29,7 +30,8 @@ export default function ConsentManagement() {
     documentType: "all",
     documentNumber: "",
     patientName: "",
-    status: "all"
+    status: "all",
+    source: "all"
   })
 
   const documentTypes = [
@@ -45,6 +47,11 @@ export default function ConsentManagement() {
     { value: "sent", label: "Enviado" },
     { value: "signed", label: "Firmado" },
     { value: "expired", label: "Expirado" }
+  ];
+
+  const sourceTypes = [
+    { value: "app", label: "Aplicación Web" },
+    { value: "mobile", label: "Dispositivo Móvil" }
   ];
 
   useEffect(() => {
@@ -99,6 +106,10 @@ export default function ConsentManagement() {
       if (filters.status && filters.status !== "all") {
         searchFilters.status = filters.status;
       }
+
+      if (filters.source && filters.source !== "all") {
+        searchFilters.source = filters.source;
+      }
       
       const data = await consentService.searchConsents(searchFilters);
       setFilteredConsents(data);
@@ -122,7 +133,8 @@ export default function ConsentManagement() {
       documentType: "all",
       documentNumber: "",
       patientName: "",
-      status: "all"
+      status: "all",
+      source: "all"
     });
     
     try {
@@ -161,6 +173,57 @@ export default function ConsentManagement() {
       );
     }
   }
+
+  const handleDeleteConsent = async (consentId: string) => {
+    if (window.confirm('¿Estás seguro de eliminar este consentimiento? Esta acción no se puede deshacer.')) {
+      try {
+        const success = await appConsentService.deleteConsent(consentId);
+        if (success) {
+          toast.success('Consentimiento eliminado exitosamente');
+          loadConsents(); // Reload the list
+        } else {
+          toast.error('Error al eliminar el consentimiento');
+        }
+      } catch (error) {
+        toast.error('Error al eliminar el consentimiento');
+      }
+    }
+  };
+
+  const handleDownloadPDF = async (consentId: string) => {
+    try {
+      const pdfUrl = await appConsentService.getConsentPDFUrl(consentId);
+      if (pdfUrl) {
+        window.open(pdfUrl, '_blank');
+      } else {
+        toast.error('PDF no disponible para este consentimiento');
+      }
+    } catch (error) {
+      toast.error('Error al descargar el PDF');
+    }
+  };
+
+  const getSourceIcon = (source: string) => {
+    return source === 'app' ? <Monitor className="h-4 w-4" /> : <Smartphone className="h-4 w-4" />;
+  };
+
+  const getSourceBadge = (source: string) => {
+    if (source === 'app') {
+      return (
+        <Badge className="bg-blue-100 text-blue-800 border-blue-200">
+          <Monitor className="h-3 w-3 mr-1" />
+          App Web
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge className="bg-green-100 text-green-800 border-green-200">
+          <Smartphone className="h-3 w-3 mr-1" />
+          Móvil
+        </Badge>
+      );
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-medical-blue-light to-background">
@@ -251,6 +314,23 @@ export default function ConsentManagement() {
                   </SelectContent>
                 </Select>
               </div>
+
+              <div className="space-y-2">
+                <Label>Origen</Label>
+                <Select value={filters.source} onValueChange={(value) => handleFilterChange("source", value)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos los orígenes" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos los orígenes</SelectItem>
+                    {sourceTypes.map((source) => (
+                      <SelectItem key={source.value} value={source.value}>
+                        {source.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="flex gap-2 mb-4">
@@ -317,6 +397,7 @@ export default function ConsentManagement() {
                       <TableHead>Paciente</TableHead>
                       <TableHead>Documento</TableHead>
                       <TableHead>Tipo Consentimiento</TableHead>
+                      <TableHead>Origen</TableHead>
                       <TableHead>Estado</TableHead>
                       <TableHead>Firma</TableHead>
                       <TableHead>Acciones</TableHead>
@@ -349,6 +430,9 @@ export default function ConsentManagement() {
                             {consent.consent_type}
                           </Badge>
                         </TableCell>
+                        <TableCell className="text-sm">
+                          {getSourceBadge(consent.source || 'mobile')}
+                        </TableCell>
                         <TableCell>
                           {getConsentStatusBadge(consent.status, consent.signed_at || undefined)}
                         </TableCell>
@@ -369,31 +453,56 @@ export default function ConsentManagement() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Dialog>
-                            <DialogTrigger asChild>
+                          <div className="flex items-center gap-2">
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => setSelectedConsent(consent)}
+                                >
+                                  <Eye className="h-4 w-4 mr-1" />
+                                  Ver
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-4xl max-h-[90vh]">
+                                <DialogHeader>
+                                  <DialogTitle className="flex items-center gap-2">
+                                    <FileText className="h-5 w-5" />
+                                    Detalles del Consentimiento
+                                  </DialogTitle>
+                                </DialogHeader>
+                                {selectedConsent && (
+                                  <ScrollArea className="max-h-[70vh]">
+                                    <ConsentDetails consent={selectedConsent} />
+                                  </ScrollArea>
+                                )}
+                              </DialogContent>
+                            </Dialog>
+
+                            {consent.pdf_url && (
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setSelectedConsent(consent)}
+                                onClick={() => handleDownloadPDF(consent.id)}
+                                title="Descargar PDF"
                               >
-                                <Eye className="h-4 w-4 mr-1" />
-                                Ver
+                                <Download className="h-4 w-4" />
                               </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-4xl max-h-[90vh]">
-                              <DialogHeader>
-                                <DialogTitle className="flex items-center gap-2">
-                                  <FileText className="h-5 w-5" />
-                                  Detalles del Consentimiento
-                                </DialogTitle>
-                              </DialogHeader>
-                              {selectedConsent && (
-                                <ScrollArea className="max-h-[70vh]">
-                                  <ConsentDetails consent={selectedConsent} />
-                                </ScrollArea>
-                              )}
-                            </DialogContent>
-                          </Dialog>
+                            )}
+
+                            {consent.source === 'app' && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleDeleteConsent(consent.id)}
+                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                title="Eliminar consentimiento"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}

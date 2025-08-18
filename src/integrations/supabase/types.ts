@@ -118,6 +118,7 @@ export type Database = {
           signature_data: string | null
           signed_at: string | null
           signed_by_name: string | null
+          source: string | null
           status: string
           updated_at: string
         }
@@ -145,6 +146,7 @@ export type Database = {
           signature_data?: string | null
           signed_at?: string | null
           signed_by_name?: string | null
+          source?: string | null
           status?: string
           updated_at?: string
         }
@@ -172,6 +174,7 @@ export type Database = {
           signature_data?: string | null
           signed_at?: string | null
           signed_by_name?: string | null
+          source?: string | null
           status?: string
           updated_at?: string
         }
