@@ -10,7 +10,7 @@ import { SignaturePad, SignatureRef } from "./SignaturePad";
 import { CameraCapture, CameraCaptureRef } from "./CameraCapture";
 import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
-import { FileText, AlertCircle, Shield, Download, TestTube, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
+import { FileText, AlertCircle, Shield, Download, TestTube, CheckCircle, ChevronDown, ChevronUp, Camera, RotateCcw } from "lucide-react";
 import { ShareConsentButtons } from './ShareConsentButtons';
 import { toast } from "sonner";
 import { generateVenopuncionPDF } from "@/utils/pdfGeneratorVenopuncion";
@@ -159,16 +159,10 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
     setShowProfessionalForm(true);
   };
 
-  const handlePhotoCapture = async () => {
-    try {
-      const photo = await cameraCaptureRef.current?.capturePhoto();
-      if (photo) {
-        setPatientPhoto(photo);
-        toast.success("Foto del paciente capturada exitosamente");
-      }
-    } catch (error) {
-      console.error("Error capturing photo:", error);
-      toast.error("Error al capturar la foto");
+  const handlePhotoCapture = (photoData: string | null) => {
+    if (photoData) {
+      setPatientPhoto(photoData);
+      toast.success("Foto del paciente capturada exitosamente");
     }
   };
 
@@ -487,25 +481,50 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
                 {/* Foto del Paciente */}
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <Label className="text-medical-blue font-medium">Foto del Paciente</Label>
-                  <div className="bg-gray-100 border-2 border-dashed border-gray-300 rounded-lg p-6 text-center mt-2">
-                    <div className="flex flex-col items-center">
-                      <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center mb-3">
-                        <span className="text-xl text-gray-400">📷</span>
-                      </div>
-                      <p className="text-gray-500 mb-3 text-sm">Cámara no activada</p>
-                      <Button variant="outline" size="sm" className="mb-3">
-                        <span className="w-4 h-4 mr-2">📷</span>
-                        Activar Cámara
+                  <div className="mt-2">
+                    <CameraCapture
+                      ref={cameraCaptureRef}
+                      title="Foto del Paciente"
+                      required={false}
+                    />
+                    <div className="mt-2 flex gap-2">
+                      <Button 
+                        type="button" 
+                        variant="outline" 
+                        onClick={async () => {
+                          try {
+                            const photo = await cameraCaptureRef.current?.capturePhoto();
+                            handlePhotoCapture(photo);
+                          } catch (error) {
+                            console.error("Error capturing photo:", error);
+                            toast.error("Error al capturar la foto");
+                          }
+                        }}
+                        className="flex items-center gap-2"
+                      >
+                        <Camera className="h-4 w-4" />
+                        Capturar Foto
                       </Button>
-                      <p className="text-xs text-gray-400">
-                        La foto se tomará automáticamente al registrar la firma
-                      </p>
+                      {patientPhoto && (
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          onClick={() => {
+                            setPatientPhoto(null);
+                            cameraCaptureRef.current?.stopCamera();
+                          }}
+                          className="flex items-center gap-2"
+                        >
+                          <RotateCcw className="h-4 w-4" />
+                          Tomar Otra
+                        </Button>
+                      )}
                     </div>
-                  </div>
-                  <div className="mt-3 text-center">
-                    <Button variant="outline" size="sm">
-                      Capturar Foto
-                    </Button>
+                    {patientPhoto && (
+                      <div className="mt-2 text-sm text-green-600">
+                        ✓ Foto capturada exitosamente
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
