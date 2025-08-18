@@ -59,40 +59,51 @@ export const PublicConsentSigning: React.FC = () => {
   };
 
   const handleSign = async () => {
-    console.log('🖊️ Iniciando proceso de firma desde móvil - CORREGIDO');
-    console.log('Validando datos de entrada...');
-    console.log('Nombre firmante:', signedByName.trim());
-    console.log('Tiene signatureData:', !!signatureData);
-    console.log('Longitud signatureData:', signatureData?.length || 0);
-    console.log('Muestra signatureData:', signatureData?.substring(0, 100) + '...');
+    console.log('🖊️ INICIANDO PROCESO DE FIRMA MÓVIL - V3');
+    console.log('📋 DATOS DE ENTRADA:');
+    console.log('- Nombre firmante:', signedByName.trim());
+    console.log('- Token:', token);
+    console.log('- Tiene signatureData:', !!signatureData);
+    console.log('- Longitud signatureData:', signatureData?.length || 0);
     
+    // Validar nombre del firmante
     if (!signedByName.trim()) {
       console.error('❌ Error: Nombre firmante vacío');
       toast.error('Por favor ingrese su nombre completo');
       return;
     }
 
-    // Validación más permisiva de la firma
-    console.log('📝 VALIDANDO FIRMA - Estado actual:');
+    // Validación SUPER PERMISIVA de la firma para móvil
+    console.log('📝 VALIDACIÓN DE FIRMA MÓVIL:');
     console.log('- signatureData existe:', !!signatureData);
-    console.log('- signatureData longitud:', signatureData?.length || 0);
     console.log('- signatureData tipo:', typeof signatureData);
+    console.log('- signatureData longitud:', signatureData?.length || 0);
     
-    // Verificar si es una firma válida (más permisivo)
-    const isValidSignature = signatureData && 
-                           typeof signatureData === 'string' && 
-                           signatureData.startsWith('data:image/png;base64,') &&
-                           signatureData.length > 100;
+    // Si no hay signatureData, intentar obtenerla directamente del componente
+    let finalSignatureData = signatureData;
+    if (!finalSignatureData && signatureRef.current) {
+      console.log('⚡ Intentando capturar firma directamente del canvas...');
+      finalSignatureData = signatureRef.current.getSignatureData();
+      console.log('- Captura directa exitosa:', !!finalSignatureData);
+      console.log('- Longitud captura directa:', finalSignatureData?.length || 0);
+    }
     
-    console.log('- Es firma válida:', isValidSignature);
+    // Validación final MUY PERMISIVA
+    const isValidSignature = finalSignatureData && 
+                           typeof finalSignatureData === 'string' && 
+                           finalSignatureData.length > 50; // Solo verificar que tenga contenido mínimo
+    
+    console.log('📊 RESULTADO VALIDACIÓN:');
+    console.log('- Firma final válida:', isValidSignature);
+    console.log('- Datos finales longitud:', finalSignatureData?.length || 0);
+    console.log('- Muestra datos:', finalSignatureData?.substring(0, 50) + '...');
     
     if (!isValidSignature) {
-      console.error('❌ FIRMA INVÁLIDA - Motivos posibles:');
-      console.error('- No hay datos de firma:', !signatureData);
-      console.error('- Tipo incorrecto:', typeof signatureData !== 'string');
-      console.error('- No es base64:', !signatureData?.startsWith('data:image/png;base64,'));
-      console.error('- Muy corta:', (signatureData?.length || 0) <= 100);
-      toast.error('Error: Firma no detectada correctamente. Intente limpiar y firmar nuevamente.');
+      console.error('❌ FIRMA INVÁLIDA - Motivos:');
+      console.error('- No hay datos de firma:', !finalSignatureData);
+      console.error('- Tipo incorrecto:', typeof finalSignatureData !== 'string');
+      console.error('- Muy corta:', (finalSignatureData?.length || 0) <= 50);
+      toast.error('Por favor dibuje su firma en el área designada y luego presione "Firmar Consentimiento"');
       return;
     }
     
@@ -123,7 +134,7 @@ export const PublicConsentSigning: React.FC = () => {
       
       const result = await consentService.signConsentByToken(
         token!,
-        signatureData,
+        finalSignatureData, // Usar la firma final validada
         signedByName.trim(),
         photoResult?.url
       );

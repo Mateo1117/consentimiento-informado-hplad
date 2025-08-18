@@ -179,7 +179,7 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(({
               className: 'signature-canvas w-full h-full'
             }}
             onEnd={() => {
-              // Captura inmediata de la firma
+              // NUEVA CAPTURA INMEDIATA Y ROBUSTA PARA MÓVIL
               console.log('🖊️ EVENTO onEnd - Usuario terminó de firmar');
               
               if (!signatureRef.current) {
@@ -187,28 +187,36 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(({
                 return;
               }
               
-              // Esperar un momento para que se complete el trazo
-              setTimeout(() => {
-                const isEmpty = signatureRef.current?.isEmpty();
-                console.log('📊 Estado del canvas:');
-                console.log('- Canvas vacío:', isEmpty);
+              // Captura INMEDIATA sin timeout para móviles
+              const isEmpty = signatureRef.current.isEmpty();
+              console.log('📊 Estado del canvas:');
+              console.log('- Canvas vacío:', isEmpty);
+              
+              if (!isEmpty) {
+                const signatureData = signatureRef.current.toDataURL();
+                console.log('✅ CAPTURANDO FIRMA INMEDIATA:');
+                console.log('- Longitud:', signatureData?.length || 0);
+                console.log('- Tipo válido:', signatureData?.startsWith('data:image/png;base64,'));
+                console.log('- Muestra:', signatureData?.substring(0, 50) + '...');
                 
-                if (!isEmpty) {
-                  const signatureData = signatureRef.current?.toDataURL();
-                  console.log('✅ CAPTURANDO FIRMA:');
-                  console.log('- Longitud:', signatureData?.length || 0);
-                  console.log('- Tipo válido:', signatureData?.startsWith('data:image/png;base64,'));
-                  console.log('- Muestra:', signatureData?.substring(0, 50) + '...');
-                  
+                setHasSignature(true);
+                onSignatureChange?.(signatureData || null);
+                console.log('📤 Firma enviada INMEDIATAMENTE al componente padre');
+              } else {
+                console.log('❌ Canvas detectado como vacío');
+                setHasSignature(false);
+                onSignatureChange?.(null);
+              }
+              
+              // Backup timeout por si la captura inmediata falla en algunos dispositivos
+              setTimeout(() => {
+                if (signatureRef.current && !signatureRef.current.isEmpty()) {
+                  const backupSignatureData = signatureRef.current.toDataURL();
+                  console.log('🔄 BACKUP: Recapturando firma después de 100ms');
                   setHasSignature(true);
-                  onSignatureChange?.(signatureData || null);
-                  console.log('📤 Firma enviada al componente padre');
-                } else {
-                  console.log('❌ Canvas detectado como vacío');
-                  setHasSignature(false);
-                  onSignatureChange?.(null);
+                  onSignatureChange?.(backupSignatureData || null);
                 }
-              }, 50); // Reducido a 50ms para respuesta más rápida
+              }, 100);
             }}
           />
         </div>
