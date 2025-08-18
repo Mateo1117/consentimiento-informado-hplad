@@ -347,9 +347,6 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
               className="flex items-start space-x-3 p-3 rounded-lg border border-medical-blue/20 bg-medical-blue/5 cursor-pointer hover:bg-medical-blue/10 transition-colors"
               onClick={() => {
                 setIsProcedureInfoExpanded(!isProcedureInfoExpanded);
-                if (!selectedProcedures.includes("frotis_vaginal")) {
-                  handleProcedureChange("frotis_vaginal");
-                }
               }}
             >
               <Checkbox
@@ -358,8 +355,10 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
                 onCheckedChange={(checked) => {
                   if (checked) {
                     handleProcedureChange("frotis_vaginal");
+                    setIsProcedureInfoExpanded(true);
                   } else {
                     handleProcedureChange("frotis_vaginal");
+                    setIsProcedureInfoExpanded(false);
                   }
                 }}
                 className="mt-1 data-[state=checked]:bg-medical-blue data-[state=checked]:border-medical-blue"
@@ -369,7 +368,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
                   htmlFor="procedimiento-frotis" 
                   className="cursor-pointer text-medical-blue font-semibold text-base flex items-center gap-2"
                 >
-                  Toma de Muestra Frotis Vaginal - Cultivo Recto-Vaginal
+                  Toma de Muestra para Frotis Vaginal - Cultivo Recto-Vaginal
                   {isProcedureInfoExpanded ? (
                     <ChevronUp className="h-4 w-4 text-medical-blue" />
                   ) : (
@@ -528,7 +527,11 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
             
             <div className="bg-medical-blue-light/20 border border-medical-blue/20 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <input type="checkbox" className="mt-1 w-4 h-4 text-medical-blue border-medical-blue/30 rounded" defaultChecked />
+                <Checkbox 
+                  checked={agreedToConsent}
+                  onCheckedChange={(checked) => setAgreedToConsent(checked === true)}
+                  className="mt-1 w-4 h-4 text-medical-blue border-medical-blue/30 rounded data-[state=checked]:bg-medical-blue data-[state=checked]:border-medical-blue" 
+                />
                 <span className="text-medical-gray text-sm leading-relaxed">
                   <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
                 </span>
