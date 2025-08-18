@@ -58,6 +58,41 @@ export type Database = {
           },
         ]
       }
+      consent_signature_logs: {
+        Row: {
+          consent_id: string | null
+          id: string
+          ip_address: string | null
+          signed_at: string | null
+          signed_by_name: string
+          user_agent: string | null
+        }
+        Insert: {
+          consent_id?: string | null
+          id?: string
+          ip_address?: string | null
+          signed_at?: string | null
+          signed_by_name: string
+          user_agent?: string | null
+        }
+        Update: {
+          consent_id?: string | null
+          id?: string
+          ip_address?: string | null
+          signed_at?: string | null
+          signed_by_name?: string
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_signature_logs_consent_id_fkey"
+            columns: ["consent_id"]
+            isOneToOne: false
+            referencedRelation: "consents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consents: {
         Row: {
           consent_type: string
@@ -80,6 +115,7 @@ export type Database = {
           professional_signature_data: string | null
           share_expires_at: string | null
           share_token: string
+          signature_data: string | null
           signed_at: string | null
           signed_by_name: string | null
           status: string
@@ -106,6 +142,7 @@ export type Database = {
           professional_signature_data?: string | null
           share_expires_at?: string | null
           share_token?: string
+          signature_data?: string | null
           signed_at?: string | null
           signed_by_name?: string | null
           status?: string
@@ -132,6 +169,7 @@ export type Database = {
           professional_signature_data?: string | null
           share_expires_at?: string | null
           share_token?: string
+          signature_data?: string | null
           signed_at?: string | null
           signed_by_name?: string | null
           status?: string
@@ -229,7 +267,9 @@ export type Database = {
         }[]
       }
       get_consent_by_token_secure: {
-        Args: { p_ip_address?: unknown; p_token: string; p_user_agent?: string }
+        Args:
+          | { p_ip_address?: string; p_token: string; p_user_agent?: string }
+          | { p_ip_address?: unknown; p_token: string; p_user_agent?: string }
         Returns: {
           access_count: number
           consent_type: string
@@ -280,15 +320,25 @@ export type Database = {
         }[]
       }
       sign_consent_by_token_secure: {
-        Args: {
-          p_ip_address?: unknown
-          p_patient_photo_url?: string
-          p_signature_data: string
-          p_signed_by_name: string
-          p_token: string
-          p_user_agent?: string
-          p_verification_code?: string
-        }
+        Args:
+          | {
+              p_ip_address?: string
+              p_patient_photo_url?: string
+              p_signature_data: string
+              p_signed_by_name: string
+              p_token: string
+              p_user_agent?: string
+              p_verification_code?: string
+            }
+          | {
+              p_ip_address?: unknown
+              p_patient_photo_url?: string
+              p_signature_data: string
+              p_signed_by_name: string
+              p_token: string
+              p_user_agent?: string
+              p_verification_code?: string
+            }
         Returns: {
           id: string
           patient_photo_url: string
