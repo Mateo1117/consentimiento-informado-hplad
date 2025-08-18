@@ -618,11 +618,11 @@ En manifestación de aceptación firmo/pongo mi huella en este documento a los $
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(8);
     
-    const patientName = data.guardianData ? data.guardianData.name : `${data.patientData.nombre} ${data.patientData.apellidos}`;
+    const patientFullName = data.guardianData ? data.guardianData.name : `${data.patientData.nombre} ${data.patientData.apellidos}`;
     const document = data.guardianData ? data.guardianData.document : data.patientData.numeroDocumento;
     
     const dissentTexts = [
-      `Yo, ${patientName}, identificada(o) como aparece junto a mi firma/huella, actuando en nombre propio ${!data.guardianData ? '[X]' : '[ ]'} / en calidad de representante legal ${data.guardianData ? '[X]' : '[ ]'} de la/del paciente cuyo nombre e identificación están registrados en el encabezado de este documento, manifiesto -de forma libre, informada y consciente-, mi voluntad de retirar mi consentimiento respecto de la realización de la intervención/ del procedimiento arriba nombrado, que me/le había sido propuesta(o) realizarme (le). He sido informada(o) que, por causa de mi decisión, no cambia la disposición del equipo asistencial a proporcionarme (le) las alternativas de atención, con las limitaciones, que mi decisión genera; Manifiesto que me hago responsable de las consecuencias que puedan derivarse de esta decisión.`,
+      `Yo, ${patientFullName}, identificada(o) como aparece junto a mi firma/huella, actuando en nombre propio ${!data.guardianData ? '[X]' : '[ ]'} / en calidad de representante legal ${data.guardianData ? '[X]' : '[ ]'} de la/del paciente cuyo nombre e identificación están registrados en el encabezado de este documento, manifiesto -de forma libre, informada y consciente-, mi voluntad de retirar mi consentimiento respecto de la realización de la intervención/ del procedimiento arriba nombrado, que me/le había sido propuesta(o) realizarme (le). He sido informada(o) que, por causa de mi decisión, no cambia la disposición del equipo asistencial a proporcionarme (le) las alternativas de atención, con las limitaciones, que mi decisión genera; Manifiesto que me hago responsable de las consecuencias que puedan derivarse de esta decisión.`,
       '',
       `Fecha: ${new Date().getDate()} días del mes de ${new Date().toLocaleDateString('es-ES', { month: 'long' })} de ${new Date().getFullYear()}`
     ];
@@ -644,6 +644,7 @@ En manifestación de aceptación firmo/pongo mi huella en este documento a los $
       this.pdf.text(lines, this.margin + 2, this.currentY + 4);
       this.currentY += textHeight;
     }
+    
     
     // Dissent signature (only if patient dissents)
     if (data.consentDecision === 'disentir') {

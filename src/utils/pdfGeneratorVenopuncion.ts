@@ -421,82 +421,60 @@ export class VenopuncionPDFGenerator {
     
     this.currentY += 10;
     
-    // Dissent text
+    // Dissent text with filled patient name
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(8);
     
     const patientName = data.guardianData ? data.guardianData.name : `${data.patientData.nombre} ${data.patientData.apellidos}`;
-    const dissentTexts = [
-      `Yo, ${patientName}, identificada(o) como aparece junto a mi firma/huella, actuando en nombre propio ${!data.guardianData ? '[X]' : '[ ]'} / en calidad de representante legal ${data.guardianData ? '[X]' : '[ ]'} de la/del paciente cuyo nombre e identificación están registrados en el encabezado de este documento, manifiesto -de forma libre, informada y consciente-, mi voluntad de retirar mi consentimiento respecto de la realización de la intervención/ del procedimiento arriba nombrado, que me/le había sido propuesta(o) realizarme (le). He sido informada(o) que, por causa de mi decisión, no cambia la disposición del equipo asistencial a proporcionarme (le) las alternativas de atención, con las limitaciones, que mi decisión genera; Manifiesto que me hago responsable de las consecuencias que puedan derivarse de esta decisión.`,
-      '',
-      `En manifestación de aceptación firmo/pongo mi huella en este documento a los ${data.date.split('-')[2]} días del mes de ${this.getMonthName(parseInt(data.date.split('-')[1]))} de ${data.date.split('-')[0]}`,
-      ''
-    ];
+    const currentDate = new Date();
+    const day = currentDate.getDate();
+    const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
+                       'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+    const month = monthNames[currentDate.getMonth()];
+    const year = currentDate.getFullYear();
     
-    // Add signature section with actual signatures if available and decision is to withdraw
-    if (data.consentDecision === 'disentir') {
-      // Create signature boxes
-      const boxWidth = 55;
-      const boxHeight = 25;
-      const startX = this.margin + 5;
-      
-      // Patient/Guardian signature
-      this.pdf.rect(startX, this.currentY + 40, boxWidth, boxHeight);
-      if (data.patientSignature) {
-        try {
-          this.pdf.addImage(data.patientSignature, 'PNG', startX + 2, this.currentY + 42, boxWidth - 4, boxHeight - 4);
-        } catch (error) {
-          console.error('Error adding patient signature to withdrawal:', error);
-        }
-      }
-      
-      // Professional signature
-      this.pdf.rect(startX + boxWidth + 10, this.currentY + 40, boxWidth, boxHeight);
-      if (data.professionalSignature) {
-        try {
-          this.pdf.addImage(data.professionalSignature, 'PNG', startX + boxWidth + 12, this.currentY + 42, boxWidth - 4, boxHeight - 4);
-        } catch (error) {
-          console.error('Error adding professional signature to withdrawal:', error);
-        }
-      }
-      
-      // Professional details box
-      this.pdf.rect(startX + 2 * (boxWidth + 10), this.currentY + 40, boxWidth, boxHeight);
-      
-      dissentTexts.push(
-        '',
-        data.guardianData ? 'Firma Acudiente                     Firma Profesional                   Nombre y documento de quien toma el' : 'Firma Paciente                      Firma Profesional                   Nombre y documento de quien toma el',
-        '                                                                            consentimiento',
-        '',
-        `Documento: ${data.guardianData ? data.guardianData.document : data.patientData.numeroDocumento}              Documento: ${data.professionalDocument}              Documento: ${data.guardianData ? data.guardianData.document : data.patientData.numeroDocumento}`
-      );
-    } else {
-      dissentTexts.push(
-        '_______________________________     ______________________________     ____________________________________',
-        'Firma paciente                      Firma Representante Legal           Nombre y documento de quien toma el',
-        '                                                                       consentimiento',
-        '',
-        'Documento: _____________________              Documento: ___________________              Documento: __________________________'
-      );
+    const dissentText = `Yo, ${patientName}, identificada(o) como aparece junto a mi firma/huella, actuando en nombre propio ${!data.guardianData ? '[X]' : '[ ]'} / en calidad de representante legal ${data.guardianData ? '[X]' : '[ ]'} de la/del paciente cuyo nombre e identificación están registrados en el encabezado de este documento, manifiesto -de forma libre, informada y consciente-, mi voluntad de retirar mi consentimiento respecto de la realización de la intervención/ del procedimiento arriba nombrado, que me/le había sido propuesta(o) realizarme (le). He sido informada(o) que, por causa de mi decisión, no cambia la disposición del equipo asistencial a proporcionarme (le) las alternativas de atención, con las limitaciones, que mi decisión genera; Manifiesto que me hago responsable de las consecuencias que puedan derivarse de esta decisión.`;
+    
+    const lines = this.pdf.splitTextToSize(dissentText, this.pageWidth - 2 * this.margin - 4);
+    const textHeight = lines.length * 4;
+    
+    if (this.currentY + textHeight > this.pageHeight - this.margin - 40) {
+      this.pdf.addPage();
+      this.currentY = this.margin;
     }
     
-    for (const text of dissentTexts) {
-      if (text === '') {
-        this.currentY += 3;
-        continue;
+    this.pdf.text(lines, this.margin + 2, this.currentY + 4);
+    this.currentY += textHeight + 5;
+    
+    // Date text with filled values
+    const dateText = `En manifestación de aceptación firmo/pongo mi huella en este documento a los ${day} días del mes de ${month} de ${year}`;
+    const dateLines = this.pdf.splitTextToSize(dateText, this.pageWidth - 2 * this.margin - 4);
+    this.pdf.text(dateLines, this.margin + 2, this.currentY + 4);
+    this.currentY += dateLines.length * 4 + 10;
+    
+    // Signature section for withdrawal
+    const document = data.guardianData ? data.guardianData.document : data.patientData.numeroDocumento;
+    const boxWidth = 80;
+    const boxHeight = 30;
+    
+    this.pdf.rect(this.margin, this.currentY, boxWidth, boxHeight);
+    
+    // Add patient signature for dissent
+    if (data.patientSignature && 
+        typeof data.patientSignature === 'string' && 
+        data.patientSignature.length > 50 && 
+        data.patientSignature.startsWith('data:image/png;base64,')) {
+      try {
+        this.pdf.addImage(data.patientSignature, 'PNG', this.margin + 2, this.currentY + 2, boxWidth - 4, 25);
+      } catch (error) {
+        console.error('Error adding dissent signature:', error);
       }
-      
-      const lines = this.pdf.splitTextToSize(text, this.pageWidth - 2 * this.margin - 4);
-      const textHeight = lines.length * 4;
-      
-      if (this.currentY + textHeight > this.pageHeight - this.margin - 20) {
-        this.pdf.addPage();
-        this.currentY = this.margin;
-      }
-      
-      this.pdf.text(lines, this.margin + 2, this.currentY + 4);
-      this.currentY += textHeight;
     }
+    
+    this.pdf.setFontSize(8);
+    this.pdf.text('Firma paciente', this.margin + 2, this.currentY + boxHeight + 4);
+    this.pdf.text(`Documento: ${document}`, this.margin + 2, this.currentY + boxHeight + 8);
+    this.pdf.text('Decisión: DISENTIÓ el procedimiento', this.margin + 2, this.currentY + boxHeight + 12);
   }
   
   private getMonthName(month: number): string {
