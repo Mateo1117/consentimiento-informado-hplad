@@ -237,15 +237,32 @@ export default function AdminPanel() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-amber-600">
               <AlertCircle className="h-5 w-5" />
-              Configuración Requerida
+              Configuración de Base de Datos Requerida
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <p className="text-sm text-gray-600 mb-4">
-              Para acceder al panel de administración, es necesario configurar la conexión a la base de datos.
-            </p>
+          <CardContent className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+              <p className="text-sm text-amber-800 font-medium mb-2">
+                Base de Datos No Configurada
+              </p>
+              <p className="text-sm text-amber-700">
+                Para acceder al panel de administración y habilitar las funciones de automatización (webhooks), primero configure la conexión a Supabase.
+              </p>
+            </div>
+            
+            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+              <p className="text-sm text-blue-800 font-semibold mb-2">
+                📋 Próximos pasos:
+              </p>
+              <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
+                <li>Configure las credenciales de Supabase</li>
+                <li>Acceda al panel de administración</li>
+                <li>Configure webhooks en la pestaña "Automatizaciones"</li>
+              </ol>
+            </div>
+
             <Button onClick={() => navigate("/")} className="w-full">
-              Volver al Inicio
+              Ir a Configuración
             </Button>
           </CardContent>
         </Card>
