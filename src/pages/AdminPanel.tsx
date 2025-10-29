@@ -37,7 +37,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { consentService, type ConsentForm, isSupabaseConfigured } from "@/services/legacy-consent";
+import { consentService, type ConsentForm } from "@/services/legacy-consent";
+import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, subWeeks, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -85,10 +86,6 @@ export default function AdminPanel() {
   });
 
   useEffect(() => {
-    if (!isSupabaseConfigured()) {
-      toast.error("Base de datos no configurada");
-      return;
-    }
     loadData();
   }, []);
 
@@ -230,45 +227,7 @@ export default function AdminPanel() {
     return format(new Date(dateString), "dd/MM/yyyy HH:mm", { locale: es });
   };
 
-  if (!isSupabaseConfigured()) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-medical-blue-light to-background flex items-center justify-center">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-amber-600">
-              <AlertCircle className="h-5 w-5" />
-              Configuración de Base de Datos Requerida
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
-              <p className="text-sm text-amber-800 font-medium mb-2">
-                Base de Datos No Configurada
-              </p>
-              <p className="text-sm text-amber-700">
-                Para acceder al panel de administración y habilitar las funciones de automatización (webhooks), primero configure la conexión a Supabase.
-              </p>
-            </div>
-            
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <p className="text-sm text-blue-800 font-semibold mb-2">
-                📋 Próximos pasos:
-              </p>
-              <ol className="text-sm text-blue-700 space-y-1 list-decimal list-inside">
-                <li>Configure las credenciales de Supabase</li>
-                <li>Acceda al panel de administración</li>
-                <li>Configure webhooks en la pestaña "Automatizaciones"</li>
-              </ol>
-            </div>
-
-            <Button onClick={() => navigate("/")} className="w-full">
-              Ir a Configuración
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // Remove the isSupabaseConfigured check - Supabase is already configured
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-medical-blue-light to-background">
