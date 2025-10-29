@@ -79,10 +79,14 @@ class AutomationService {
     try {
       console.log(`🎯 Triggering automation event: ${event}`);
 
+      // Load configured webhooks from localStorage
+      const savedWebhooks = this.getConfiguredWebhooks();
+      
       const { data: result, error } = await supabase.functions.invoke('trigger-webhooks', {
         body: {
           event,
           data,
+          webhookConfigs: savedWebhooks.length > 0 ? savedWebhooks : undefined,
           metadata: {
             ...metadata,
             triggeredAt: new Date().toISOString(),
@@ -102,6 +106,20 @@ class AutomationService {
     } catch (error: any) {
       console.error('❌ Failed to trigger automation:', error.message);
       throw error;
+    }
+  }
+
+  private getConfiguredWebhooks(): WebhookConfig[] {
+    try {
+      const stored = localStorage.getItem('configured_webhooks');
+      if (!stored) return [];
+      
+      const webhooks = JSON.parse(stored);
+      // Only return active webhooks
+      return webhooks.filter((w: WebhookConfig) => w.active);
+    } catch (error) {
+      console.error('Error loading configured webhooks:', error);
+      return [];
     }
   }
 

@@ -26,7 +26,16 @@ import { toast } from "sonner";
 import { automationService, type WebhookConfig } from "@/services/automationService";
 
 export function AutomationConfig() {
-  const [webhooks, setWebhooks] = useState<WebhookConfig[]>([]);
+  // Load saved webhooks from localStorage on mount
+  const [webhooks, setWebhooks] = useState<WebhookConfig[]>(() => {
+    try {
+      const stored = localStorage.getItem('configured_webhooks');
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+  
   const [currentWebhook, setCurrentWebhook] = useState<Partial<WebhookConfig>>({
     name: '',
     url: '',
@@ -48,6 +57,12 @@ export function AutomationConfig() {
   const [testParameterValue, setTestParameterValue] = useState<string>('');
   const [selectedPlatform, setSelectedPlatform] = useState<string>('generic');
   const [testResults, setTestResults] = useState<any>(null);
+
+  // Save webhooks to localStorage whenever they change
+  const updateWebhooks = (newWebhooks: WebhookConfig[]) => {
+    setWebhooks(newWebhooks);
+    localStorage.setItem('configured_webhooks', JSON.stringify(newWebhooks));
+  };
 
   const platforms = [
     { 
@@ -107,7 +122,7 @@ export function AutomationConfig() {
       description: currentWebhook.description
     };
 
-    setWebhooks(prev => [...prev, newWebhook]);
+    updateWebhooks([...webhooks, newWebhook]);
     setCurrentWebhook({
       name: '',
       url: '',
@@ -139,7 +154,7 @@ export function AutomationConfig() {
   };
 
   const handleRemoveWebhook = (id: string) => {
-    setWebhooks(prev => prev.filter(w => w.id !== id));
+    updateWebhooks(webhooks.filter(w => w.id !== id));
     toast.success("Webhook eliminado");
   };
 
