@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/utils/logger";
 import { pdfStorageService } from "./pdfStorageService";
+import { automationService } from "./automationService";
 
 export interface AppConsentData {
   patientName: string;
@@ -104,6 +105,32 @@ class AppConsentService {
         consentId: consent.id,
         hasPdf: !!pdfUrl 
       });
+
+      // Trigger webhook automation for consent created event
+      try {
+        await automationService.onConsentCreated(
+          {
+            id: consent.id,
+            consent_type: data.consentType,
+            status: 'signed',
+            signed_at: consent.signed_at,
+            professionalName: consent.professional_name,
+            source: 'web'
+          },
+          {
+            nombre: data.patientName.split(' ')[0],
+            apellidos: data.patientName.split(' ').slice(1).join(' '),
+            numeroDocumento: data.patientDocumentNumber,
+            tipoDocumento: data.patientDocumentType,
+            email: data.patientEmail,
+            telefono: data.patientPhone
+          }
+        );
+        logger.info('Webhook triggered for consent creation');
+      } catch (webhookError) {
+        // Don't fail the consent creation if webhook fails
+        logger.error('Error triggering webhook (non-critical):', webhookError);
+      }
 
       return {
         id: consent.id,
