@@ -8,15 +8,56 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
-import { Search, User, Calendar as CalendarIcon, MapPin, Phone, IdCard } from "lucide-react";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Search, User, Calendar as CalendarIcon, MapPin, Phone, IdCard, Wifi, WifiOff, Clock, ServerCrash, AlertCircle, FileWarning, UserX } from "lucide-react";
 import { toast } from "sonner";
-import { patientApiService, type PatientData } from "@/services/patientApi";
+import { patientApiService, type PatientData, type PatientSearchResult } from "@/services/patientApi";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
 interface PatientFormProps {
   onPatientSelect: (patient: PatientData) => void;
 }
+
+// Función para obtener el icono según el tipo de error
+const getErrorIcon = (errorType?: string) => {
+  switch (errorType) {
+    case 'network':
+      return <WifiOff className="h-5 w-5" />;
+    case 'timeout':
+      return <Clock className="h-5 w-5" />;
+    case 'http':
+    case 'empty_response':
+    case 'parse_error':
+      return <ServerCrash className="h-5 w-5" />;
+    case 'not_found':
+      return <UserX className="h-5 w-5" />;
+    case 'validation':
+      return <FileWarning className="h-5 w-5" />;
+    case 'api_error':
+    default:
+      return <AlertCircle className="h-5 w-5" />;
+  }
+};
+
+// Función para obtener el color según el tipo de error
+const getErrorColor = (errorType?: string) => {
+  switch (errorType) {
+    case 'network':
+    case 'timeout':
+      return 'border-orange-500 bg-orange-50 text-orange-800';
+    case 'http':
+    case 'empty_response':
+    case 'parse_error':
+      return 'border-red-500 bg-red-50 text-red-800';
+    case 'not_found':
+      return 'border-yellow-500 bg-yellow-50 text-yellow-800';
+    case 'validation':
+      return 'border-blue-500 bg-blue-50 text-blue-800';
+    default:
+      return 'border-red-500 bg-red-50 text-red-800';
+  }
+};
 
 export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
   const [searchDocument, setSearchDocument] = useState("");
@@ -26,6 +67,7 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
   const [patientData, setPatientData] = useState<PatientData | null>(null);
   const [selectedSede, setSelectedSede] = useState<string>("");
   const [editableAge, setEditableAge] = useState<number | null>(null);
+  const [searchError, setSearchError] = useState<{ message: string; type?: string } | null>(null);
 
   const documentTypes = [
     { value: "CC", label: "Cédula de Ciudadanía (CC)" },
@@ -90,6 +132,7 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
     }
 
     setIsLoading(true);
+    setSearchError(null);
     try {
       const result = await patientApiService.searchByDocument(searchDocument);
       
@@ -108,15 +151,19 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
         };
         setPatientData(patientWithSedeAndDocType);
         setEditableAge(finalAge);
+        setSearchError(null);
         toast.success("Paciente encontrado exitosamente");
       } else {
-        // Mostrar mensaje de error específico
-        toast.error(result.error || "No se encontró paciente con este documento");
+        // Mostrar mensaje de error específico con indicador visual
+        setSearchError({ 
+          message: result.error || "No se encontró paciente con este documento",
+          type: result.errorType
+        });
         setPatientData(null);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : "Error al buscar paciente";
-      toast.error(errorMessage);
+      setSearchError({ message: errorMessage, type: 'unknown' });
     } finally {
       setIsLoading(false);
     }
@@ -214,6 +261,28 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
             Conectado al webhook local para consulta de pacientes
           </p>
         </div>
+
+        {/* Indicador visual de error */}
+        {searchError && !patientData && (
+          <Alert className={cn("border-2", getErrorColor(searchError.type))}>
+            <div className="flex items-center gap-3">
+              {getErrorIcon(searchError.type)}
+              <AlertDescription className="font-medium">
+                {searchError.message}
+              </AlertDescription>
+            </div>
+            {(searchError.type === 'network' || searchError.type === 'timeout') && (
+              <p className="text-sm mt-2 opacity-80">
+                Sugerencia: Verifique su conexión a internet o intente nuevamente en unos momentos.
+              </p>
+            )}
+            {searchError.type === 'http' && (
+              <p className="text-sm mt-2 opacity-80">
+                Sugerencia: El servidor puede estar experimentando problemas. Intente nuevamente más tarde.
+              </p>
+            )}
+          </Alert>
+        )}
 
         {/* Datos del paciente encontrado */}
         {patientData && (

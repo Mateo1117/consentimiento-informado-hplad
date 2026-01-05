@@ -1,1 +1,4 @@
 project_id = "dbhamokkweyadibngphq"
+
+[functions.consulta-paciente]
+verify_jwt = false
