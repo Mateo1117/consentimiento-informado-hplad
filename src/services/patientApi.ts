@@ -8,10 +8,13 @@ interface PatientData {
   numeroDocumento: string;
   fechaNacimiento: string;
   edad: number;
+  sexo: string;
   eps: string;
   telefono: string;
   direccion: string;
+  email: string;
   centroSalud: string;
+  sedeAtencion: string;
 }
 
 type PatientErrorType =
@@ -298,10 +301,13 @@ class PatientApiService {
       numeroDocumento: data.DOCUMENTO_PACIENTE || data.documento || data.DOCUMENTO || documento,
       fechaNacimiento,
       edad,
-      eps: data.EPS || data.eps || data.NO_NOMB_EPS || data.eps_paciente || "Sin EPS",
+      sexo: data.SEXO_PACIENTE || data.sexo || data.SEXO || "No especificado",
+      eps: data.NOMBRE_EPS || data.EPS || data.eps || data.NO_NOMB_EPS || data.eps_paciente || "Sin EPS",
       telefono: data.TELEFONO_PACIENTE || data.telefono || data.TELEFONO || data.telefono_paciente || "No disponible",
-      direccion: data.direccion || data.DIRECCION || data.direccion_paciente || "No disponible",
+      direccion: data.DIRECCION_PACIENTE || data.direccion || data.DIRECCION || data.direccion_paciente || "No disponible",
+      email: data.EMAIL_PACIENTE || data.email || data.EMAIL || "",
       centroSalud: "HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA",
+      sedeAtencion: data.SEDE_ATENCION || data.sede || data.SEDE || "",
     };
 
     console.log("Datos mapeados del paciente:", mapped);

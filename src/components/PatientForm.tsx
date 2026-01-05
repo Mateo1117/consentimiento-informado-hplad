@@ -361,6 +361,13 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                 </div>
                 
                 <div className="space-y-2">
+                  <Label className="text-xs text-medical-gray">Sexo</Label>
+                  <p className="font-medium bg-signature-area p-2 rounded border">
+                    {patientData.sexo || "No especificado"}
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
                   <Label className="text-xs text-medical-gray">EPS</Label>
                   <p className="font-medium bg-signature-area p-2 rounded border">
                     {patientData.eps}
@@ -368,7 +375,14 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-xs text-medical-gray">Sede de Atención</Label>
+                  <Label className="text-xs text-medical-gray">Sede de Atención (Webhook)</Label>
+                  <p className="font-medium bg-signature-area p-2 rounded border">
+                    {patientData.sedeAtencion || "No disponible"}
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-xs text-medical-gray">Sede Seleccionada</Label>
                   <p className="font-medium bg-signature-area p-2 rounded border">
                     {patientData.centroSalud}
                   </p>
@@ -381,6 +395,13 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                   </Label>
                   <p className="font-medium bg-signature-area p-2 rounded border">
                     {patientData.telefono}
+                  </p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label className="text-xs text-medical-gray">Email</Label>
+                  <p className="font-medium bg-signature-area p-2 rounded border">
+                    {patientData.email || "No disponible"}
                   </p>
                 </div>
                 
