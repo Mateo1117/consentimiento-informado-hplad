@@ -255,12 +255,14 @@ serve(async (req: Request) => {
       }
 
       // Verificar que haya datos de paciente válidos
-      // El webhook debe devolver NOMBRE_PACIENTE o algún identificador
-      const hasPatientData = data?.NOMBRE_PACIENTE || data?.DOCUMENTO_PACIENTE || 
-                            data?.nombre_paciente || data?.documento ||
-                            (Array.isArray(data) && data.length > 0 && data[0]?.NOMBRE_PACIENTE);
+      // El webhook puede devolver campos en mayúsculas o minúsculas
+      const nombrePaciente = data?.NOMBRE_PACIENTE || data?.nombre_paciente;
+      const documentoPaciente = data?.DOCUMENTO_PACIENTE || data?.documento;
+      const hasPatientData = nombrePaciente || documentoPaciente ||
+                            (Array.isArray(data) && data.length > 0 && (data[0]?.NOMBRE_PACIENTE || data[0]?.nombre_paciente));
       
-      if (!hasPatientData) {
+      // Verificar que el nombre no esté vacío
+      if (!hasPatientData || (nombrePaciente && String(nombrePaciente).trim() === "")) {
         console.log("No se encontraron datos de paciente en la respuesta. Campos:", Object.keys(data || {}));
         return new Response(
           JSON.stringify({
