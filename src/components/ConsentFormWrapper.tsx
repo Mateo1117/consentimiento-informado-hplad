@@ -101,41 +101,17 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       
       <Separator />
       
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <FileText className="h-5 w-5" />
-            Opciones de Guardado
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="flex flex-col sm:flex-row gap-4">
-            <Button
-              onClick={handleSaveAndGenerate}
-              disabled={isSaving}
-              className="flex-1"
-            >
-              <Save className="h-4 w-4 mr-2" />
-              {isSaving ? 'Guardando...' : 'Guardar y Descargar PDF'}
-            </Button>
-            
-            <Button
-              variant="outline"
-              onClick={handleDownloadOnly}
-              className="flex-1"
-            >
-              <Download className="h-4 w-4 mr-2" />
-              Solo Descargar PDF
-            </Button>
-          </div>
-          
-          <p className="text-sm text-muted-foreground mt-3">
-            <strong>Guardar y Descargar:</strong> Almacena el consentimiento en la base de datos para su gestión posterior y descarga el PDF.
-            <br />
-            <strong>Solo Descargar:</strong> Genera y descarga el PDF sin guardarlo en la base de datos.
-          </p>
-        </CardContent>
-      </Card>
+      <div className="flex justify-center">
+        <Button
+          onClick={handleSaveAndGenerate}
+          disabled={isSaving}
+          size="lg"
+          className="w-full sm:w-auto min-w-[300px]"
+        >
+          <Save className="h-5 w-5 mr-2" />
+          {isSaving ? 'Guardando...' : 'Crear y Guardar Consentimiento'}
+        </Button>
+      </div>
     </div>
   );
 };
