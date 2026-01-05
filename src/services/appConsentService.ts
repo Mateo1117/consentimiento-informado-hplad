@@ -110,6 +110,15 @@ class AppConsentService {
 
       // Enviar datos al webhook externo
       try {
+        // Log detallado para debugging
+        logger.info('Datos para webhook:', {
+          hasPatientSignature: !!(data.patientSignature || data.payload?.patientSignature),
+          hasPatientPhoto: !!(data.patientPhotoUrl || data.payload?.patientPhotoUrl),
+          hasPdfUrl: !!pdfUrl,
+          patientSignatureLength: (data.patientSignature || data.payload?.patientSignature)?.length || 0,
+          patientPhotoLength: (data.patientPhotoUrl || data.payload?.patientPhotoUrl)?.length || 0
+        });
+
         await this.sendConsentToWebhook({
           consentId: consent.id,
           patientName: data.patientName,

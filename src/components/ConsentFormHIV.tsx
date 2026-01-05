@@ -140,6 +140,10 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
       onGeneratePDF={generatePDF}
       onGetHTMLContent={getHTMLContent}
       professionalData={professionalData}
+      patientSignature={patientSignature}
+      patientPhotoUrl={patientPhoto}
+      getPatientSignature={() => signatureRef.current?.getSignatureData() || null}
+      getPatientPhoto={() => cameraRef.current?.getCapturedPhoto() || null}
     >
     <div id="consent-form-content" className="space-y-6">
       {/* Header */}
