@@ -35,144 +35,24 @@ interface PatientSearchResult {
   fromCache?: boolean;
 }
 
-type CacheEntry = {
-  data: PatientData;
-  expiresAt: number;
-};
-
 const CACHE_KEY = "mcm_patient_cache_v1";
-const CACHE_TTL_MS = 1000 * 60 * 60 * 6; // 6 horas
-const CACHE_MAX_ITEMS = 50;
-const CACHE_CLEANUP_INTERVAL_MS = 1000 * 60 * 30; // Limpieza cada 30 minutos
 
 class PatientApiService {
-  private cache = new Map<string, CacheEntry>();
-  private cleanupIntervalId: number | null = null;
-
   constructor() {
-    this.loadCache();
-    this.cleanExpiredEntries(); // Limpieza automática al iniciar
-    this.startAutoCleanup(); // Iniciar limpieza periódica
+    // Limpiar cualquier caché existente al iniciar
+    this.clearCache();
   }
 
-  // Limpieza automática periódica
-  private startAutoCleanup() {
-    if (this.cleanupIntervalId) {
-      clearInterval(this.cleanupIntervalId);
-    }
-    
-    this.cleanupIntervalId = window.setInterval(() => {
-      console.log("Ejecutando limpieza automática de caché de pacientes...");
-      this.cleanExpiredEntries();
-    }, CACHE_CLEANUP_INTERVAL_MS);
-  }
-
-  // Limpiar entradas expiradas
-  private cleanExpiredEntries(): number {
-    const now = Date.now();
-    let removed = 0;
-
-    for (const [doc, entry] of this.cache.entries()) {
-      if (entry.expiresAt <= now) {
-        this.cache.delete(doc);
-        removed++;
-      }
-    }
-
-    if (removed > 0) {
-      console.log(`Caché: ${removed} entradas expiradas eliminadas`);
-      this.persistCache();
-    }
-
-    return removed;
-  }
-
-  // Limpiar toda la caché manualmente
+  // Limpiar toda la caché
   public clearCache(): void {
-    this.cache.clear();
     localStorage.removeItem(CACHE_KEY);
-    console.log("Caché de pacientes limpiada completamente");
+    console.log("Caché de pacientes limpiada");
   }
 
-  // Limpiar un documento específico del caché
-  public clearCacheForDocument(documento: string): void {
-    const doc = String(documento).trim();
-    if (this.cache.has(doc)) {
-      this.cache.delete(doc);
-      this.persistCache();
-      console.log(`Caché eliminada para documento: ${doc}`);
-    }
-  }
-
-  // Obtener estadísticas del caché
-  public getCacheStats(): { size: number; items: string[] } {
-    return {
-      size: this.cache.size,
-      items: Array.from(this.cache.keys()),
-    };
-  }
-
-  private loadCache() {
-    try {
-      const raw = localStorage.getItem(CACHE_KEY);
-      if (!raw) return;
-
-      const parsed = JSON.parse(raw) as Record<string, CacheEntry>;
-      const now = Date.now();
-
-      for (const [doc, entry] of Object.entries(parsed)) {
-        if (entry?.data && entry?.expiresAt && entry.expiresAt > now) {
-          this.cache.set(doc, entry);
-        }
-      }
-      
-      console.log(`Caché de pacientes cargada: ${this.cache.size} entradas válidas`);
-    } catch (e) {
-      console.warn("No se pudo cargar el caché de pacientes", e);
-    }
-  }
-
-  private persistCache() {
-    try {
-      // limitar tamaño
-      const entries = Array.from(this.cache.entries())
-        .sort((a, b) => b[1].expiresAt - a[1].expiresAt)
-        .slice(0, CACHE_MAX_ITEMS);
-
-      const obj: Record<string, CacheEntry> = {};
-      for (const [doc, entry] of entries) obj[doc] = entry;
-
-      localStorage.setItem(CACHE_KEY, JSON.stringify(obj));
-    } catch (e) {
-      console.warn("No se pudo guardar el caché de pacientes", e);
-    }
-  }
-
-  private getFromCache(documento: string): PatientData | null {
-    const entry = this.cache.get(documento);
-    if (!entry) return null;
-
-    if (entry.expiresAt <= Date.now()) {
-      this.cache.delete(documento);
-      this.persistCache();
-      return null;
-    }
-
-    return entry.data;
-  }
-
-  private setCache(documento: string, data: PatientData) {
-    this.cache.set(documento, {
-      data,
-      expiresAt: Date.now() + CACHE_TTL_MS,
-    });
-    this.persistCache();
-  }
-
-  async searchByDocument(documento: string, forceRefresh: boolean = false): Promise<PatientSearchResult> {
+  async searchByDocument(documento: string): Promise<PatientSearchResult> {
     try {
       const doc = String(documento || "").trim();
-      console.log(`Consultando paciente con documento: ${doc}${forceRefresh ? " (forzando actualización)" : ""}`);
+      console.log(`Consultando paciente con documento: ${doc} (siempre datos frescos)`);
 
       if (!doc) {
         return {
@@ -190,18 +70,7 @@ class PatientApiService {
         };
       }
 
-      // Cache hit (si no se fuerza actualización)
-      if (!forceRefresh) {
-        const cached = this.getFromCache(doc);
-        if (cached) {
-          console.log("Cache hit paciente:", doc);
-          return { data: cached, fromCache: true };
-        }
-      } else {
-        // Si se fuerza, eliminar del caché primero
-        this.clearCacheForDocument(doc);
-      }
-
+      // Siempre consultar datos frescos de la API
       const { data, error } = await supabase.functions.invoke("consulta-paciente", {
         body: { documento: doc },
       });
@@ -232,7 +101,6 @@ class PatientApiService {
         };
       }
 
-      this.setCache(doc, mapped);
       return { data: mapped };
     } catch (error: any) {
       console.error("Error al consultar paciente:", error);
