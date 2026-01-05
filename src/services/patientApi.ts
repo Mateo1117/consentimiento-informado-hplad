@@ -19,7 +19,7 @@ interface WebhookResponse {
 }
 
 class PatientApiService {
-  private apiBaseUrl: string = 'http://190.145.223.146:666/mcm/controller/api.php';
+  private apiBaseUrl: string = 'https://webhook.mcmasociados.tech/webhook/consulta-paciente';
 
   constructor() {
     // Cargar configuración desde localStorage
