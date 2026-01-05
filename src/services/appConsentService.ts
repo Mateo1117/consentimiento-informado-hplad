@@ -14,6 +14,8 @@ export interface AppConsentData {
   professionalName?: string;
   professionalDocument?: string;
   pdfContent?: string; // HTML content for PDF generation
+  patientSignature?: string; // base64 de la firma del paciente
+  patientPhotoUrl?: string; // URL de la foto del paciente
 }
 
 export interface SavedConsentResult {
@@ -105,6 +107,31 @@ class AppConsentService {
         consentId: consent.id,
         hasPdf: !!pdfUrl 
       });
+
+      // Enviar datos al webhook externo
+      try {
+        await this.sendConsentToWebhook({
+          consentId: consent.id,
+          patientName: data.patientName,
+          patientDocumentType: data.patientDocumentType,
+          patientDocumentNumber: data.patientDocumentNumber,
+          patientEmail: data.patientEmail,
+          patientPhone: data.patientPhone,
+          patientSignature: data.patientSignature || data.payload?.patientSignature,
+          patientPhotoUrl: data.patientPhotoUrl || data.payload?.patientPhotoUrl,
+          consentType: data.consentType,
+          professionalName: professionalSignature?.professional_name || data.professionalName,
+          professionalDocument: professionalSignature?.professional_document || data.professionalDocument,
+          professionalSignature: professionalSignature?.signature_data,
+          pdfUrl: pdfUrl,
+          payload: data.payload,
+          signedAt: consent.signed_at
+        });
+        logger.info('Webhook de consentimiento enviado exitosamente');
+      } catch (webhookError) {
+        // No fallar si el webhook falla
+        logger.error('Error al enviar webhook de consentimiento (no crítico):', webhookError);
+      }
 
       // Trigger webhook automation for consent created event
       try {
@@ -251,6 +278,79 @@ class AppConsentService {
       logger.error('Error getting consent PDF URL:', error);
       return null;
     }
+  }
+
+  /**
+   * Send consent data to external webhook
+   */
+  private async sendConsentToWebhook(data: {
+    consentId: string;
+    patientName: string;
+    patientDocumentType?: string;
+    patientDocumentNumber?: string;
+    patientEmail?: string;
+    patientPhone?: string;
+    patientSignature?: string;
+    patientPhotoUrl?: string;
+    consentType: string;
+    professionalName?: string;
+    professionalDocument?: string;
+    professionalSignature?: string;
+    pdfUrl?: string;
+    payload?: any;
+    signedAt?: string;
+  }): Promise<void> {
+    try {
+      logger.info('Enviando consentimiento al webhook externo', {
+        consentId: data.consentId,
+        consentType: data.consentType
+      });
+
+      const { data: response, error } = await supabase.functions.invoke('enviar-consentimiento', {
+        body: {
+          consent_id: data.consentId,
+          paciente_nombre_completo: data.patientName,
+          paciente_tipo_documento: data.patientDocumentType || 'CC',
+          paciente_numero_documento: data.patientDocumentNumber || '',
+          paciente_email: data.patientEmail || null,
+          paciente_telefono: data.patientPhone || null,
+          paciente_firma: data.patientSignature || null,
+          paciente_foto: data.patientPhotoUrl || null,
+          tipo_procedimiento: data.consentType,
+          nombre_consentimiento: this.getConsentDisplayName(data.consentType),
+          fecha_firma: data.signedAt || new Date().toISOString(),
+          profesional_nombre_completo: data.professionalName || '',
+          profesional_documento: data.professionalDocument || null,
+          profesional_firma: data.professionalSignature || null,
+          pdf_url: data.pdfUrl || null,
+          payload_adicional: data.payload || {}
+        }
+      });
+
+      if (error) {
+        logger.error('Error en edge function enviar-consentimiento:', error);
+        throw error;
+      }
+
+      logger.info('Respuesta del webhook:', response);
+    } catch (error) {
+      logger.error('Error enviando consentimiento al webhook:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Get display name for consent type
+   */
+  private getConsentDisplayName(consentType: string): string {
+    const displayNames: Record<string, string> = {
+      'venopuncion': 'Consentimiento Informado de Venopunción',
+      'hiv': 'Consentimiento Informado para Prueba de VIH',
+      'hemocomponentes': 'Consentimiento Informado de Hemocomponentes',
+      'carga_glucosa': 'Consentimiento Informado Curva de Carga de Glucosa',
+      'frotis_vaginal': 'Consentimiento Informado Frotis Vaginal'
+    };
+    return displayNames[consentType] || `Consentimiento ${consentType}`;
   }
 }
 
