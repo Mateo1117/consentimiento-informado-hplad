@@ -1,8 +1,7 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Download, Save, FileText } from 'lucide-react';
+import { Save } from 'lucide-react';
 import { useAppConsent } from '@/hooks/useAppConsent';
 import { toast } from 'sonner';
 
@@ -23,6 +22,11 @@ interface ConsentFormWrapperProps {
     name: string;
     document: string;
   };
+  patientSignature?: string | null;
+  patientPhotoUrl?: string | null;
+  // Funciones para obtener datos dinámicamente antes de guardar
+  getPatientSignature?: () => string | null;
+  getPatientPhoto?: () => string | null;
 }
 
 export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
@@ -31,12 +35,27 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
   patientData,
   onGeneratePDF,
   onGetHTMLContent,
-  professionalData
+  professionalData,
+  patientSignature,
+  patientPhotoUrl,
+  getPatientSignature,
+  getPatientPhoto
 }) => {
   const { saveConsent, isSaving } = useAppConsent();
 
   const handleSaveAndGenerate = async () => {
     try {
+      // Obtener firma y foto justo antes de guardar (usando callbacks si están disponibles)
+      const currentPatientSignature = getPatientSignature?.() || patientSignature;
+      const currentPatientPhoto = getPatientPhoto?.() || patientPhotoUrl;
+
+      console.log('📝 Datos de firma/foto al guardar:', {
+        hasSignature: !!currentPatientSignature,
+        signatureLength: currentPatientSignature?.length || 0,
+        hasPhoto: !!currentPatientPhoto,
+        photoLength: currentPatientPhoto?.length || 0
+      });
+
       // Get HTML content for storage first
       const htmlContent = onGetHTMLContent();
       
@@ -54,11 +73,15 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         payload: {
           patientData,
           professionalData,
+          patientSignature: currentPatientSignature,
+          patientPhotoUrl: currentPatientPhoto,
           generatedAt: new Date().toISOString()
         },
         professionalName: professionalData?.name,
         professionalDocument: professionalData?.document,
-        pdfContent: htmlContent
+        pdfContent: htmlContent,
+        patientSignature: currentPatientSignature || undefined,
+        patientPhotoUrl: currentPatientPhoto || undefined
       });
 
       if (result.success) {
@@ -78,23 +101,8 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         });
       }
     } catch (error) {
+      console.error('Error al procesar consentimiento:', error);
       toast.error('Error al procesar el consentimiento');
-    }
-  };
-
-  const handleDownloadOnly = async () => {
-    try {
-      const pdfBlob = await onGeneratePDF();
-      const url = URL.createObjectURL(pdfBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `${consentType}_${patientData.nombre}_${patientData.apellidos}.pdf`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      URL.revokeObjectURL(url);
-    } catch (error) {
-      toast.error('Error al generar el PDF');
     }
   };
 

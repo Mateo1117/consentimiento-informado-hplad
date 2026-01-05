@@ -182,6 +182,10 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         name: professionalName,
         document: professionalDocument
       }}
+      patientSignature={patientSignature}
+      patientPhotoUrl={patientPhoto}
+      getPatientSignature={() => patientSignatureRef.current?.getSignatureData() || null}
+      getPatientPhoto={() => cameraCaptureRef.current?.getCapturedPhoto() || null}
     >
     <div id="consent-form-content" className="space-y-6">
       {/* Header */}
