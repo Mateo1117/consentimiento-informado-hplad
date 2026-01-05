@@ -101,17 +101,49 @@ serve(async (req: Request) => {
       payload_adicional: body.payload_adicional || {}
     };
 
-    console.log("🔗 Enviando al webhook:", WEBHOOK_URL);
+    // Construir URL con parámetros para GET
+    const params = new URLSearchParams();
+    params.append('paciente_nombre_completo', webhookPayload.paciente_nombre_completo);
+    params.append('paciente_tipo_documento', webhookPayload.paciente_tipo_documento);
+    params.append('paciente_numero_documento', webhookPayload.paciente_numero_documento);
+    if (webhookPayload.paciente_email) params.append('paciente_email', webhookPayload.paciente_email);
+    if (webhookPayload.paciente_telefono) params.append('paciente_telefono', webhookPayload.paciente_telefono);
+    if (webhookPayload.paciente_firma) params.append('paciente_firma', webhookPayload.paciente_firma);
+    if (webhookPayload.paciente_foto) params.append('paciente_foto', webhookPayload.paciente_foto);
+    params.append('tipo_procedimiento', webhookPayload.tipo_procedimiento);
+    params.append('nombre_consentimiento', webhookPayload.nombre_consentimiento);
+    params.append('fecha_firma', webhookPayload.fecha_firma);
+    params.append('profesional_nombre_completo', webhookPayload.profesional_nombre_completo);
+    if (webhookPayload.profesional_documento) params.append('profesional_documento', webhookPayload.profesional_documento);
+    if (webhookPayload.profesional_firma) params.append('profesional_firma', webhookPayload.profesional_firma);
+    if (webhookPayload.pdf_url) params.append('pdf_url', webhookPayload.pdf_url);
+    params.append('consent_id', webhookPayload.consent_id);
 
-    const response = await fetch(WEBHOOK_URL, {
-      method: "POST",
+    const fullUrl = `${WEBHOOK_URL}?${params.toString()}`;
+    console.log("🔗 Enviando al webhook (GET):", WEBHOOK_URL);
+
+    // Intentar primero con GET, si falla intentar con POST
+    let response = await fetch(fullUrl, {
+      method: "GET",
       headers: {
-        "Content-Type": "application/json",
         "Accept": "application/json",
         "User-Agent": "Hospital-Consent-System/1.0"
-      },
-      body: JSON.stringify(webhookPayload)
+      }
     });
+
+    // Si GET falla con 404/405, intentar POST
+    if (response.status === 404 || response.status === 405) {
+      console.log("🔄 GET no disponible, intentando POST...");
+      response = await fetch(WEBHOOK_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "User-Agent": "Hospital-Consent-System/1.0"
+        },
+        body: JSON.stringify(webhookPayload)
+      });
+    }
 
     const responseText = await response.text();
     console.log("📥 Respuesta del webhook - Status:", response.status);
