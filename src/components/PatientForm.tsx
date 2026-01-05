@@ -9,7 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, User, Calendar as CalendarIcon, MapPin, Phone, IdCard, Wifi, WifiOff, Clock, ServerCrash, AlertCircle, FileWarning, UserX, RefreshCw } from "lucide-react";
+import { Search, User, Calendar as CalendarIcon, MapPin, Phone, IdCard, Wifi, WifiOff, Clock, ServerCrash, AlertCircle, FileWarning, UserX, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { patientApiService, type PatientData, type PatientSearchResult } from "@/services/patientApi";
 import { format } from "date-fns";
@@ -274,9 +274,26 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
             </div>
           </div>
           
-          <p className="text-xs text-medical-gray">
-            Conectado al webhook local para consulta de pacientes
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-medical-gray">
+              Conectado al webhook local para consulta de pacientes
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                patientApiService.clearCache();
+                setPatientData(null);
+                setSearchDocument("");
+                setIsFromCache(false);
+                toast.success("Caché de pacientes limpiada");
+              }}
+              className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Limpiar caché
+            </Button>
+          </div>
         </div>
 
         {/* Indicador visual de error */}
