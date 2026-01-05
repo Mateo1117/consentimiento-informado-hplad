@@ -19,7 +19,7 @@ interface WebhookResponse {
 }
 
 class PatientApiService {
-  private webhookUrl: string = 'https://flow.mcmasociados.tech/webhook/G92PxmaZY4H2Mhbw/webhook4/consulta-paciente';
+  private apiBaseUrl: string = 'http://190.145.223.146:666/mcm/controller/api.php';
 
   constructor() {
     // Cargar configuración desde localStorage
@@ -36,8 +36,8 @@ class PatientApiService {
         const config = JSON.parse(saved);
         const patientEndpoint = config.find((ep: any) => ep.name === 'consulta-paciente');
         if (patientEndpoint && patientEndpoint.status === 'active') {
-          this.webhookUrl = patientEndpoint.url;
-          console.log('URL de webhook cargada desde configuración:', this.webhookUrl);
+          this.apiBaseUrl = patientEndpoint.url;
+          console.log('URL de API cargada desde configuración:', this.apiBaseUrl);
         }
       }
     } catch (error) {
@@ -49,203 +49,92 @@ class PatientApiService {
     const endpoints = event.detail.endpoints;
     const patientEndpoint = endpoints.find((ep: any) => ep.name === 'consulta-paciente');
     if (patientEndpoint && patientEndpoint.status === 'active') {
-      this.webhookUrl = patientEndpoint.url;
-      console.log('URL de webhook actualizada:', this.webhookUrl);
+      this.apiBaseUrl = patientEndpoint.url;
+      console.log('URL de API actualizada:', this.apiBaseUrl);
     }
   }
 
-  private get WEBHOOK_URL() {
-    return this.webhookUrl;
+  private get API_BASE_URL() {
+    return this.apiBaseUrl;
   }
 
   async searchByDocument(documento: string): Promise<PatientData | null> {
     try {
       console.log(`Consultando paciente con documento: ${documento}`);
       
-      // Intentar conexión directa primero
-      try {
-        const result = await this.tryDirectConnection(documento);
-        if (result) {
-          console.log('Paciente encontrado con conexión directa');
-          return result;
-        }
-      } catch (directError) {
-        console.log('Error en conexión directa, intentando con edge function:', directError.message);
-      }
+      // Construir URL con parámetros GET
+      const apiUrl = `${this.API_BASE_URL}?op=GetPaciente&documento_paciente=${encodeURIComponent(documento)}`;
+      console.log('URL de consulta:', apiUrl);
       
-      // Si falla la conexión directa, usar edge function de Supabase
-      try {
-        console.log('Intentando con edge function de Supabase...');
-        const edgeFunctionResult = await this.tryWithAllOrigins(documento);
-        if (edgeFunctionResult) {
-          console.log('Paciente encontrado con edge function');
-          return edgeFunctionResult;
-        }
-      } catch (edgeError) {
-        console.log('Edge function también falló:', edgeError.message);
-      }
-      
-      // Si no se encuentra paciente en ninguna conexión
-      console.log('No se encontró paciente en el webhook');
-      return null;
-      
-    } catch (error) {
-      console.error('Error general al consultar paciente:', error);
-      // En lugar de lanzar error, retornar null para mejor manejo en el UI
-      return null;
-    }
-  }
-
-  private async tryDirectConnection(documento: string): Promise<PatientData | null> {
-    console.log('Intentando conexión directa al webhook');
-    
-    const requestBody = {
-      documento: documento,
-      tipo_documento: "CC" // Agregar tipo de documento por defecto
-    };
-    
-    console.log('Cuerpo de la petición directa:', JSON.stringify(requestBody));
-    
-    try {
-      // Intentar primero como POST
-      const response = await fetch(this.WEBHOOK_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify(requestBody),
-        mode: 'cors'
-      });
-
-      console.log('Respuesta directa - Status:', response.status);
-
-      if (!response.ok) {
-        throw new Error(`Error en conexión directa: ${response.status} ${response.statusText}`);
-      }
-
-      const data: WebhookResponse = await response.json();
-      console.log('Respuesta del webhook directo:', data);
-      
-      return this.mapPatientData(data, documento);
-      
-    } catch (corsError) {
-      console.log('Error CORS, intentando como GET con parámetros:', corsError);
-      
-      // Si falla por CORS, intentar como GET
-      const getUrl = `${this.WEBHOOK_URL}?documento=${encodeURIComponent(documento)}`;
-      const getResponse = await fetch(getUrl, {
+      const response = await fetch(apiUrl, {
         method: 'GET',
         headers: {
           'Accept': 'application/json'
-        },
-        mode: 'cors'
+        }
       });
 
-      if (!getResponse.ok) {
-        throw new Error(`Error en GET directo: ${getResponse.status} ${getResponse.statusText}`);
+      console.log('Respuesta API - Status:', response.status);
+
+      if (!response.ok) {
+        throw new Error(`Error en API: ${response.status} ${response.statusText}`);
       }
 
-      const data: WebhookResponse = await getResponse.json();
-      console.log('Respuesta del webhook GET directo:', data);
+      const data: WebhookResponse = await response.json();
+      console.log('Respuesta de la API:', data);
       
       return this.mapPatientData(data, documento);
+      
+    } catch (error) {
+      console.error('Error al consultar paciente:', error);
+      return null;
     }
-  }
-
-  private async tryWithAllOrigins(documento: string): Promise<PatientData | null> {
-    console.log('Intentando con edge function de Supabase');
-    
-    const requestData = {
-      webhookUrl: this.WEBHOOK_URL,
-      platform: 'custom',
-      testData: {
-        documento: documento,
-        tipo_documento: "CC"
-      }
-    };
-    
-    console.log('Datos a enviar a edge function:', JSON.stringify(requestData));
-    
-    // Usar edge function de Supabase en lugar de proxy CORS
-    const edgeFunctionUrl = 'https://drspravsvyxfhazpeygo.supabase.co/functions/v1/test-webhook';
-    
-    const response = await fetch(edgeFunctionUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json',
-        'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyc3ByYXZzdnl4ZmhhenBleWdvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3NTU4MjksImV4cCI6MjA2OTMzMTgyOX0.YhBkyIcpykfzhq44yL3wlyxpHauSogwvmWxclcNCDz8`
-      },
-      body: JSON.stringify(requestData)
-    });
-
-    console.log('Respuesta edge function - Status:', response.status);
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error en edge function:', errorText);
-      throw new Error(`Error en edge function: ${response.status} ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    console.log('Respuesta del edge function:', result);
-    
-    if (!result.success) {
-      throw new Error(`Error en webhook: ${result.error || 'Unknown error'}`);
-    }
-    
-    // Parsear la respuesta del webhook
-    let webhookData;
-    try {
-      webhookData = typeof result.response === 'string' ? JSON.parse(result.response) : result.response;
-    } catch (parseError) {
-      console.error('Error parsing webhook response:', parseError);
-      throw new Error('Error al parsear respuesta del webhook');
-    }
-    
-    console.log('Datos parseados del webhook:', webhookData);
-    
-    return this.mapPatientData(webhookData, documento);
   }
 
   private mapPatientData(data: WebhookResponse, documento: string): PatientData | null {
-    // Si no hay datos o paciente no encontrado
-    if (!data || data.success === false || data.success === "false") {
-      console.log('No se encontró paciente en el webhook:', data);
+    // Si no hay datos o error
+    if (!data || data.error) {
+      console.log('No se encontró paciente:', data);
       return null;
     }
 
     // Verificar que hay un nombre de paciente
-    if (!data.nombre_paciente || data.nombre_paciente.trim() === '') {
-      console.log('No se encontró nombre de paciente en la respuesta del webhook');
+    const nombrePaciente = data.nombre_paciente || data.nombre || data.NOMBRE;
+    if (!nombrePaciente || nombrePaciente.trim() === '') {
+      console.log('No se encontró nombre de paciente en la respuesta');
       return null;
     }
 
     // Separar nombre completo en nombre y apellidos
-    const nombreCompleto = data.nombre_paciente.trim();
+    const nombreCompleto = nombrePaciente.trim();
     const partesNombre = nombreCompleto.split(' ');
     const nombre = partesNombre.slice(0, 2).join(' '); // Primeros dos nombres
     const apellidos = partesNombre.slice(2).join(' '); // Resto como apellidos
 
-    // Calcular edad si viene fecha de nacimiento
+    // Obtener edad directamente de la API o calcularla
     let edad = 0;
-    if (data.fecha_nacimiento) {
-      edad = this.calculateAge(data.fecha_nacimiento);
+    if (data.edad !== undefined && data.edad !== null) {
+      edad = parseInt(String(data.edad), 10) || 0;
+      console.log('Edad obtenida de la API:', edad);
+    } else if (data.EDAD !== undefined && data.EDAD !== null) {
+      edad = parseInt(String(data.EDAD), 10) || 0;
+      console.log('Edad obtenida de la API (EDAD):', edad);
+    } else if (data.fecha_nacimiento || data.FECHA_NACIMIENTO) {
+      edad = this.calculateAge(data.fecha_nacimiento || data.FECHA_NACIMIENTO);
+      console.log('Edad calculada desde fecha de nacimiento:', edad);
     }
 
-    // Mapear la respuesta del webhook según el flujo de n8n
+    // Mapear la respuesta de la API
     const mappedData: PatientData = {
-      id: data.documento || documento,
-      nombre: nombre || nombreCompleto, // Si no se puede dividir, usar el nombre completo
-      apellidos: apellidos || '', // Apellidos separados
-      tipoDocumento: data.tipo_documento || 'CC',
-      numeroDocumento: data.documento || documento,
-      fechaNacimiento: data.fecha_nacimiento || '',
+      id: data.documento || data.DOCUMENTO || documento,
+      nombre: nombre || nombreCompleto,
+      apellidos: apellidos || '',
+      tipoDocumento: data.tipo_documento || data.TIPO_DOCUMENTO || 'CC',
+      numeroDocumento: data.documento || data.DOCUMENTO || documento,
+      fechaNacimiento: data.fecha_nacimiento || data.FECHA_NACIMIENTO || '',
       edad: edad,
-      eps: data.NO_NOMB_EPS || data.eps_paciente || data.eps || 'Sin EPS',
-      telefono: data.telefono_paciente || 'No disponible',
-      direccion: data.direccion_paciente || 'No disponible',
+      eps: data.eps || data.EPS || data.NO_NOMB_EPS || data.eps_paciente || 'Sin EPS',
+      telefono: data.telefono || data.TELEFONO || data.telefono_paciente || 'No disponible',
+      direccion: data.direccion || data.DIRECCION || data.direccion_paciente || 'No disponible',
       centroSalud: 'HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA'
     };
 

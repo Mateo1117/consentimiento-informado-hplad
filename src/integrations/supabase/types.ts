@@ -21,7 +21,7 @@ export type Database = {
           consent_id: string | null
           error_message: string | null
           id: string
-          ip_address: unknown | null
+          ip_address: unknown
           share_token: string
           success: boolean | null
           user_agent: string | null
@@ -32,7 +32,7 @@ export type Database = {
           consent_id?: string | null
           error_message?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           share_token: string
           success?: boolean | null
           user_agent?: string | null
@@ -43,7 +43,7 @@ export type Database = {
           consent_id?: string | null
           error_message?: string | null
           id?: string
-          ip_address?: unknown | null
+          ip_address?: unknown
           share_token?: string
           success?: boolean | null
           user_agent?: string | null
@@ -302,29 +302,35 @@ export type Database = {
         }
         Returns: undefined
       }
-      is_admin_user: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
-      sign_consent_by_token: {
-        Args:
-          | {
+      is_admin_user: { Args: never; Returns: boolean }
+      sign_consent_by_token:
+        | {
+            Args: {
+              p_signature_data: string
+              p_signed_by_name: string
+              p_token: string
+            }
+            Returns: {
+              id: string
+              signed_at: string
+              status: string
+            }[]
+          }
+        | {
+            Args: {
               p_patient_photo_url?: string
               p_signature_data: string
               p_signed_by_name: string
               p_token: string
             }
-          | {
-              p_signature_data: string
-              p_signed_by_name: string
-              p_token: string
-            }
-        Returns: {
-          id: string
-          signed_at: string
-          status: string
-        }[]
-      }
+            Returns: {
+              id: string
+              patient_photo_url: string
+              signed_at: string
+              signed_by_name: string
+              status: string
+            }[]
+          }
       sign_consent_by_token_secure: {
         Args: {
           p_ip_address?: string
