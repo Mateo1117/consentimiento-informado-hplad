@@ -72,7 +72,10 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
 
-        toast.success('Consentimiento guardado y PDF generado exitosamente');
+        toast.success('¡Consentimiento creado exitosamente!', {
+          description: `El consentimiento de ${patientData.nombre} ${patientData.apellidos} ha sido guardado y el PDF se ha descargado.`,
+          duration: 5000,
+        });
       }
     } catch (error) {
       toast.error('Error al procesar el consentimiento');
