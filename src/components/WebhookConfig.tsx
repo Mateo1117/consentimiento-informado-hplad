@@ -49,17 +49,17 @@ export const WebhookConfig = () => {
     try {
       console.log(`Probando búsqueda de paciente con documento: ${documento}`);
       
-      const patientData = await patientApiService.searchByDocument(documento);
+      const result = await patientApiService.searchByDocument(documento);
       
-      if (patientData) {
+      if (result.data) {
         setTestResult({
           success: true,
-          message: `Paciente encontrado: ${patientData.nombre} - ${patientData.eps}`
+          message: `Paciente encontrado: ${result.data.nombre} - ${result.data.eps}`
         });
       } else {
         setTestResult({
           success: false,
-          message: 'No se encontró paciente con ese documento'
+          message: result.error || 'No se encontró paciente con ese documento'
         });
       }
     } catch (error) {
