@@ -501,15 +501,18 @@ Content-Type: application/json
 
           <div className="bg-green-50 p-4 rounded-lg border border-green-200">
             <h4 className="font-medium text-green-800 mb-2">Formato de Respuesta Esperado:</h4>
-            <code className="text-xs bg-white p-2 rounded border block">
+            <code className="text-xs bg-white p-2 rounded border block whitespace-pre-wrap">
               {`{
-  "success": true,
-  "nombre_paciente": "JUAN PEREZ",
-  "documento": "1015435249",
-  "tipo_documento": "CC",
-  "eps": "NUEVA EPS",
-  "telefono_paciente": "3001234567",
-  "direccion_paciente": "CALLE 123 #45-67"
+  "OID_GENPACIEN": "205543",
+  "DOCUMENTO_PACIENTE": "1015435249",
+  "NOMBRE_PACIENTE": "MIGUEL MATEO LOPEZ HERRERA",
+  "TELEFONO_PACIENTE": "3102448187",
+  "EMAIL_PACIENTE": "mateolopez327@gmail.com",
+  "TELEFONO_PRINCIPAL_PACIENTE": null,
+  "FECHA_NACIMIENTO": "1992-05-05 15:31:20.143",
+  "EDAD_PACIENTE": "33",
+  "EPS": "PARTICULARES TARIFAS INSTITUCIONALES PROPIAS",
+  "TIPO_DOCUMENTO": "C.C"
 }`}
             </code>
           </div>
