@@ -1,4 +1,4 @@
-import { supabase } from '@/integrations/supabase/client';
+import { supabase } from "@/integrations/supabase/client";
 
 interface PatientData {
   id: string;
@@ -14,144 +14,220 @@ interface PatientData {
   centroSalud: string;
 }
 
+type PatientErrorType =
+  | "validation"
+  | "timeout"
+  | "network"
+  | "http"
+  | "empty_response"
+  | "parse_error"
+  | "api_error"
+  | "not_found"
+  | "unknown";
+
 interface PatientSearchResult {
   data: PatientData | null;
   error?: string;
-  errorType?: 'validation' | 'timeout' | 'network' | 'http' | 'empty_response' | 'parse_error' | 'api_error' | 'not_found' | 'unknown';
+  errorType?: PatientErrorType;
+  fromCache?: boolean;
 }
 
+type CacheEntry = {
+  data: PatientData;
+  expiresAt: number;
+};
+
+const CACHE_KEY = "mcm_patient_cache_v1";
+const CACHE_TTL_MS = 1000 * 60 * 60 * 6; // 6 horas
+const CACHE_MAX_ITEMS = 50;
+
 class PatientApiService {
+  private cache = new Map<string, CacheEntry>();
+
+  constructor() {
+    this.loadCache();
+  }
+
+  private loadCache() {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as Record<string, CacheEntry>;
+      const now = Date.now();
+
+      for (const [doc, entry] of Object.entries(parsed)) {
+        if (entry?.data && entry?.expiresAt && entry.expiresAt > now) {
+          this.cache.set(doc, entry);
+        }
+      }
+    } catch (e) {
+      console.warn("No se pudo cargar el caché de pacientes", e);
+    }
+  }
+
+  private persistCache() {
+    try {
+      // limitar tamaño
+      const entries = Array.from(this.cache.entries())
+        .sort((a, b) => b[1].expiresAt - a[1].expiresAt)
+        .slice(0, CACHE_MAX_ITEMS);
+
+      const obj: Record<string, CacheEntry> = {};
+      for (const [doc, entry] of entries) obj[doc] = entry;
+
+      localStorage.setItem(CACHE_KEY, JSON.stringify(obj));
+    } catch (e) {
+      console.warn("No se pudo guardar el caché de pacientes", e);
+    }
+  }
+
+  private getFromCache(documento: string): PatientData | null {
+    const entry = this.cache.get(documento);
+    if (!entry) return null;
+
+    if (entry.expiresAt <= Date.now()) {
+      this.cache.delete(documento);
+      this.persistCache();
+      return null;
+    }
+
+    return entry.data;
+  }
+
+  private setCache(documento: string, data: PatientData) {
+    this.cache.set(documento, {
+      data,
+      expiresAt: Date.now() + CACHE_TTL_MS,
+    });
+    this.persistCache();
+  }
+
   async searchByDocument(documento: string): Promise<PatientSearchResult> {
     try {
-      console.log(`Consultando paciente con documento: ${documento}`);
-      
-      // Validar documento antes de consultar
-      if (!documento || documento.trim() === '') {
-        return { 
-          data: null, 
-          error: 'El número de documento es requerido',
-          errorType: 'validation'
+      const doc = String(documento || "").trim();
+      console.log(`Consultando paciente con documento: ${doc}`);
+
+      if (!doc) {
+        return {
+          data: null,
+          error: "El número de documento es requerido",
+          errorType: "validation",
         };
       }
 
-      if (documento.length < 5) {
-        return { 
-          data: null, 
-          error: 'El número de documento debe tener al menos 5 dígitos',
-          errorType: 'validation'
+      if (doc.length < 5) {
+        return {
+          data: null,
+          error: "El número de documento debe tener al menos 5 dígitos",
+          errorType: "validation",
         };
       }
 
-      // Llamar a la edge function para evitar CORS
-      const { data, error } = await supabase.functions.invoke('consulta-paciente', {
-        body: { documento }
+      // Cache hit
+      const cached = this.getFromCache(doc);
+      if (cached) {
+        console.log("Cache hit paciente:", doc);
+        return { data: cached, fromCache: true };
+      }
+
+      const { data, error } = await supabase.functions.invoke("consulta-paciente", {
+        body: { documento: doc },
       });
 
       if (error) {
-        console.error('Error en edge function:', error);
+        console.error("Error en edge function:", error);
         return {
           data: null,
-          error: 'Error al conectar con el servidor. Intente nuevamente.',
-          errorType: 'network'
+          error: "Error al conectar con el servidor. Intente nuevamente.",
+          errorType: "network",
         };
       }
 
-      // Si hay error en la respuesta
-      if (data.error) {
+      if (data?.error) {
         return {
           data: null,
           error: data.error,
-          errorType: data.errorType || 'unknown'
+          errorType: (data.errorType as PatientErrorType) || "unknown",
         };
       }
 
-      // Mapear los datos del paciente
-      const mappedData = this.mapPatientData(data.data, documento);
-      
-      if (!mappedData) {
-        return { 
-          data: null, 
-          error: 'Paciente no encontrado. Verifique que el número de documento sea correcto.',
-          errorType: 'not_found'
+      const mapped = this.mapPatientData(data?.data, doc);
+      if (!mapped) {
+        return {
+          data: null,
+          error: "Paciente no encontrado. Verifique que el número de documento sea correcto.",
+          errorType: "not_found",
         };
       }
-      
-      return { data: mappedData };
-      
+
+      this.setCache(doc, mapped);
+      return { data: mapped };
     } catch (error: any) {
-      console.error('Error al consultar paciente:', error);
-      return { 
-        data: null, 
-        error: `Error inesperado: ${error.message || 'Ocurrió un error al consultar el paciente'}`,
-        errorType: 'unknown'
+      console.error("Error al consultar paciente:", error);
+      return {
+        data: null,
+        error: `Error inesperado: ${error.message || "Ocurrió un error al consultar el paciente"}`,
+        errorType: "unknown",
       };
     }
   }
 
   private mapPatientData(data: any, documento: string): PatientData | null {
-    // Si no hay datos o error
     if (!data || data.error) {
-      console.log('No se encontró paciente:', data);
+      console.log("No se encontró paciente:", data);
       return null;
     }
 
-    // Verificar que hay un nombre de paciente
     const nombrePaciente = data.nombre_paciente || data.nombre || data.NOMBRE;
-    if (!nombrePaciente || nombrePaciente.trim() === '') {
-      console.log('No se encontró nombre de paciente en la respuesta');
+    if (!nombrePaciente || String(nombrePaciente).trim() === "") {
+      console.log("No se encontró nombre de paciente en la respuesta");
       return null;
     }
 
-    // Separar nombre completo en nombre y apellidos
-    const nombreCompleto = nombrePaciente.trim();
-    const partesNombre = nombreCompleto.split(' ');
-    const nombre = partesNombre.slice(0, 2).join(' '); // Primeros dos nombres
-    const apellidos = partesNombre.slice(2).join(' '); // Resto como apellidos
+    const nombreCompleto = String(nombrePaciente).trim();
+    const partesNombre = nombreCompleto.split(" ");
+    const nombre = partesNombre.slice(0, 2).join(" ");
+    const apellidos = partesNombre.slice(2).join(" ");
 
-    // Obtener edad directamente de la API o calcularla
     let edad = 0;
     if (data.edad !== undefined && data.edad !== null) {
       edad = parseInt(String(data.edad), 10) || 0;
-      console.log('Edad obtenida de la API:', edad);
     } else if (data.EDAD !== undefined && data.EDAD !== null) {
       edad = parseInt(String(data.EDAD), 10) || 0;
-      console.log('Edad obtenida de la API (EDAD):', edad);
     } else if (data.fecha_nacimiento || data.FECHA_NACIMIENTO) {
       edad = this.calculateAge(data.fecha_nacimiento || data.FECHA_NACIMIENTO);
-      console.log('Edad calculada desde fecha de nacimiento:', edad);
     }
 
-    // Mapear la respuesta de la API
-    const mappedData: PatientData = {
+    const mapped: PatientData = {
       id: data.documento || data.DOCUMENTO || documento,
       nombre: nombre || nombreCompleto,
-      apellidos: apellidos || '',
-      tipoDocumento: data.tipo_documento || data.TIPO_DOCUMENTO || 'CC',
+      apellidos: apellidos || "",
+      tipoDocumento: data.tipo_documento || data.TIPO_DOCUMENTO || "CC",
       numeroDocumento: data.documento || data.DOCUMENTO || documento,
-      fechaNacimiento: data.fecha_nacimiento || data.FECHA_NACIMIENTO || '',
-      edad: edad,
-      eps: data.eps || data.EPS || data.NO_NOMB_EPS || data.eps_paciente || 'Sin EPS',
-      telefono: data.telefono || data.TELEFONO || data.telefono_paciente || 'No disponible',
-      direccion: data.direccion || data.DIRECCION || data.direccion_paciente || 'No disponible',
-      centroSalud: 'HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA'
+      fechaNacimiento: data.fecha_nacimiento || data.FECHA_NACIMIENTO || "",
+      edad,
+      eps: data.eps || data.EPS || data.NO_NOMB_EPS || data.eps_paciente || "Sin EPS",
+      telefono: data.telefono || data.TELEFONO || data.telefono_paciente || "No disponible",
+      direccion: data.direccion || data.DIRECCION || data.direccion_paciente || "No disponible",
+      centroSalud: "HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA",
     };
 
-    console.log('Datos mapeados del paciente:', mappedData);
-    return mappedData;
+    return mapped;
   }
 
   private calculateAge(fechaNacimiento: string): number {
     if (!fechaNacimiento) return 0;
-    
+
     const today = new Date();
     const birthDate = new Date(fechaNacimiento);
     let age = today.getFullYear() - birthDate.getFullYear();
     const monthDiff = today.getMonth() - birthDate.getMonth();
-    
+
     if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
       age--;
     }
-    
+
     return age;
   }
 }
