@@ -209,6 +209,7 @@ serve(async (req: Request) => {
       let data: any;
       try {
         data = JSON.parse(responseText);
+        console.log("Respuesta parseada:", JSON.stringify(data, null, 2));
       } catch (parseError) {
         console.error("JSON inválido:", responseText);
         return new Response(
@@ -223,10 +224,12 @@ serve(async (req: Request) => {
         );
       }
 
-      if (data?.error) {
+      // Verificar si hay un error explícito
+      if (data?.error && typeof data.error === "string") {
+        console.log("Error en respuesta:", data.error);
         return new Response(
           JSON.stringify({
-            error: typeof data.error === "string" ? data.error : "Error en la consulta",
+            error: data.error,
             errorType: "api_error",
           }),
           {
@@ -236,7 +239,9 @@ serve(async (req: Request) => {
         );
       }
 
+      // Verificar si el webhook indica explícitamente que no encontró el paciente
       if (data?.success === false || data?.success === "false") {
+        console.log("Webhook indica success=false:", data?.message);
         return new Response(
           JSON.stringify({
             error: data?.message || "No se encontró el paciente",
@@ -248,6 +253,28 @@ serve(async (req: Request) => {
           },
         );
       }
+
+      // Verificar que haya datos de paciente válidos
+      // El webhook debe devolver NOMBRE_PACIENTE o algún identificador
+      const hasPatientData = data?.NOMBRE_PACIENTE || data?.DOCUMENTO_PACIENTE || 
+                            data?.nombre_paciente || data?.documento ||
+                            (Array.isArray(data) && data.length > 0 && data[0]?.NOMBRE_PACIENTE);
+      
+      if (!hasPatientData) {
+        console.log("No se encontraron datos de paciente en la respuesta. Campos:", Object.keys(data || {}));
+        return new Response(
+          JSON.stringify({
+            error: "No se encontró el paciente con el documento proporcionado",
+            errorType: "not_found",
+          }),
+          {
+            status: 404,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          },
+        );
+      }
+
+      console.log("Paciente encontrado exitosamente");
 
       return new Response(
         JSON.stringify({
