@@ -49,16 +49,22 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       const currentPatientSignature = getPatientSignature?.() || patientSignature;
       const currentPatientPhoto = getPatientPhoto?.() || patientPhotoUrl;
 
-      console.log('📝 ConsentFormWrapper - Datos al guardar:', {
-        hasSignatureCallback: !!getPatientSignature,
-        hasPhotoCallback: !!getPatientPhoto,
+      // No loggear datos sensibles (base64). Solo presencia/longitud.
+      console.log('📝 ConsentFormWrapper - Validación previa:', {
         hasSignature: !!currentPatientSignature,
         signatureLength: currentPatientSignature?.length || 0,
-        signaturePreview: currentPatientSignature?.substring(0, 50) || 'N/A',
         hasPhoto: !!currentPatientPhoto,
         photoLength: currentPatientPhoto?.length || 0,
-        photoPreview: currentPatientPhoto?.substring(0, 50) || 'N/A'
       });
+
+      // Validación requerida: firma del paciente
+      if (!currentPatientSignature || currentPatientSignature.length < 100) {
+        toast.error('Falta la firma del paciente', {
+          description: 'La firma del paciente es obligatoria antes de guardar el consentimiento.',
+          duration: 5000,
+        });
+        return;
+      }
 
       // Get HTML content for storage first
       const htmlContent = onGetHTMLContent();

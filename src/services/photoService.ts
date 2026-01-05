@@ -6,35 +6,38 @@ export interface PhotoUploadResult {
 }
 
 export class PhotoService {
-  private static generateFileName(prefix: string): string {
+  private static generateFileName(prefix: string, extension: string): string {
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
     const random = Math.random().toString(36).substring(2, 8);
-    return `${prefix}_${timestamp}_${random}.jpg`;
+    return `${prefix}_${timestamp}_${random}.${extension}`;
   }
 
-  private static base64ToBlob(base64: string): Blob {
+  private static base64ToBlob(base64: string): { blob: Blob; mime: string; extension: string } {
+    const match = base64.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,/);
+    const mime = match?.[1] ?? 'image/jpeg';
+    const extension = mime === 'image/png' ? 'png' : 'jpg';
+
     const base64Data = base64.split(',')[1];
     const byteCharacters = atob(base64Data);
     const byteNumbers = new Array(byteCharacters.length);
-    
+
     for (let i = 0; i < byteCharacters.length; i++) {
       byteNumbers[i] = byteCharacters.charCodeAt(i);
     }
-    
+
     const byteArray = new Uint8Array(byteNumbers);
-    return new Blob([byteArray], { type: 'image/jpeg' });
+    return { blob: new Blob([byteArray], { type: mime }), mime, extension };
   }
 
   static async uploadPhoto(base64Image: string, prefix: string): Promise<PhotoUploadResult | null> {
     try {
-
-      const fileName = this.generateFileName(prefix);
-      const blob = this.base64ToBlob(base64Image);
+      const { blob, mime, extension } = this.base64ToBlob(base64Image);
+      const fileName = this.generateFileName(prefix, extension);
 
       const { data, error } = await supabase.storage
         .from('photos')
         .upload(fileName, blob, {
-          contentType: 'image/jpeg',
+          contentType: mime,
           upsert: false
         });
 
