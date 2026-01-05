@@ -85,6 +85,20 @@ serve(async (req: Request) => {
       );
     }
 
+    // Validación requerida: firma del paciente
+    if (!body.paciente_firma) {
+      return new Response(
+        JSON.stringify({
+          success: false,
+          error: "La firma del paciente es requerida"
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
     // Construir payload para el webhook
     const webhookPayload: ConsentPayload = {
       // Datos del paciente
@@ -112,17 +126,36 @@ serve(async (req: Request) => {
       payload_adicional: body.payload_adicional || {}
     };
 
-    // Enviar directamente como POST con JSON body (los datos base64 son muy largos para GET)
-    console.log("🔗 Enviando al webhook (POST):", WEBHOOK_URL);
-    
-    const response = await fetch(WEBHOOK_URL, {
-      method: "POST",
+    // El webhook externo SOLO acepta GET. Enviamos parámetros cortos (URLs) para evitar límites de longitud.
+    const params = new URLSearchParams();
+    params.set('paciente_nombre_completo', webhookPayload.paciente_nombre_completo);
+    params.set('paciente_tipo_documento', webhookPayload.paciente_tipo_documento);
+    params.set('paciente_numero_documento', webhookPayload.paciente_numero_documento);
+    if (webhookPayload.paciente_email) params.set('paciente_email', webhookPayload.paciente_email);
+    if (webhookPayload.paciente_telefono) params.set('paciente_telefono', webhookPayload.paciente_telefono);
+    if (webhookPayload.paciente_firma) params.set('paciente_firma', webhookPayload.paciente_firma);
+    if (webhookPayload.paciente_foto) params.set('paciente_foto', webhookPayload.paciente_foto);
+
+    params.set('tipo_procedimiento', webhookPayload.tipo_procedimiento);
+    params.set('nombre_consentimiento', webhookPayload.nombre_consentimiento);
+    params.set('fecha_firma', webhookPayload.fecha_firma);
+
+    params.set('profesional_nombre_completo', webhookPayload.profesional_nombre_completo);
+    if (webhookPayload.profesional_documento) params.set('profesional_documento', webhookPayload.profesional_documento);
+    if (webhookPayload.profesional_firma) params.set('profesional_firma', webhookPayload.profesional_firma);
+
+    if (webhookPayload.pdf_url) params.set('pdf_url', webhookPayload.pdf_url);
+    params.set('consent_id', webhookPayload.consent_id);
+
+    const fullUrl = `${WEBHOOK_URL}?${params.toString()}`;
+    console.log("🔗 Enviando al webhook (GET)", { urlLength: fullUrl.length });
+
+    const response = await fetch(fullUrl, {
+      method: "GET",
       headers: {
-        "Content-Type": "application/json",
         "Accept": "application/json",
         "User-Agent": "Hospital-Consent-System/1.0"
-      },
-      body: JSON.stringify(webhookPayload)
+      }
     });
 
     const responseText = await response.text();

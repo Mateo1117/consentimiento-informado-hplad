@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/utils/logger";
 import { pdfStorageService } from "./pdfStorageService";
 import { automationService } from "./automationService";
+import { PhotoService } from "./photoService";
 
 export interface AppConsentData {
   patientName: string;
@@ -49,14 +50,34 @@ class AppConsentService {
         source: 'app'
       });
 
-      // Log datos de firma y foto recibidos
-      logger.info('Datos de firma/foto recibidos en saveAppConsent:', {
-        hasPatientSignature: !!data.patientSignature,
-        patientSignatureLength: data.patientSignature?.length || 0,
-        hasPatientPhotoUrl: !!data.patientPhotoUrl,
-        patientPhotoUrlLength: data.patientPhotoUrl?.length || 0,
-        payloadHasSignature: !!data.payload?.patientSignature,
-        payloadHasPhoto: !!data.payload?.patientPhotoUrl
+      // Normalizar firma/foto: si vienen como base64, subir a Storage para enviar URLs cortas al webhook
+      const rawPatientSignature = data.patientSignature || data.payload?.patientSignature || null;
+      const rawPatientPhoto = data.patientPhotoUrl || data.payload?.patientPhotoUrl || null;
+
+      let patientSignatureForDb: string | null = rawPatientSignature;
+      let patientPhotoForDb: string | null = rawPatientPhoto;
+
+      // Subir firma (si es data URL) y usar URL pública
+      if (rawPatientSignature && rawPatientSignature.startsWith('data:image')) {
+        const uploaded = await PhotoService.uploadPhoto(rawPatientSignature, 'firma_paciente');
+        if (uploaded?.url) {
+          patientSignatureForDb = uploaded.url;
+        }
+      }
+
+      // Subir foto (si es data URL) y usar URL pública
+      if (rawPatientPhoto && rawPatientPhoto.startsWith('data:image')) {
+        const uploaded = await PhotoService.uploadPhoto(rawPatientPhoto, 'foto_paciente');
+        if (uploaded?.url) {
+          patientPhotoForDb = uploaded.url;
+        }
+      }
+
+      logger.info('Firma/foto normalizadas', {
+        hasSignature: !!patientSignatureForDb,
+        hasPhoto: !!patientPhotoForDb,
+        signatureIsUrl: !!patientSignatureForDb && patientSignatureForDb.startsWith('http'),
+        photoIsUrl: !!patientPhotoForDb && patientPhotoForDb.startsWith('http')
       });
 
       // Insert consent record con firma y foto del paciente
@@ -74,8 +95,8 @@ class AppConsentService {
           professional_name: professionalSignature?.professional_name || data.professionalName,
           professional_document: professionalSignature?.professional_document || data.professionalDocument,
           professional_signature_data: professionalSignature?.signature_data,
-          patient_signature_data: data.patientSignature || null, // Firma del paciente
-          patient_photo_url: data.patientPhotoUrl || null, // Foto del paciente
+          patient_signature_data: patientSignatureForDb,
+          patient_photo_url: patientPhotoForDb,
           status: 'signed', // App consents are immediately signed
           signed_at: new Date().toISOString(),
           signed_by_name: data.patientName,
@@ -138,8 +159,9 @@ class AppConsentService {
           patientDocumentNumber: data.patientDocumentNumber,
           patientEmail: data.patientEmail,
           patientPhone: data.patientPhone,
-          patientSignature: data.patientSignature || data.payload?.patientSignature,
-          patientPhotoUrl: data.patientPhotoUrl || data.payload?.patientPhotoUrl,
+          // Enviar URLs (no base64) para evitar URLs enormes en el webhook GET
+          patientSignature: patientSignatureForDb || undefined,
+          patientPhotoUrl: patientPhotoForDb || undefined,
           consentType: data.consentType,
           professionalName: professionalSignature?.professional_name || data.professionalName,
           professionalDocument: professionalSignature?.professional_document || data.professionalDocument,
