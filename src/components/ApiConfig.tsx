@@ -41,9 +41,9 @@ export const ApiConfig = () => {
   const defaultEndpoints: ApiEndpoint[] = [
     {
       name: "consulta-paciente",
-      url: "https://flow.mcmasociados.tech/webhook/G92PxmaZY4H2Mhbw/webhook4/consulta-paciente",
-      description: "API para consultar información de pacientes por documento",
-      method: "POST",
+      url: "http://190.145.223.146:666/mcm/controller/api.php",
+      description: "API para consultar información de pacientes por documento (incluye edad)",
+      method: "GET",
       status: "active"
     },
     {
