@@ -138,18 +138,31 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
       
       if (result.data) {
         const patient = result.data;
-        // Asignar la sede seleccionada y el tipo de documento seleccionado al paciente
-        const finalBirthDate = birthDate ? birthDate.toISOString() : patient.fechaNacimiento;
-        const finalAge = birthDate ? calculateAge(birthDate) : (editableAge || patient.edad || 0);
+        
+        // Parsear fecha de nacimiento del API (viene como "1997-07-14 00:00:00" o "1997-07-14")
+        let parsedBirthDate: Date | undefined;
+        if (patient.fechaNacimiento && patient.fechaNacimiento !== "") {
+          const fechaStr = patient.fechaNacimiento.split(" ")[0]; // Tomar solo la fecha sin hora
+          parsedBirthDate = new Date(fechaStr + "T12:00:00"); // Agregar hora para evitar problemas de timezone
+        }
+        
+        // Usar edad del API primero, si no calcularla
+        const apiAge = patient.edad && patient.edad > 0 ? patient.edad : 
+          (parsedBirthDate ? calculateAge(parsedBirthDate) : 0);
+        
+        // Si el usuario ya seleccionó una fecha manual, usarla
+        const finalBirthDate = birthDate ? birthDate : parsedBirthDate;
+        const finalAge = birthDate ? calculateAge(birthDate) : apiAge;
         
         const patientWithSedeAndDocType = { 
           ...patient, 
           centroSalud: selectedSede,
           tipoDocumento: documentType,
-          fechaNacimiento: finalBirthDate,
-          edad: finalAge
+          fechaNacimiento: patient.fechaNacimiento || "", // Mantener la fecha original del API
         };
+        
         setPatientData(patientWithSedeAndDocType);
+        setBirthDate(finalBirthDate); // Establecer la fecha parseada
         setEditableAge(finalAge);
         setSearchError(null);
         toast.success("Paciente encontrado exitosamente");
@@ -316,7 +329,13 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                     Fecha de Nacimiento
                   </Label>
                   <p className="font-medium bg-signature-area p-2 rounded border">
-                    {new Date(patientData.fechaNacimiento).toLocaleDateString('es-CO')}
+                    {patientData.fechaNacimiento 
+                      ? (() => {
+                          const fechaStr = patientData.fechaNacimiento.split(" ")[0];
+                          const [year, month, day] = fechaStr.split("-");
+                          return `${day}/${month}/${year}`;
+                        })()
+                      : "No disponible"}
                   </p>
                 </div>
                 
