@@ -179,7 +179,8 @@ class PatientApiService {
       return null;
     }
 
-    const nombrePaciente = data.nombre_paciente || data.nombre || data.NOMBRE;
+    // Manejar diferentes formatos de nombre
+    const nombrePaciente = data.NOMBRE_PACIENTE || data.nombre_paciente || data.nombre || data.NOMBRE;
     if (!nombrePaciente || String(nombrePaciente).trim() === "") {
       console.log("No se encontró nombre de paciente en la respuesta");
       return null;
@@ -190,29 +191,52 @@ class PatientApiService {
     const nombre = partesNombre.slice(0, 2).join(" ");
     const apellidos = partesNombre.slice(2).join(" ");
 
+    // Obtener edad - priorizar EDAD_PACIENTE
     let edad = 0;
-    if (data.edad !== undefined && data.edad !== null) {
+    if (data.EDAD_PACIENTE !== undefined && data.EDAD_PACIENTE !== null) {
+      edad = parseInt(String(data.EDAD_PACIENTE), 10) || 0;
+      console.log("Edad obtenida de EDAD_PACIENTE:", edad);
+    } else if (data.edad !== undefined && data.edad !== null) {
       edad = parseInt(String(data.edad), 10) || 0;
     } else if (data.EDAD !== undefined && data.EDAD !== null) {
       edad = parseInt(String(data.EDAD), 10) || 0;
+    }
+
+    // Obtener fecha de nacimiento - priorizar FECHA_NACIMIENTO
+    let fechaNacimiento = "";
+    if (data.FECHA_NACIMIENTO) {
+      // Puede venir con hora, extraer solo la fecha
+      const fechaRaw = String(data.FECHA_NACIMIENTO).split(" ")[0];
+      fechaNacimiento = fechaRaw;
+      console.log("Fecha de nacimiento obtenida de FECHA_NACIMIENTO:", fechaNacimiento);
+      
+      // Si no tenemos edad, calcularla desde la fecha
+      if (!edad && fechaNacimiento) {
+        edad = this.calculateAge(fechaNacimiento);
+        console.log("Edad calculada desde FECHA_NACIMIENTO:", edad);
+      }
     } else if (data.fecha_nacimiento || data.FECHA_NACIMIENTO) {
-      edad = this.calculateAge(data.fecha_nacimiento || data.FECHA_NACIMIENTO);
+      fechaNacimiento = data.fecha_nacimiento || data.FECHA_NACIMIENTO;
+      if (!edad) {
+        edad = this.calculateAge(fechaNacimiento);
+      }
     }
 
     const mapped: PatientData = {
-      id: data.documento || data.DOCUMENTO || documento,
+      id: data.DOCUMENTO_PACIENTE || data.documento || data.DOCUMENTO || documento,
       nombre: nombre || nombreCompleto,
       apellidos: apellidos || "",
-      tipoDocumento: data.tipo_documento || data.TIPO_DOCUMENTO || "CC",
-      numeroDocumento: data.documento || data.DOCUMENTO || documento,
-      fechaNacimiento: data.fecha_nacimiento || data.FECHA_NACIMIENTO || "",
+      tipoDocumento: data.TIPO_DOCUMENTO || data.tipo_documento || "CC",
+      numeroDocumento: data.DOCUMENTO_PACIENTE || data.documento || data.DOCUMENTO || documento,
+      fechaNacimiento,
       edad,
-      eps: data.eps || data.EPS || data.NO_NOMB_EPS || data.eps_paciente || "Sin EPS",
-      telefono: data.telefono || data.TELEFONO || data.telefono_paciente || "No disponible",
+      eps: data.EPS || data.eps || data.NO_NOMB_EPS || data.eps_paciente || "Sin EPS",
+      telefono: data.TELEFONO_PACIENTE || data.telefono || data.TELEFONO || data.telefono_paciente || "No disponible",
       direccion: data.direccion || data.DIRECCION || data.direccion_paciente || "No disponible",
       centroSalud: "HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA",
     };
 
+    console.log("Datos mapeados del paciente:", mapped);
     return mapped;
   }
 
