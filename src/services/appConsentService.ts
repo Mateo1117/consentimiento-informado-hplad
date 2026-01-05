@@ -49,7 +49,17 @@ class AppConsentService {
         source: 'app'
       });
 
-      // Insert consent record
+      // Log datos de firma y foto recibidos
+      logger.info('Datos de firma/foto recibidos en saveAppConsent:', {
+        hasPatientSignature: !!data.patientSignature,
+        patientSignatureLength: data.patientSignature?.length || 0,
+        hasPatientPhotoUrl: !!data.patientPhotoUrl,
+        patientPhotoUrlLength: data.patientPhotoUrl?.length || 0,
+        payloadHasSignature: !!data.payload?.patientSignature,
+        payloadHasPhoto: !!data.payload?.patientPhotoUrl
+      });
+
+      // Insert consent record con firma y foto del paciente
       const { data: consent, error } = await supabase
         .from('consents')
         .insert({
@@ -64,6 +74,8 @@ class AppConsentService {
           professional_name: professionalSignature?.professional_name || data.professionalName,
           professional_document: professionalSignature?.professional_document || data.professionalDocument,
           professional_signature_data: professionalSignature?.signature_data,
+          patient_signature_data: data.patientSignature || null, // Firma del paciente
+          patient_photo_url: data.patientPhotoUrl || null, // Foto del paciente
           status: 'signed', // App consents are immediately signed
           signed_at: new Date().toISOString(),
           signed_by_name: data.patientName,

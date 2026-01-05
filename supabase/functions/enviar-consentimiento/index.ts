@@ -49,15 +49,26 @@ serve(async (req: Request) => {
   try {
     const body = await req.json();
     console.log("📤 Preparando envío de consentimiento al webhook externo");
-    console.log("📋 Datos recibidos:", JSON.stringify({
+    console.log("📋 Datos recibidos completos:", JSON.stringify({
       consent_id: body.consent_id,
       paciente_nombre: body.paciente_nombre_completo,
+      paciente_tipo_documento: body.paciente_tipo_documento,
+      paciente_numero_documento: body.paciente_numero_documento,
+      paciente_email: body.paciente_email,
+      paciente_telefono: body.paciente_telefono,
       tipo_procedimiento: body.tipo_procedimiento,
+      nombre_consentimiento: body.nombre_consentimiento,
       profesional: body.profesional_nombre_completo,
+      profesional_documento: body.profesional_documento,
+      fecha_firma: body.fecha_firma,
       tiene_firma_paciente: !!body.paciente_firma,
+      firma_paciente_length: body.paciente_firma?.length || 0,
       tiene_foto_paciente: !!body.paciente_foto,
+      foto_paciente_length: body.paciente_foto?.length || 0,
       tiene_firma_profesional: !!body.profesional_firma,
-      tiene_pdf: !!body.pdf_url
+      firma_profesional_length: body.profesional_firma?.length || 0,
+      tiene_pdf: !!body.pdf_url,
+      pdf_url: body.pdf_url
     }, null, 2));
 
     // Validar datos mínimos requeridos

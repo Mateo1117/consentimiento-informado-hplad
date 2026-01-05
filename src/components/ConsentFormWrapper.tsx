@@ -49,11 +49,15 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       const currentPatientSignature = getPatientSignature?.() || patientSignature;
       const currentPatientPhoto = getPatientPhoto?.() || patientPhotoUrl;
 
-      console.log('📝 Datos de firma/foto al guardar:', {
+      console.log('📝 ConsentFormWrapper - Datos al guardar:', {
+        hasSignatureCallback: !!getPatientSignature,
+        hasPhotoCallback: !!getPatientPhoto,
         hasSignature: !!currentPatientSignature,
         signatureLength: currentPatientSignature?.length || 0,
+        signaturePreview: currentPatientSignature?.substring(0, 50) || 'N/A',
         hasPhoto: !!currentPatientPhoto,
-        photoLength: currentPatientPhoto?.length || 0
+        photoLength: currentPatientPhoto?.length || 0,
+        photoPreview: currentPatientPhoto?.substring(0, 50) || 'N/A'
       });
 
       // Get HTML content for storage first
