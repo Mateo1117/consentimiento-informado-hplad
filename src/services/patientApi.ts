@@ -40,12 +40,73 @@ type CacheEntry = {
 const CACHE_KEY = "mcm_patient_cache_v1";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 6; // 6 horas
 const CACHE_MAX_ITEMS = 50;
+const CACHE_CLEANUP_INTERVAL_MS = 1000 * 60 * 30; // Limpieza cada 30 minutos
 
 class PatientApiService {
   private cache = new Map<string, CacheEntry>();
+  private cleanupIntervalId: number | null = null;
 
   constructor() {
     this.loadCache();
+    this.cleanExpiredEntries(); // Limpieza automática al iniciar
+    this.startAutoCleanup(); // Iniciar limpieza periódica
+  }
+
+  // Limpieza automática periódica
+  private startAutoCleanup() {
+    if (this.cleanupIntervalId) {
+      clearInterval(this.cleanupIntervalId);
+    }
+    
+    this.cleanupIntervalId = window.setInterval(() => {
+      console.log("Ejecutando limpieza automática de caché de pacientes...");
+      this.cleanExpiredEntries();
+    }, CACHE_CLEANUP_INTERVAL_MS);
+  }
+
+  // Limpiar entradas expiradas
+  private cleanExpiredEntries(): number {
+    const now = Date.now();
+    let removed = 0;
+
+    for (const [doc, entry] of this.cache.entries()) {
+      if (entry.expiresAt <= now) {
+        this.cache.delete(doc);
+        removed++;
+      }
+    }
+
+    if (removed > 0) {
+      console.log(`Caché: ${removed} entradas expiradas eliminadas`);
+      this.persistCache();
+    }
+
+    return removed;
+  }
+
+  // Limpiar toda la caché manualmente
+  public clearCache(): void {
+    this.cache.clear();
+    localStorage.removeItem(CACHE_KEY);
+    console.log("Caché de pacientes limpiada completamente");
+  }
+
+  // Limpiar un documento específico del caché
+  public clearCacheForDocument(documento: string): void {
+    const doc = String(documento).trim();
+    if (this.cache.has(doc)) {
+      this.cache.delete(doc);
+      this.persistCache();
+      console.log(`Caché eliminada para documento: ${doc}`);
+    }
+  }
+
+  // Obtener estadísticas del caché
+  public getCacheStats(): { size: number; items: string[] } {
+    return {
+      size: this.cache.size,
+      items: Array.from(this.cache.keys()),
+    };
   }
 
   private loadCache() {
@@ -61,6 +122,8 @@ class PatientApiService {
           this.cache.set(doc, entry);
         }
       }
+      
+      console.log(`Caché de pacientes cargada: ${this.cache.size} entradas válidas`);
     } catch (e) {
       console.warn("No se pudo cargar el caché de pacientes", e);
     }
@@ -103,10 +166,10 @@ class PatientApiService {
     this.persistCache();
   }
 
-  async searchByDocument(documento: string): Promise<PatientSearchResult> {
+  async searchByDocument(documento: string, forceRefresh: boolean = false): Promise<PatientSearchResult> {
     try {
       const doc = String(documento || "").trim();
-      console.log(`Consultando paciente con documento: ${doc}`);
+      console.log(`Consultando paciente con documento: ${doc}${forceRefresh ? " (forzando actualización)" : ""}`);
 
       if (!doc) {
         return {
@@ -124,11 +187,16 @@ class PatientApiService {
         };
       }
 
-      // Cache hit
-      const cached = this.getFromCache(doc);
-      if (cached) {
-        console.log("Cache hit paciente:", doc);
-        return { data: cached, fromCache: true };
+      // Cache hit (si no se fuerza actualización)
+      if (!forceRefresh) {
+        const cached = this.getFromCache(doc);
+        if (cached) {
+          console.log("Cache hit paciente:", doc);
+          return { data: cached, fromCache: true };
+        }
+      } else {
+        // Si se fuerza, eliminar del caché primero
+        this.clearCacheForDocument(doc);
       }
 
       const { data, error } = await supabase.functions.invoke("consulta-paciente", {
