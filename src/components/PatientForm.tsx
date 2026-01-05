@@ -137,7 +137,7 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
     setIsFromCache(false);
     try {
       // Forzar actualización para obtener datos frescos
-      const result = await patientApiService.searchByDocument(searchDocument, forceRefresh);
+      const result = await patientApiService.searchByDocument(searchDocument);
       
       if (result.data) {
         const patient = result.data;
