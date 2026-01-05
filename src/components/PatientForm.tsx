@@ -91,9 +91,10 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
 
     setIsLoading(true);
     try {
-      const patient = await patientApiService.searchByDocument(searchDocument);
+      const result = await patientApiService.searchByDocument(searchDocument);
       
-      if (patient) {
+      if (result.data) {
+        const patient = result.data;
         // Asignar la sede seleccionada y el tipo de documento seleccionado al paciente
         const finalBirthDate = birthDate ? birthDate.toISOString() : patient.fechaNacimiento;
         const finalAge = birthDate ? calculateAge(birthDate) : (editableAge || patient.edad || 0);
@@ -109,7 +110,8 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
         setEditableAge(finalAge);
         toast.success("Paciente encontrado exitosamente");
       } else {
-        toast.error("No se encontró paciente con este documento");
+        // Mostrar mensaje de error específico
+        toast.error(result.error || "No se encontró paciente con este documento");
         setPatientData(null);
       }
     } catch (error) {

@@ -58,35 +58,148 @@ class PatientApiService {
     return this.apiBaseUrl;
   }
 
-  async searchByDocument(documento: string): Promise<PatientData | null> {
+  async searchByDocument(documento: string): Promise<{ data: PatientData | null; error?: string; errorType?: string }> {
     try {
       console.log(`Consultando paciente con documento: ${documento}`);
+      
+      // Validar documento antes de consultar
+      if (!documento || documento.trim() === '') {
+        return { 
+          data: null, 
+          error: 'El número de documento es requerido',
+          errorType: 'validation'
+        };
+      }
+
+      if (documento.length < 5) {
+        return { 
+          data: null, 
+          error: 'El número de documento debe tener al menos 5 dígitos',
+          errorType: 'validation'
+        };
+      }
       
       // Construir URL con parámetros GET
       const apiUrl = `${this.API_BASE_URL}?op=GetPaciente&documento_paciente=${encodeURIComponent(documento)}`;
       console.log('URL de consulta:', apiUrl);
       
-      const response = await fetch(apiUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'application/json'
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos timeout
+      
+      let response: Response;
+      try {
+        response = await fetch(apiUrl, {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          },
+          signal: controller.signal
+        });
+      } catch (fetchError: any) {
+        clearTimeout(timeoutId);
+        
+        if (fetchError.name === 'AbortError') {
+          return { 
+            data: null, 
+            error: 'La consulta tardó demasiado tiempo. Verifique su conexión e intente nuevamente.',
+            errorType: 'timeout'
+          };
         }
-      });
-
+        
+        // Error de red (CORS, servidor no disponible, etc.)
+        return { 
+          data: null, 
+          error: 'No se pudo conectar con el servidor. Verifique que la URL del webhook sea correcta y que el servidor esté disponible.',
+          errorType: 'network'
+        };
+      }
+      
+      clearTimeout(timeoutId);
       console.log('Respuesta API - Status:', response.status);
 
+      // Validar respuesta HTTP
       if (!response.ok) {
-        throw new Error(`Error en API: ${response.status} ${response.statusText}`);
+        const errorMessages: Record<number, string> = {
+          400: 'Solicitud inválida. Verifique el número de documento.',
+          401: 'No autorizado. Las credenciales del webhook son inválidas.',
+          403: 'Acceso denegado. No tiene permisos para esta operación.',
+          404: 'Endpoint no encontrado. Verifique la URL del webhook.',
+          500: 'Error interno del servidor. Intente nuevamente más tarde.',
+          502: 'El servidor no está respondiendo correctamente.',
+          503: 'Servicio no disponible. Intente nuevamente más tarde.',
+          504: 'Tiempo de espera agotado en el servidor.'
+        };
+        
+        const errorMessage = errorMessages[response.status] || 
+          `Error del servidor: ${response.status} ${response.statusText}`;
+        
+        return { 
+          data: null, 
+          error: errorMessage,
+          errorType: 'http'
+        };
       }
 
-      const data: WebhookResponse = await response.json();
+      // Validar contenido de la respuesta
+      let data: WebhookResponse;
+      try {
+        const responseText = await response.text();
+        
+        if (!responseText || responseText.trim() === '') {
+          return { 
+            data: null, 
+            error: 'El servidor respondió pero no envió datos. Verifique la configuración del webhook.',
+            errorType: 'empty_response'
+          };
+        }
+        
+        data = JSON.parse(responseText);
+      } catch (parseError) {
+        return { 
+          data: null, 
+          error: 'La respuesta del servidor no es válida. El formato esperado es JSON.',
+          errorType: 'parse_error'
+        };
+      }
+      
       console.log('Respuesta de la API:', data);
       
-      return this.mapPatientData(data, documento);
+      // Verificar si hay error en la respuesta
+      if (data.error) {
+        return { 
+          data: null, 
+          error: typeof data.error === 'string' ? data.error : 'Error en la consulta del paciente',
+          errorType: 'api_error'
+        };
+      }
+
+      if (data.success === false || data.success === 'false') {
+        return { 
+          data: null, 
+          error: data.message || 'No se encontró el paciente con el documento proporcionado',
+          errorType: 'not_found'
+        };
+      }
       
-    } catch (error) {
+      const mappedData = this.mapPatientData(data, documento);
+      
+      if (!mappedData) {
+        return { 
+          data: null, 
+          error: 'Paciente no encontrado. Verifique que el número de documento sea correcto.',
+          errorType: 'not_found'
+        };
+      }
+      
+      return { data: mappedData };
+      
+    } catch (error: any) {
       console.error('Error al consultar paciente:', error);
-      return null;
+      return { 
+        data: null, 
+        error: `Error inesperado: ${error.message || 'Ocurrió un error al consultar el paciente'}`,
+        errorType: 'unknown'
+      };
     }
   }
 
