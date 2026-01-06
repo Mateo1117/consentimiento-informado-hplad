@@ -359,7 +359,7 @@ class AppConsentService {
           paciente_telefono: data.patientPhone || null,
           paciente_firma: data.patientSignature || null,
           paciente_foto: data.patientPhotoUrl || null,
-          tipo_procedimiento: data.consentType,
+          tipo_procedimiento: this.getProcedureName(data.consentType),
           nombre_consentimiento: this.getConsentDisplayName(data.consentType),
           fecha_firma: data.signedAt || new Date().toISOString(),
           profesional_nombre_completo: data.professionalName || '',
@@ -394,6 +394,20 @@ class AppConsentService {
       'frotis_vaginal': 'Consentimiento Informado Frotis Vaginal'
     };
     return displayNames[consentType] || `Consentimiento ${consentType}`;
+  }
+
+  /**
+   * Get full procedure name for webhook
+   */
+  private getProcedureName(consentType: string): string {
+    const procedureNames: Record<string, string> = {
+      'venopuncion': 'Toma de Muestra por Venopunción',
+      'hiv': 'Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)',
+      'hemocomponentes': 'Transfusión de Hemocomponentes Sanguíneos',
+      'carga_glucosa': 'Administración oral de carga de glucosa (Dextrosa Anhidra)',
+      'frotis_vaginal': 'Toma de Muestra para Frotis Vaginal - Cultivo Recto-Vaginal'
+    };
+    return procedureNames[consentType] || consentType;
   }
 }
 
