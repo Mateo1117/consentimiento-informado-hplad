@@ -185,7 +185,7 @@ class PatientApiService {
       edad,
       sexo: patientRecord.SEXO_PACIENTE || patientRecord.sexo || patientRecord.SEXO || "No especificado",
       eps: patientRecord.NOMBRE_EPS || patientRecord.EPS || patientRecord.eps || patientRecord.NO_NOMB_EPS || patientRecord.eps_paciente || "Sin EPS",
-      telefono: patientRecord.TELEFONO_PRINCIPAL_PACIENTE || patientRecord.TELEFONO_PACIENTE || patientRecord.telefono_paciente || patientRecord.telefono || patientRecord.TELEFONO || "No disponible",
+      telefono: patientRecord.TELEFONO_PACIENTE || patientRecord.telefono_paciente || patientRecord.telefono || patientRecord.TELEFONO || "No disponible",
       direccion: patientRecord.DIRECCION_PACIENTE || patientRecord.direccion_paciente || patientRecord.direccion || patientRecord.DIRECCION || "No disponible",
       email: patientRecord.EMAIL_PACIENTE || patientRecord.email_paciente || patientRecord.email || patientRecord.EMAIL || "",
       centroSalud: "HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA",
