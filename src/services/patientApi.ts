@@ -120,22 +120,22 @@ class PatientApiService {
       return null;
     }
 
-    // Los datos ya vienen directamente del edge function (sin wrapper adicional)
-    // El edge function ya devuelve { success, data: {...} } y searchByDocument pasa data.data
-    let patientRecord = data;
-    
+    // El webhook puede devolver los datos en diferentes estructuras
     // Intentar extraer del primer elemento si es un array
-    if (Array.isArray(patientRecord) && patientRecord.length > 0) {
-      patientRecord = patientRecord[0];
+    let patientRecord = data;
+    if (Array.isArray(data) && data.length > 0) {
+      patientRecord = data[0];
       console.log("Datos extraídos de array:", patientRecord);
+    } else if (data.data && typeof data.data === 'object') {
+      // Si los datos vienen anidados en .data
+      patientRecord = Array.isArray(data.data) ? data.data[0] : data.data;
+      console.log("Datos extraídos de .data:", patientRecord);
     }
 
-    console.log("Registro de paciente final:", JSON.stringify(patientRecord, null, 2));
-
-    // Manejar diferentes formatos de nombre - priorizar MAYÚSCULAS (formato del webhook)
+    // Manejar diferentes formatos de nombre
     const nombrePaciente = patientRecord.NOMBRE_PACIENTE || patientRecord.nombre_paciente || patientRecord.nombre || patientRecord.NOMBRE;
     if (!nombrePaciente || String(nombrePaciente).trim() === "") {
-      console.log("No se encontró nombre de paciente en la respuesta. Campos disponibles:", Object.keys(patientRecord || {}));
+      console.log("No se encontró nombre de paciente en la respuesta. Campos disponibles:", Object.keys(patientRecord));
       return null;
     }
 
@@ -144,18 +144,18 @@ class PatientApiService {
     const nombre = partesNombre.slice(0, 2).join(" ");
     const apellidos = partesNombre.slice(2).join(" ");
 
-    // Obtener edad - priorizar MAYÚSCULAS (formato del webhook)
+    // Obtener edad - priorizar EDAD_PACIENTE
     let edad = 0;
     if (patientRecord.EDAD_PACIENTE !== undefined && patientRecord.EDAD_PACIENTE !== null) {
       edad = parseInt(String(patientRecord.EDAD_PACIENTE), 10) || 0;
       console.log("Edad obtenida de EDAD_PACIENTE:", edad);
-    } else if (patientRecord.edad_paciente !== undefined && patientRecord.edad_paciente !== null) {
-      edad = parseInt(String(patientRecord.edad_paciente), 10) || 0;
     } else if (patientRecord.edad !== undefined && patientRecord.edad !== null) {
       edad = parseInt(String(patientRecord.edad), 10) || 0;
+    } else if (patientRecord.EDAD !== undefined && patientRecord.EDAD !== null) {
+      edad = parseInt(String(patientRecord.EDAD), 10) || 0;
     }
 
-    // Obtener fecha de nacimiento - priorizar MAYÚSCULAS
+    // Obtener fecha de nacimiento - priorizar FECHA_NACIMIENTO
     let fechaNacimiento = "";
     if (patientRecord.FECHA_NACIMIENTO) {
       // Puede venir con hora, extraer solo la fecha
@@ -169,32 +169,11 @@ class PatientApiService {
         console.log("Edad calculada desde FECHA_NACIMIENTO:", edad);
       }
     } else if (patientRecord.fecha_nacimiento) {
-      const fechaRaw = String(patientRecord.fecha_nacimiento).split(" ")[0];
-      fechaNacimiento = fechaRaw;
+      fechaNacimiento = patientRecord.fecha_nacimiento;
       if (!edad) {
         edad = this.calculateAge(fechaNacimiento);
       }
     }
-
-    // Obtener teléfono - priorizar MAYÚSCULAS (TELEFONO_PACIENTE del webhook)
-    // Validar que no sea solo un punto "." o vacío o null
-    let telefono = "No disponible";
-    const telefonoPaciente = patientRecord.TELEFONO_PACIENTE || patientRecord.telefono_paciente;
-    const telefonoPrincipal = patientRecord.TELEFONO_PRINCIPAL_PACIENTE || patientRecord.telefono_principal;
-    
-    console.log("Campos de teléfono encontrados:", { 
-      TELEFONO_PACIENTE: patientRecord.TELEFONO_PACIENTE,
-      telefono_paciente: patientRecord.telefono_paciente,
-      TELEFONO_PRINCIPAL_PACIENTE: patientRecord.TELEFONO_PRINCIPAL_PACIENTE,
-      telefono_principal: patientRecord.telefono_principal
-    });
-    
-    if (telefonoPaciente && telefonoPaciente !== "." && String(telefonoPaciente).trim() !== "") {
-      telefono = String(telefonoPaciente).trim();
-    } else if (telefonoPrincipal && telefonoPrincipal !== "." && String(telefonoPrincipal).trim() !== "") {
-      telefono = String(telefonoPrincipal).trim();
-    }
-    console.log("Teléfono extraído final:", telefono);
 
     const mapped: PatientData = {
       id: patientRecord.DOCUMENTO_PACIENTE || patientRecord.documento || patientRecord.DOCUMENTO || documento,
@@ -204,13 +183,13 @@ class PatientApiService {
       numeroDocumento: patientRecord.DOCUMENTO_PACIENTE || patientRecord.documento || patientRecord.DOCUMENTO || documento,
       fechaNacimiento,
       edad,
-      sexo: patientRecord.SEXO_PACIENTE || patientRecord.sexo_paciente || patientRecord.sexo || patientRecord.SEXO || "No especificado",
-      eps: patientRecord.EPS || patientRecord.eps || patientRecord.NOMBRE_EPS || patientRecord.NO_NOMB_EPS || "Sin EPS",
-      telefono,
+      sexo: patientRecord.SEXO_PACIENTE || patientRecord.sexo || patientRecord.SEXO || "No especificado",
+      eps: patientRecord.NOMBRE_EPS || patientRecord.EPS || patientRecord.eps || patientRecord.NO_NOMB_EPS || patientRecord.eps_paciente || "Sin EPS",
+      telefono: patientRecord.TELEFONO_PRINCIPAL_PACIENTE || patientRecord.TELEFONO_PACIENTE || patientRecord.telefono_paciente || patientRecord.telefono || patientRecord.TELEFONO || "No disponible",
       direccion: patientRecord.DIRECCION_PACIENTE || patientRecord.direccion_paciente || patientRecord.direccion || patientRecord.DIRECCION || "No disponible",
       email: patientRecord.EMAIL_PACIENTE || patientRecord.email_paciente || patientRecord.email || patientRecord.EMAIL || "",
       centroSalud: "HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA",
-      sedeAtencion: patientRecord.sede_atencion || patientRecord.SEDE_ATENCION || patientRecord.sede || "",
+      sedeAtencion: patientRecord.SEDE_ATENCION || patientRecord.sede || patientRecord.SEDE || "",
     };
 
     console.log("Datos mapeados del paciente:", mapped);
