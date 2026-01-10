@@ -120,22 +120,28 @@ class PatientApiService {
       return null;
     }
 
-    // El webhook puede devolver los datos en diferentes estructuras
-    // Intentar extraer del primer elemento si es un array
+    // El edge function devuelve { success: true, data: {...}, attempt: "..." }
+    // Los datos del paciente están en data directamente o pueden venir anidados
     let patientRecord = data;
-    if (Array.isArray(data) && data.length > 0) {
-      patientRecord = data[0];
+    
+    // Si viene la estructura del edge function con success y data
+    if (data.success && data.data) {
+      patientRecord = data.data;
+      console.log("Datos extraídos de data.data:", patientRecord);
+    }
+    
+    // Intentar extraer del primer elemento si es un array
+    if (Array.isArray(patientRecord) && patientRecord.length > 0) {
+      patientRecord = patientRecord[0];
       console.log("Datos extraídos de array:", patientRecord);
-    } else if (data.data && typeof data.data === 'object') {
-      // Si los datos vienen anidados en .data
-      patientRecord = Array.isArray(data.data) ? data.data[0] : data.data;
-      console.log("Datos extraídos de .data:", patientRecord);
     }
 
-    // Manejar diferentes formatos de nombre - priorizar formato del webhook (minúsculas)
-    const nombrePaciente = patientRecord.nombre_paciente || patientRecord.NOMBRE_PACIENTE || patientRecord.nombre || patientRecord.NOMBRE;
+    console.log("Registro de paciente final:", JSON.stringify(patientRecord, null, 2));
+
+    // Manejar diferentes formatos de nombre - priorizar MAYÚSCULAS (formato del webhook)
+    const nombrePaciente = patientRecord.NOMBRE_PACIENTE || patientRecord.nombre_paciente || patientRecord.nombre || patientRecord.NOMBRE;
     if (!nombrePaciente || String(nombrePaciente).trim() === "") {
-      console.log("No se encontró nombre de paciente en la respuesta. Campos disponibles:", Object.keys(patientRecord));
+      console.log("No se encontró nombre de paciente en la respuesta. Campos disponibles:", Object.keys(patientRecord || {}));
       return null;
     }
 
@@ -144,64 +150,71 @@ class PatientApiService {
     const nombre = partesNombre.slice(0, 2).join(" ");
     const apellidos = partesNombre.slice(2).join(" ");
 
-    // Obtener edad - priorizar formato del webhook (minúsculas)
+    // Obtener edad - priorizar MAYÚSCULAS (formato del webhook)
     let edad = 0;
-    if (patientRecord.edad_paciente !== undefined && patientRecord.edad_paciente !== null) {
-      edad = parseInt(String(patientRecord.edad_paciente), 10) || 0;
-      console.log("Edad obtenida de edad_paciente:", edad);
-    } else if (patientRecord.EDAD_PACIENTE !== undefined && patientRecord.EDAD_PACIENTE !== null) {
+    if (patientRecord.EDAD_PACIENTE !== undefined && patientRecord.EDAD_PACIENTE !== null) {
       edad = parseInt(String(patientRecord.EDAD_PACIENTE), 10) || 0;
+      console.log("Edad obtenida de EDAD_PACIENTE:", edad);
+    } else if (patientRecord.edad_paciente !== undefined && patientRecord.edad_paciente !== null) {
+      edad = parseInt(String(patientRecord.edad_paciente), 10) || 0;
     } else if (patientRecord.edad !== undefined && patientRecord.edad !== null) {
       edad = parseInt(String(patientRecord.edad), 10) || 0;
     }
 
-    // Obtener fecha de nacimiento - priorizar formato del webhook
+    // Obtener fecha de nacimiento - priorizar MAYÚSCULAS
     let fechaNacimiento = "";
-    if (patientRecord.fecha_nacimiento) {
+    if (patientRecord.FECHA_NACIMIENTO) {
       // Puede venir con hora, extraer solo la fecha
-      const fechaRaw = String(patientRecord.fecha_nacimiento).split(" ")[0];
+      const fechaRaw = String(patientRecord.FECHA_NACIMIENTO).split(" ")[0];
       fechaNacimiento = fechaRaw;
-      console.log("Fecha de nacimiento obtenida de fecha_nacimiento:", fechaNacimiento);
+      console.log("Fecha de nacimiento obtenida de FECHA_NACIMIENTO:", fechaNacimiento);
       
       // Si no tenemos edad, calcularla desde la fecha
       if (!edad && fechaNacimiento) {
         edad = this.calculateAge(fechaNacimiento);
-        console.log("Edad calculada desde fecha_nacimiento:", edad);
+        console.log("Edad calculada desde FECHA_NACIMIENTO:", edad);
       }
-    } else if (patientRecord.FECHA_NACIMIENTO) {
-      const fechaRaw = String(patientRecord.FECHA_NACIMIENTO).split(" ")[0];
+    } else if (patientRecord.fecha_nacimiento) {
+      const fechaRaw = String(patientRecord.fecha_nacimiento).split(" ")[0];
       fechaNacimiento = fechaRaw;
       if (!edad) {
         edad = this.calculateAge(fechaNacimiento);
       }
     }
 
-    // Obtener teléfono - priorizar telefono_paciente del webhook
-    // Validar que no sea solo un punto "." o vacío
+    // Obtener teléfono - priorizar MAYÚSCULAS (TELEFONO_PACIENTE del webhook)
+    // Validar que no sea solo un punto "." o vacío o null
     let telefono = "No disponible";
-    const telefonoPaciente = patientRecord.telefono_paciente || patientRecord.TELEFONO_PACIENTE;
-    const telefonoPrincipal = patientRecord.telefono_principal || patientRecord.TELEFONO_PRINCIPAL_PACIENTE;
+    const telefonoPaciente = patientRecord.TELEFONO_PACIENTE || patientRecord.telefono_paciente;
+    const telefonoPrincipal = patientRecord.TELEFONO_PRINCIPAL_PACIENTE || patientRecord.telefono_principal;
     
-    if (telefonoPaciente && telefonoPaciente !== "." && telefonoPaciente.trim() !== "") {
-      telefono = telefonoPaciente.trim();
-    } else if (telefonoPrincipal && telefonoPrincipal !== "." && telefonoPrincipal.trim() !== "") {
-      telefono = telefonoPrincipal.trim();
+    console.log("Campos de teléfono encontrados:", { 
+      TELEFONO_PACIENTE: patientRecord.TELEFONO_PACIENTE,
+      telefono_paciente: patientRecord.telefono_paciente,
+      TELEFONO_PRINCIPAL_PACIENTE: patientRecord.TELEFONO_PRINCIPAL_PACIENTE,
+      telefono_principal: patientRecord.telefono_principal
+    });
+    
+    if (telefonoPaciente && telefonoPaciente !== "." && String(telefonoPaciente).trim() !== "") {
+      telefono = String(telefonoPaciente).trim();
+    } else if (telefonoPrincipal && telefonoPrincipal !== "." && String(telefonoPrincipal).trim() !== "") {
+      telefono = String(telefonoPrincipal).trim();
     }
-    console.log("Teléfono extraído:", telefono);
+    console.log("Teléfono extraído final:", telefono);
 
     const mapped: PatientData = {
-      id: patientRecord.documento || patientRecord.DOCUMENTO_PACIENTE || patientRecord.DOCUMENTO || documento,
+      id: patientRecord.DOCUMENTO_PACIENTE || patientRecord.documento || patientRecord.DOCUMENTO || documento,
       nombre: nombre || nombreCompleto,
       apellidos: apellidos || "",
-      tipoDocumento: patientRecord.tipo_documento || patientRecord.TIPO_DOCUMENTO || "CC",
-      numeroDocumento: patientRecord.documento || patientRecord.DOCUMENTO_PACIENTE || patientRecord.DOCUMENTO || documento,
+      tipoDocumento: patientRecord.TIPO_DOCUMENTO || patientRecord.tipo_documento || "CC",
+      numeroDocumento: patientRecord.DOCUMENTO_PACIENTE || patientRecord.documento || patientRecord.DOCUMENTO || documento,
       fechaNacimiento,
       edad,
-      sexo: patientRecord.sexo_paciente || patientRecord.SEXO_PACIENTE || patientRecord.sexo || patientRecord.SEXO || "No especificado",
-      eps: patientRecord.eps || patientRecord.NOMBRE_EPS || patientRecord.EPS || patientRecord.NO_NOMB_EPS || "Sin EPS",
+      sexo: patientRecord.SEXO_PACIENTE || patientRecord.sexo_paciente || patientRecord.sexo || patientRecord.SEXO || "No especificado",
+      eps: patientRecord.EPS || patientRecord.eps || patientRecord.NOMBRE_EPS || patientRecord.NO_NOMB_EPS || "Sin EPS",
       telefono,
-      direccion: patientRecord.direccion_paciente || patientRecord.DIRECCION_PACIENTE || patientRecord.direccion || patientRecord.DIRECCION || "No disponible",
-      email: patientRecord.email_paciente || patientRecord.EMAIL_PACIENTE || patientRecord.email || patientRecord.EMAIL || "",
+      direccion: patientRecord.DIRECCION_PACIENTE || patientRecord.direccion_paciente || patientRecord.direccion || patientRecord.DIRECCION || "No disponible",
+      email: patientRecord.EMAIL_PACIENTE || patientRecord.email_paciente || patientRecord.email || patientRecord.EMAIL || "",
       centroSalud: "HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA",
       sedeAtencion: patientRecord.sede_atencion || patientRecord.SEDE_ATENCION || patientRecord.sede || "",
     };
