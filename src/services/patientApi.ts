@@ -120,15 +120,9 @@ class PatientApiService {
       return null;
     }
 
-    // El edge function devuelve { success: true, data: {...}, attempt: "..." }
-    // Los datos del paciente están en data directamente o pueden venir anidados
+    // Los datos ya vienen directamente del edge function (sin wrapper adicional)
+    // El edge function ya devuelve { success, data: {...} } y searchByDocument pasa data.data
     let patientRecord = data;
-    
-    // Si viene la estructura del edge function con success y data
-    if (data.success && data.data) {
-      patientRecord = data.data;
-      console.log("Datos extraídos de data.data:", patientRecord);
-    }
     
     // Intentar extraer del primer elemento si es un array
     if (Array.isArray(patientRecord) && patientRecord.length > 0) {
