@@ -132,8 +132,8 @@ class PatientApiService {
       console.log("Datos extraídos de .data:", patientRecord);
     }
 
-    // Manejar diferentes formatos de nombre
-    const nombrePaciente = patientRecord.NOMBRE_PACIENTE || patientRecord.nombre_paciente || patientRecord.nombre || patientRecord.NOMBRE;
+    // Manejar diferentes formatos de nombre - priorizar formato del webhook (minúsculas)
+    const nombrePaciente = patientRecord.nombre_paciente || patientRecord.NOMBRE_PACIENTE || patientRecord.nombre || patientRecord.NOMBRE;
     if (!nombrePaciente || String(nombrePaciente).trim() === "") {
       console.log("No se encontró nombre de paciente en la respuesta. Campos disponibles:", Object.keys(patientRecord));
       return null;
@@ -144,52 +144,66 @@ class PatientApiService {
     const nombre = partesNombre.slice(0, 2).join(" ");
     const apellidos = partesNombre.slice(2).join(" ");
 
-    // Obtener edad - priorizar EDAD_PACIENTE
+    // Obtener edad - priorizar formato del webhook (minúsculas)
     let edad = 0;
-    if (patientRecord.EDAD_PACIENTE !== undefined && patientRecord.EDAD_PACIENTE !== null) {
+    if (patientRecord.edad_paciente !== undefined && patientRecord.edad_paciente !== null) {
+      edad = parseInt(String(patientRecord.edad_paciente), 10) || 0;
+      console.log("Edad obtenida de edad_paciente:", edad);
+    } else if (patientRecord.EDAD_PACIENTE !== undefined && patientRecord.EDAD_PACIENTE !== null) {
       edad = parseInt(String(patientRecord.EDAD_PACIENTE), 10) || 0;
-      console.log("Edad obtenida de EDAD_PACIENTE:", edad);
     } else if (patientRecord.edad !== undefined && patientRecord.edad !== null) {
       edad = parseInt(String(patientRecord.edad), 10) || 0;
-    } else if (patientRecord.EDAD !== undefined && patientRecord.EDAD !== null) {
-      edad = parseInt(String(patientRecord.EDAD), 10) || 0;
     }
 
-    // Obtener fecha de nacimiento - priorizar FECHA_NACIMIENTO
+    // Obtener fecha de nacimiento - priorizar formato del webhook
     let fechaNacimiento = "";
-    if (patientRecord.FECHA_NACIMIENTO) {
+    if (patientRecord.fecha_nacimiento) {
       // Puede venir con hora, extraer solo la fecha
-      const fechaRaw = String(patientRecord.FECHA_NACIMIENTO).split(" ")[0];
+      const fechaRaw = String(patientRecord.fecha_nacimiento).split(" ")[0];
       fechaNacimiento = fechaRaw;
-      console.log("Fecha de nacimiento obtenida de FECHA_NACIMIENTO:", fechaNacimiento);
+      console.log("Fecha de nacimiento obtenida de fecha_nacimiento:", fechaNacimiento);
       
       // Si no tenemos edad, calcularla desde la fecha
       if (!edad && fechaNacimiento) {
         edad = this.calculateAge(fechaNacimiento);
-        console.log("Edad calculada desde FECHA_NACIMIENTO:", edad);
+        console.log("Edad calculada desde fecha_nacimiento:", edad);
       }
-    } else if (patientRecord.fecha_nacimiento) {
-      fechaNacimiento = patientRecord.fecha_nacimiento;
+    } else if (patientRecord.FECHA_NACIMIENTO) {
+      const fechaRaw = String(patientRecord.FECHA_NACIMIENTO).split(" ")[0];
+      fechaNacimiento = fechaRaw;
       if (!edad) {
         edad = this.calculateAge(fechaNacimiento);
       }
     }
 
+    // Obtener teléfono - priorizar telefono_paciente del webhook
+    // Validar que no sea solo un punto "." o vacío
+    let telefono = "No disponible";
+    const telefonoPaciente = patientRecord.telefono_paciente || patientRecord.TELEFONO_PACIENTE;
+    const telefonoPrincipal = patientRecord.telefono_principal || patientRecord.TELEFONO_PRINCIPAL_PACIENTE;
+    
+    if (telefonoPaciente && telefonoPaciente !== "." && telefonoPaciente.trim() !== "") {
+      telefono = telefonoPaciente.trim();
+    } else if (telefonoPrincipal && telefonoPrincipal !== "." && telefonoPrincipal.trim() !== "") {
+      telefono = telefonoPrincipal.trim();
+    }
+    console.log("Teléfono extraído:", telefono);
+
     const mapped: PatientData = {
-      id: patientRecord.DOCUMENTO_PACIENTE || patientRecord.documento || patientRecord.DOCUMENTO || documento,
+      id: patientRecord.documento || patientRecord.DOCUMENTO_PACIENTE || patientRecord.DOCUMENTO || documento,
       nombre: nombre || nombreCompleto,
       apellidos: apellidos || "",
-      tipoDocumento: patientRecord.TIPO_DOCUMENTO || patientRecord.tipo_documento || "CC",
-      numeroDocumento: patientRecord.DOCUMENTO_PACIENTE || patientRecord.documento || patientRecord.DOCUMENTO || documento,
+      tipoDocumento: patientRecord.tipo_documento || patientRecord.TIPO_DOCUMENTO || "CC",
+      numeroDocumento: patientRecord.documento || patientRecord.DOCUMENTO_PACIENTE || patientRecord.DOCUMENTO || documento,
       fechaNacimiento,
       edad,
-      sexo: patientRecord.SEXO_PACIENTE || patientRecord.sexo || patientRecord.SEXO || "No especificado",
-      eps: patientRecord.NOMBRE_EPS || patientRecord.EPS || patientRecord.eps || patientRecord.NO_NOMB_EPS || patientRecord.eps_paciente || "Sin EPS",
-      telefono: patientRecord.TELEFONO_PACIENTE || patientRecord.telefono_paciente || patientRecord.telefono || patientRecord.TELEFONO || "No disponible",
-      direccion: patientRecord.DIRECCION_PACIENTE || patientRecord.direccion_paciente || patientRecord.direccion || patientRecord.DIRECCION || "No disponible",
-      email: patientRecord.EMAIL_PACIENTE || patientRecord.email_paciente || patientRecord.email || patientRecord.EMAIL || "",
+      sexo: patientRecord.sexo_paciente || patientRecord.SEXO_PACIENTE || patientRecord.sexo || patientRecord.SEXO || "No especificado",
+      eps: patientRecord.eps || patientRecord.NOMBRE_EPS || patientRecord.EPS || patientRecord.NO_NOMB_EPS || "Sin EPS",
+      telefono,
+      direccion: patientRecord.direccion_paciente || patientRecord.DIRECCION_PACIENTE || patientRecord.direccion || patientRecord.DIRECCION || "No disponible",
+      email: patientRecord.email_paciente || patientRecord.EMAIL_PACIENTE || patientRecord.email || patientRecord.EMAIL || "",
       centroSalud: "HOSPITAL PEDRO LEON ALVAREZ DIAZ DE LA MESA",
-      sedeAtencion: patientRecord.SEDE_ATENCION || patientRecord.sede || patientRecord.SEDE || "",
+      sedeAtencion: patientRecord.sede_atencion || patientRecord.SEDE_ATENCION || patientRecord.sede || "",
     };
 
     console.log("Datos mapeados del paciente:", mapped);
