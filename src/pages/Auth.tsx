@@ -5,10 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { AlertCircle, FileHeart, Shield, Eye, EyeOff } from "lucide-react";
+import { AlertCircle, Shield, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import logoHospital from "@/assets/logo_hospital.png";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -166,13 +167,15 @@ export default function Auth() {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-medical-blue rounded-full flex items-center justify-center">
-              <FileHeart className="h-6 w-6 text-white" />
-            </div>
+          <div className="flex flex-col items-center justify-center gap-3 mb-4">
+            <img 
+              src={logoHospital} 
+              alt="Logo E.S.E Hospital La Mesa Pedro León Álvarez Díaz" 
+              className="h-24 w-auto object-contain"
+            />
             <div>
-              <h1 className="text-2xl font-bold text-medical-blue">Hospital Pedro Leon Alvarez Diaz de la Mesa</h1>
-              <p className="text-sm text-medical-gray">Sistema de Consentimientos</p>
+              <h1 className="text-xl font-bold text-medical-blue">E.S.E Hospital La Mesa</h1>
+              <p className="text-sm text-medical-gray">Sistema de Consentimientos Informados</p>
             </div>
           </div>
           <div className="flex items-center justify-center gap-2 text-medical-gray">
