@@ -9,7 +9,7 @@ import { AlertCircle, Shield, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import logoHospital from "@/assets/logo_hospital_transparent.png";
+import logoHospital from "@/assets/logo_hospital.png";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -171,10 +171,10 @@ export default function Auth() {
             <img 
               src={logoHospital} 
               alt="Logo E.S.E Hospital La Mesa Pedro León Álvarez Díaz" 
-              className="h-24 w-auto object-contain"
+              className="h-28 w-auto object-contain"
             />
             <div>
-              <h1 className="text-xl font-bold text-medical-blue">E.S.E Hospital La Mesa</h1>
+              <h1 className="text-xl font-bold text-medical-blue">E.S.E Hospital La Mesa Pedro León Álvarez Díaz</h1>
               <p className="text-sm text-medical-gray">Sistema de Consentimientos Informados</p>
             </div>
           </div>
