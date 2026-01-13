@@ -129,6 +129,8 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
   return (
     <ConsentFormWrapper
       consentType="VIH"
+      consentTypeCode="hiv"
+      consentDecision={consentDecision}
       patientData={{
         nombre: patientData.nombre,
         apellidos: patientData.apellidos,
