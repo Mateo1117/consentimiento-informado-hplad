@@ -89,7 +89,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
         time: formData.hora
       };
 
-      const pdf = generateHIVPDF(pdfData);
+      const pdf = await generateHIVPDF(pdfData);
       return pdf.output('blob');
     } catch (error) {
       console.error('Error generating PDF:', error);

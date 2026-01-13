@@ -224,7 +224,7 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         consentDecision: pdfData.consentDecision
       });
       
-      const pdf = generateCargaGlucosaPDF(pdfData);
+      const pdf = await generateCargaGlucosaPDF(pdfData);
       
       console.log("📄 PDF generado exitosamente");
       
