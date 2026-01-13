@@ -282,6 +282,39 @@ export type Database = {
         }
         Relationships: []
       }
+      roles: {
+        Row: {
+          created_at: string
+          description: string | null
+          display_name: string
+          id: string
+          is_active: boolean
+          is_system: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          display_name: string
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          display_name?: string
+          id?: string
+          is_active?: boolean
+          is_system?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -369,12 +402,28 @@ export type Database = {
         }
         Returns: undefined
       }
+      create_role: {
+        Args: { p_description?: string; p_display_name: string; p_name: string }
+        Returns: string
+      }
+      delete_role: { Args: { p_role_id: string }; Returns: undefined }
       delete_role_permission: {
         Args: {
           p_permission_key: string
           p_role: Database["public"]["Enums"]["app_role"]
         }
         Returns: undefined
+      }
+      get_all_roles: {
+        Args: never
+        Returns: {
+          description: string
+          display_name: string
+          id: string
+          is_active: boolean
+          is_system: boolean
+          name: string
+        }[]
       }
       get_consent_by_token: {
         Args: { p_token: string }
@@ -500,6 +549,14 @@ export type Database = {
           signed_at: string
           status: string
         }[]
+      }
+      update_role: {
+        Args: {
+          p_description?: string
+          p_display_name: string
+          p_role_id: string
+        }
+        Returns: undefined
       }
       update_role_permission: {
         Args: {
