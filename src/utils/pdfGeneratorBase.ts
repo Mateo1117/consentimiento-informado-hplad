@@ -132,19 +132,20 @@ export class BasePDFGenerator {
     this.pdf.setLineWidth(0.3);
     this.pdf.line(this.margin + leftWidth, headerY, this.margin + leftWidth, headerY + headerHeight);
     
-    // Add logo
+    // Add logo - centrado y más grande
     if (this.logoBase64) {
       try {
-        const logoSize = 16;
-        const logoX = this.margin + 2;
-        const logoY = headerY + 2;
-        this.pdf.addImage(this.logoBase64, 'PNG', logoX, logoY, logoSize, logoSize);
+        const logoWidth = 32; // Más ancho
+        const logoHeight = 16; // Altura proporcional
+        const logoX = this.margin + (leftWidth - logoWidth) / 2; // Centrado horizontal
+        const logoY = headerY + (headerHeight - logoHeight) / 2; // Centrado vertical
+        this.pdf.addImage(this.logoBase64, 'PNG', logoX, logoY, logoWidth, logoHeight);
       } catch (error) {
         console.error('Error adding logo:', error);
-        this.drawFallbackLogo(headerY);
+        this.drawFallbackLogo(headerY, leftWidth, headerHeight);
       }
     } else {
-      this.drawFallbackLogo(headerY);
+      this.drawFallbackLogo(headerY, leftWidth, headerHeight);
     }
     
     // Center section - Document title
@@ -187,14 +188,18 @@ export class BasePDFGenerator {
     this.currentY = headerY + headerHeight + 1;
   }
 
-  protected drawFallbackLogo(headerY: number) {
+  protected drawFallbackLogo(headerY: number, leftWidth: number, headerHeight: number) {
+    // Texto centrado en la celda del logo
+    const centerX = this.margin + leftWidth / 2;
+    const centerY = headerY + headerHeight / 2;
+    
     this.pdf.setFontSize(7);
     this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('E.S.E', this.margin + 12, headerY + 5);
-    this.pdf.text('HOSPITAL', this.margin + 8, headerY + 9);
-    this.pdf.text('LA MESA', this.margin + 10, headerY + 13);
+    this.pdf.text('E.S.E', centerX, centerY - 4, { align: 'center' });
+    this.pdf.text('HOSPITAL', centerX, centerY, { align: 'center' });
+    this.pdf.text('LA MESA', centerX, centerY + 4, { align: 'center' });
     this.pdf.setFontSize(5);
-    this.pdf.text('PEDRO LEÓN ÁLVAREZ DÍAZ', this.margin + 2, headerY + 17);
+    this.pdf.text('PEDRO LEÓN ÁLVAREZ DÍAZ', centerX, centerY + 8, { align: 'center' });
   }
 
   protected drawPatientData(data: BasePDFData) {
