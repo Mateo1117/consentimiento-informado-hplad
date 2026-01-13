@@ -455,19 +455,20 @@ export class BasePDFGenerator {
       `Actuando en nombre propio (${data.guardianData ? ' ' : 'X'}) / en calidad de representante legal (${data.guardianData ? 'X' : ' '}) de la/del paciente cuyos nombres e identificación están registrados en el encabezado de este documento, autorizo al personal asistencial de esta institución, para que me/le realice el/los procedimiento(s) enseguida señalado(s) y, en caso de ser necesario, tome las medidas y conductas médicas necesarias para salvaguardar mí integridad física, de acuerdo a como se presenten las situaciones imprevistas en el curso del procedimiento.`
     ];
     
-    this.pdf.setFontSize(6);
+    this.pdf.setFontSize(5.5);
     this.pdf.setFont('helvetica', 'normal');
-    const lineSpacing = 2.8;
+    const lineSpacing = 2.5;
     
     for (const paragraph of consentParagraphs) {
       const lines = this.pdf.splitTextToSize(paragraph, this.contentWidth - 4);
-      const textHeight = lines.length * lineSpacing;
       
-      // NO hacer salto de página aquí - forzar que quepa todo
+      // Dibujar cada línea con espaciado correcto - empezar desde currentY + offset inicial
+      let textY = this.currentY + 2.5; // Offset inicial para no sobreponerse al header
       for (let i = 0; i < lines.length; i++) {
-        this.pdf.text(lines[i], this.margin + 2, this.currentY + (i * lineSpacing));
+        this.pdf.text(lines[i], this.margin + 2, textY);
+        textY += lineSpacing;
       }
-      this.currentY += textHeight + 2;
+      this.currentY = textY + 1; // Espacio entre párrafos
     }
     
     // Extract date components
@@ -479,7 +480,7 @@ export class BasePDFGenerator {
     const dateText = `En manifestación de aceptación firmo/pongo mi huella en este documento a los ___${day}___ días del mes de ___${month}___ de ${year}.`;
     const dateLines = this.pdf.splitTextToSize(dateText, this.contentWidth - 4);
     this.pdf.text(dateLines, this.margin + 2, this.currentY);
-    this.currentY += dateLines.length * lineSpacing + 3;
+    this.currentY += dateLines.length * lineSpacing + 2;
   }
 
   protected drawSignatureSection(data: BasePDFData) {
