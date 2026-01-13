@@ -147,27 +147,13 @@ export function RoleManagement() {
     if (!selectedUser) return;
 
     try {
-      // First, delete all existing roles for this user
-      const { error: deleteError } = await supabase
-        .from('user_roles')
-        .delete()
-        .eq('user_id', selectedUser.user_id);
+      // Usar la función segura que bypassea RLS
+      const { error } = await supabase.rpc('assign_user_roles', {
+        p_user_id: selectedUser.user_id,
+        p_roles: selectedRoles as ("admin" | "doctor" | "lab_technician" | "receptionist" | "viewer")[]
+      });
 
-      if (deleteError) throw deleteError;
-
-      // Then insert the new roles
-      if (selectedRoles.length > 0) {
-        const rolesToInsert = selectedRoles.map(role => ({
-          user_id: selectedUser.user_id,
-          role: role as any
-        }));
-
-        const { error: insertError } = await supabase
-          .from('user_roles')
-          .insert(rolesToInsert);
-
-        if (insertError) throw insertError;
-      }
+      if (error) throw error;
 
       toast.success("Roles actualizados exitosamente");
       setIsRoleDialogOpen(false);
