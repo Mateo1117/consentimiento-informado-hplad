@@ -1,9 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { FileHeart, Settings, Database, User, LogOut, Shield, UserPlus } from "lucide-react";
+import { Settings, Database, User, LogOut, Shield, UserPlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import logoHospital from "@/assets/logo_hospital_transparent.png";
+
 export function AuthenticatedHeader() {
   const {
     user,
@@ -39,8 +41,17 @@ export function AuthenticatedHeader() {
   };
   return <header className="bg-gradient-to-r from-medical-blue to-medical-blue/90 text-white shadow-lg">
       <div className="container mx-auto px-4 py-4">
-        <div className="flex-row flex items-end justify-between text-primary-foreground bg-primary border-0">
+        <div className="flex-row flex items-center justify-between text-primary-foreground bg-primary border-0">
           
+          {/* Logo */}
+          <div className="flex items-center">
+            <img 
+              src={logoHospital} 
+              alt="Logo Hospital" 
+              className="h-12 w-auto cursor-pointer"
+              onClick={() => navigate("/")}
+            />
+          </div>
           
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
