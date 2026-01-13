@@ -1,15 +1,19 @@
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Loader2, ShieldAlert, ArrowLeft } from "lucide-react";
+
+type AppRole = 'admin' | 'doctor' | 'lab_technician' | 'receptionist' | 'viewer';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: string[];
+  requiredRole?: AppRole[];
 }
 
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
-  const { user, isLoading, isAuthenticated } = useAuth();
+  const { user, isLoading, isAuthenticated, roles } = useAuth();
+  const navigate = useNavigate();
 
   if (isLoading) {
     return (
@@ -30,21 +34,53 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
     return <Navigate to="/auth" replace />;
   }
 
-  // Check role-based access if required
-  if (requiredRole && user?.user_metadata?.role) {
-    const userRole = user.user_metadata.role;
-    if (!requiredRole.includes(userRole)) {
+  // Check role-based access from database roles
+  if (requiredRole && requiredRole.length > 0) {
+    const hasRequiredRole = requiredRole.some(role => roles.includes(role));
+    
+    if (!hasRequiredRole) {
       return (
-        <div className="min-h-screen bg-gradient-to-br from-medical-blue-light to-background flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-medical-blue-light to-background flex items-center justify-center p-4">
           <Card className="w-full max-w-md">
             <CardContent className="p-8 text-center">
+              <ShieldAlert className="h-16 w-16 text-red-500 mx-auto mb-4" />
               <h2 className="text-xl font-bold text-medical-blue mb-4">Acceso Denegado</h2>
               <p className="text-medical-gray mb-4">
                 No tiene permisos suficientes para acceder a esta sección.
               </p>
-              <p className="text-sm text-gray-600">
-                Rol requerido: {requiredRole.join(' o ')} | Su rol: {userRole}
-              </p>
+              <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                <p className="text-sm text-gray-600 mb-2">
+                  <strong>Rol requerido:</strong> {requiredRole.map(r => {
+                    const labels: Record<AppRole, string> = {
+                      admin: 'Administrador',
+                      doctor: 'Médico',
+                      lab_technician: 'Técnico de Laboratorio',
+                      receptionist: 'Recepcionista',
+                      viewer: 'Visualizador'
+                    };
+                    return labels[r];
+                  }).join(' o ')}
+                </p>
+                <p className="text-sm text-gray-600">
+                  <strong>Sus roles:</strong> {roles.length > 0 ? roles.map(r => {
+                    const labels: Record<AppRole, string> = {
+                      admin: 'Administrador',
+                      doctor: 'Médico',
+                      lab_technician: 'Técnico de Laboratorio',
+                      receptionist: 'Recepcionista',
+                      viewer: 'Visualizador'
+                    };
+                    return labels[r];
+                  }).join(', ') : 'Sin rol asignado'}
+                </p>
+              </div>
+              <Button 
+                onClick={() => navigate('/')}
+                className="bg-medical-blue hover:bg-medical-blue/90"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver al Inicio
+              </Button>
             </CardContent>
           </Card>
         </div>
