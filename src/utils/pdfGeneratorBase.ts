@@ -73,13 +73,13 @@ export class BasePDFGenerator {
     this.pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
-      format: 'letter' // Carta: 215.9 x 279.4 mm (8.5 x 11 pulgadas) - tamaño estándar usado en Colombia
+      format: 'letter' // Carta: 215.9 x 279.4 mm
     });
     this.pageWidth = this.pdf.internal.pageSize.getWidth(); // 215.9mm
     this.pageHeight = this.pdf.internal.pageSize.getHeight(); // 279.4mm
-    this.margin = 12; // Margen de 12mm para evitar sobreposición
+    this.margin = 10; // Margen de 10mm
     this.currentY = this.margin;
-    this.lineHeight = 4;
+    this.lineHeight = 3;
     this.contentWidth = this.pageWidth - 2 * this.margin;
   }
 
@@ -268,10 +268,10 @@ export class BasePDFGenerator {
     
     // Second section: DOCUMENTO | TIPO | EDAD | EAPB | REGIMEN
     const row2Y = this.currentY;
-    const docCol = 35;
-    const tipoCol = 35;
-    const edadCol = 20;
-    const eapbCol = 55;
+    const docCol = 30;
+    const tipoCol = 45; // Más ancho para evitar sobreposición
+    const edadCol = 18;
+    const eapbCol = 50;
     const regimenCol = this.contentWidth - docCol - tipoCol - edadCol - eapbCol;
     
     xPos = this.margin;
@@ -281,10 +281,10 @@ export class BasePDFGenerator {
     this.pdf.rect(xPos, row2Y + rowHeight, docCol, rowHeight);
     this.pdf.setFontSize(5);
     this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('DOCUMENTO – N° HC', xPos + 1, row2Y + 4);
+    this.pdf.text('DOCUMENTO – N° HC', xPos + docCol / 2, row2Y + 4, { align: 'center' });
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(6);
-    this.pdf.text(data.patientData.numeroDocumento, xPos + 1, row2Y + rowHeight + 4);
+    this.pdf.text(data.patientData.numeroDocumento, xPos + docCol / 2, row2Y + rowHeight + 4, { align: 'center' });
     xPos += docCol;
     
     // TIPO header and value
@@ -292,22 +292,23 @@ export class BasePDFGenerator {
     this.pdf.rect(xPos, row2Y + rowHeight, tipoCol, rowHeight);
     this.pdf.setFontSize(5);
     this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('TIPO', xPos + 1, row2Y + 4);
+    this.pdf.text('TIPO', xPos + tipoCol / 2, row2Y + 4, { align: 'center' });
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(5);
     
-    // Draw document type checkboxes: RC | TI | CC | CE | OTRO
+    // Draw document type checkboxes with proper spacing
     const tipos = ['RC', 'TI', 'CC', 'CE', 'OTRO'];
-    let tipoX = xPos + 1;
-    tipos.forEach((t, idx) => {
+    const tipoSpacing = (tipoCol - 4) / tipos.length;
+    let tipoX = xPos + 2;
+    tipos.forEach((t) => {
       const isSelected = data.patientData.tipoDocumento === t || 
                         (t === 'CC' && (data.patientData.tipoDocumento === 'Cédula de ciudadanía' || data.patientData.tipoDocumento === 'Cédula de Ciudadanía'));
       this.pdf.rect(tipoX, row2Y + rowHeight + 1.5, 2.5, 2.5);
       if (isSelected) {
-        this.pdf.text('X', tipoX + 0.5, row2Y + rowHeight + 3.5);
+        this.pdf.text('X', tipoX + 0.6, row2Y + rowHeight + 3.5);
       }
       this.pdf.text(t, tipoX + 3, row2Y + rowHeight + 3.5);
-      tipoX += (idx < 4 ? 7 : 0);
+      tipoX += tipoSpacing;
     });
     xPos += tipoCol;
     
@@ -316,10 +317,10 @@ export class BasePDFGenerator {
     this.pdf.rect(xPos, row2Y + rowHeight, edadCol, rowHeight);
     this.pdf.setFontSize(5);
     this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('EDAD', xPos + 1, row2Y + 4);
+    this.pdf.text('EDAD', xPos + edadCol / 2, row2Y + 4, { align: 'center' });
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(6);
-    this.pdf.text(`${data.patientData.edad}`, xPos + 1, row2Y + rowHeight + 4);
+    this.pdf.text(`${data.patientData.edad}`, xPos + edadCol / 2, row2Y + rowHeight + 4, { align: 'center' });
     xPos += edadCol;
     
     // EAPB (EPS) header and value
@@ -327,11 +328,12 @@ export class BasePDFGenerator {
     this.pdf.rect(xPos, row2Y + rowHeight, eapbCol, rowHeight);
     this.pdf.setFontSize(5);
     this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('EAPB', xPos + 1, row2Y + 4);
+    this.pdf.text('EAPB', xPos + eapbCol / 2, row2Y + 4, { align: 'center' });
     this.pdf.setFont('helvetica', 'normal');
     this.pdf.setFontSize(5);
-    const epsLines = this.pdf.splitTextToSize(data.patientData.eps || '', eapbCol - 2);
-    this.pdf.text(epsLines, xPos + 1, row2Y + rowHeight + 3.5);
+    const epsText = data.patientData.eps || '';
+    const epsLines = this.pdf.splitTextToSize(epsText, eapbCol - 2);
+    this.pdf.text(epsLines[0] || '', xPos + eapbCol / 2, row2Y + rowHeight + 3.5, { align: 'center' });
     xPos += eapbCol;
     
     // REGIMEN header and value
@@ -340,26 +342,22 @@ export class BasePDFGenerator {
       this.pdf.rect(xPos, row2Y + rowHeight, regimenCol, rowHeight);
       this.pdf.setFontSize(5);
       this.pdf.setFont('helvetica', 'bold');
-      this.pdf.text('RÉGIMEN', xPos + 1, row2Y + 4);
+      this.pdf.text('RÉGIMEN', xPos + regimenCol / 2, row2Y + 4, { align: 'center' });
       this.pdf.setFont('helvetica', 'normal');
-      this.pdf.setFontSize(5);
+      this.pdf.setFontSize(4);
       
       // Draw regimen checkboxes
-      const regimenes = [
-        { code: 'C', label: 'C' },
-        { code: 'S', label: 'S' },
-        { code: 'P', label: 'P' },
-        { code: 'PPNA', label: 'PPNA' }
-      ];
+      const regimenes = ['C', 'S', 'P', 'PPNA'];
+      const regSpacing = (regimenCol - 2) / regimenes.length;
       let regX = xPos + 1;
       regimenes.forEach((r) => {
-        const isSelected = data.patientData.regimen === r.code || (r.code === 'S' && !data.patientData.regimen);
-        this.pdf.rect(regX, row2Y + rowHeight + 1.5, 2.5, 2.5);
+        const isSelected = data.patientData.regimen === r || (r === 'S' && !data.patientData.regimen);
+        this.pdf.rect(regX, row2Y + rowHeight + 1.5, 2, 2);
         if (isSelected) {
-          this.pdf.text('X', regX + 0.5, row2Y + rowHeight + 3.5);
+          this.pdf.text('X', regX + 0.4, row2Y + rowHeight + 3);
         }
-        this.pdf.text(r.label, regX + 3, row2Y + rowHeight + 3.5);
-        regX += 8;
+        this.pdf.text(r, regX + 2.5, row2Y + rowHeight + 3);
+        regX += regSpacing;
       });
     }
     
@@ -408,18 +406,18 @@ export class BasePDFGenerator {
   protected drawProcedureSection(procedures: BasePDFProcedureItem[]) {
     this.drawSectionHeader('DATOS DEL PROCEDIMIENTO');
     
-    const labelWidth = 40;
+    const labelWidth = 38;
     const valueWidth = this.contentWidth - labelWidth;
     
     for (const item of procedures) {
-      // Calculate height needed
-      this.pdf.setFontSize(6);
-      const valueLines = this.pdf.splitTextToSize(item.value, valueWidth - 3);
-      const labelLines = this.pdf.splitTextToSize(item.label, labelWidth - 3);
-      const rowHeight = Math.max(labelLines.length * 3 + 2, valueLines.length * 3 + 2, 6);
+      // Calculate height needed - más compacto
+      this.pdf.setFontSize(5);
+      const valueLines = this.pdf.splitTextToSize(item.value, valueWidth - 2);
+      const labelLines = this.pdf.splitTextToSize(item.label, labelWidth - 2);
+      const rowHeight = Math.max(labelLines.length * 2.5 + 1, valueLines.length * 2.5 + 1, 5);
       
       // Check if we need a new page
-      if (this.currentY + rowHeight > this.pageHeight - 20) {
+      if (this.currentY + rowHeight > this.pageHeight - 15) {
         this.drawFooter();
         this.pdf.addPage();
         this.currentY = this.margin;
@@ -430,20 +428,22 @@ export class BasePDFGenerator {
       this.pdf.rect(this.margin, this.currentY, labelWidth, rowHeight);
       this.pdf.rect(this.margin + labelWidth, this.currentY, valueWidth, rowHeight);
       
-      // Label
-      this.pdf.setFontSize(6);
+      // Label - centrado verticalmente
+      this.pdf.setFontSize(5);
       this.pdf.setFont('helvetica', 'bold');
-      this.pdf.text(labelLines, this.margin + 1, this.currentY + 3);
+      const labelStartY = this.currentY + (rowHeight - labelLines.length * 2.5) / 2 + 2;
+      this.pdf.text(labelLines, this.margin + 1, labelStartY);
       
-      // Value
+      // Value - centrado verticalmente
       this.pdf.setFont('helvetica', 'normal');
-      this.pdf.setFontSize(6);
-      this.pdf.text(valueLines, this.margin + labelWidth + 1, this.currentY + 3);
+      this.pdf.setFontSize(5);
+      const valueStartY = this.currentY + (rowHeight - valueLines.length * 2.5) / 2 + 2;
+      this.pdf.text(valueLines, this.margin + labelWidth + 1, valueStartY);
       
       this.currentY += rowHeight;
     }
     
-    this.currentY += 1;
+    this.currentY += 0.5;
   }
 
   protected drawConsentSection(data: BasePDFData) {
@@ -455,48 +455,36 @@ export class BasePDFGenerator {
       `Actuando en nombre propio (${data.guardianData ? ' ' : 'X'}) / en calidad de representante legal (${data.guardianData ? 'X' : ' '}) de la/del paciente cuyos nombres e identificación están registrados en el encabezado de este documento, autorizo al personal asistencial de esta institución, para que me/le realice el/los procedimiento(s) enseguida señalado(s) y, en caso de ser necesario, tome las medidas y conductas médicas necesarias para salvaguardar mí integridad física, de acuerdo a como se presenten las situaciones imprevistas en el curso del procedimiento.`
     ];
     
-    this.pdf.setFontSize(7);
+    this.pdf.setFontSize(6);
     this.pdf.setFont('helvetica', 'normal');
-    const lineSpacing = 3.5; // Mayor espaciado entre líneas
+    const lineSpacing = 2.8;
     
     for (const paragraph of consentParagraphs) {
-      const lines = this.pdf.splitTextToSize(paragraph, this.contentWidth - 6);
+      const lines = this.pdf.splitTextToSize(paragraph, this.contentWidth - 4);
       const textHeight = lines.length * lineSpacing;
       
-      if (this.currentY + textHeight > this.pageHeight - 50) {
-        this.drawFooter();
-        this.pdf.addPage();
-        this.currentY = this.margin;
-      }
-      
-      // Dibujar línea por línea con espaciado adecuado
+      // NO hacer salto de página aquí - forzar que quepa todo
       for (let i = 0; i < lines.length; i++) {
         this.pdf.text(lines[i], this.margin + 2, this.currentY + (i * lineSpacing));
       }
-      this.currentY += textHeight + 4; // Más espacio entre párrafos
+      this.currentY += textHeight + 2;
     }
     
-    // Extract date components from fechaHora
+    // Extract date components
     const now = new Date();
     const day = now.getDate();
     const month = now.toLocaleDateString('es-ES', { month: 'long' });
     const year = now.getFullYear();
     
     const dateText = `En manifestación de aceptación firmo/pongo mi huella en este documento a los ___${day}___ días del mes de ___${month}___ de ${year}.`;
-    const dateLines = this.pdf.splitTextToSize(dateText, this.contentWidth - 6);
+    const dateLines = this.pdf.splitTextToSize(dateText, this.contentWidth - 4);
     this.pdf.text(dateLines, this.margin + 2, this.currentY);
-    this.currentY += dateLines.length * lineSpacing + 5;
+    this.currentY += dateLines.length * lineSpacing + 3;
   }
 
   protected drawSignatureSection(data: BasePDFData) {
-    // Check if we need a new page
-    if (this.currentY + 50 > this.pageHeight - 25) {
-      this.drawFooter();
-      this.pdf.addPage();
-      this.currentY = this.margin;
-    }
-    
-    const signatureHeight = 28; // Mayor altura para firmas
+    // NO hacer salto de página - forzar todo en una hoja
+    const signatureHeight = 22; // Altura compacta para firmas
     const colWidth = this.contentWidth / 3;
     
     // Draw three signature columns
@@ -512,7 +500,7 @@ export class BasePDFGenerator {
         data.patientSignature.length > 100 && 
         data.patientSignature.startsWith('data:image')) {
       try {
-        this.pdf.addImage(data.patientSignature, 'PNG', this.margin + 3, this.currentY + 2, colWidth - 6, signatureHeight - 8);
+        this.pdf.addImage(data.patientSignature, 'PNG', this.margin + 2, this.currentY + 1, colWidth - 4, signatureHeight - 4);
       } catch (error) {
         console.error('Error adding patient signature:', error);
       }
@@ -524,7 +512,7 @@ export class BasePDFGenerator {
         data.professionalData.firma.length > 100 && 
         data.professionalData.firma.startsWith('data:image')) {
       try {
-        this.pdf.addImage(data.professionalData.firma, 'PNG', this.margin + 2 * colWidth + 3, this.currentY + 2, colWidth - 6, signatureHeight - 8);
+        this.pdf.addImage(data.professionalData.firma, 'PNG', this.margin + 2 * colWidth + 2, this.currentY + 1, colWidth - 4, signatureHeight - 4);
       } catch (error) {
         console.error('Error adding professional signature:', error);
       }
@@ -532,43 +520,43 @@ export class BasePDFGenerator {
     
     this.currentY += signatureHeight;
     
-    // Signature labels con mayor espaciado
+    // Signature labels - compactos
     const labelY = this.currentY;
-    this.pdf.setFontSize(6);
+    this.pdf.setFontSize(5);
     this.pdf.setFont('helvetica', 'normal');
     
     // Patient signature label
-    this.pdf.text('Firma paciente', this.margin + 2, labelY + 4);
-    this.pdf.text(`Documento: ${data.patientData.numeroDocumento}`, this.margin + 2, labelY + 8);
+    this.pdf.text('Firma paciente', this.margin + 2, labelY + 3);
+    this.pdf.text(`Documento: ${data.patientData.numeroDocumento}`, this.margin + 2, labelY + 6);
     
     // Representative signature label (middle column)
-    this.pdf.text('Firma Representante legal:', this.margin + colWidth + 2, labelY + 4);
+    this.pdf.text('Firma Representante legal:', this.margin + colWidth + 2, labelY + 3);
     if (data.guardianData) {
-      this.pdf.text(`Documento: ${data.guardianData.documento}`, this.margin + colWidth + 2, labelY + 8);
+      this.pdf.text(`Documento: ${data.guardianData.documento}`, this.margin + colWidth + 2, labelY + 6);
     } else {
-      this.pdf.text('Documento:', this.margin + colWidth + 2, labelY + 8);
+      this.pdf.text('Documento:', this.margin + colWidth + 2, labelY + 6);
     }
     
     // Professional signature label
-    this.pdf.text('Nombre y documento de quien toma el', this.margin + 2 * colWidth + 2, labelY + 4);
-    this.pdf.text('consentimiento:', this.margin + 2 * colWidth + 2, labelY + 8);
-    this.pdf.setFontSize(6);
-    this.pdf.text(data.professionalData.nombreCompleto, this.margin + 2 * colWidth + 2, labelY + 12);
-    this.pdf.text(`Doc: ${data.professionalData.documento}`, this.margin + 2 * colWidth + 2, labelY + 16);
+    this.pdf.text('Nombre y documento de quien toma el', this.margin + 2 * colWidth + 2, labelY + 3);
+    this.pdf.text('consentimiento:', this.margin + 2 * colWidth + 2, labelY + 6);
+    this.pdf.setFontSize(5);
+    this.pdf.text(data.professionalData.nombreCompleto, this.margin + 2 * colWidth + 2, labelY + 9);
+    this.pdf.text(`Doc: ${data.professionalData.documento}`, this.margin + 2 * colWidth + 2, labelY + 12);
     
-    this.currentY += 18;
+    this.currentY += 14;
     
-    // Add patient photo below patient signature (left column)
+    // Add patient photo below patient signature (left column) - compacto
     if (data.patientPhoto && 
         typeof data.patientPhoto === 'string' &&
         data.patientPhoto.length > 100) {
       try {
-        this.pdf.setFontSize(6);
-        this.pdf.text('Foto del paciente:', this.margin + 2, this.currentY + 3);
-        this.currentY += 4;
-        // Photo size: 25mm x 20mm positioned below patient signature
-        this.pdf.addImage(data.patientPhoto, 'JPEG', this.margin + 2, this.currentY, 25, 20);
-        this.currentY += 22;
+        this.pdf.setFontSize(5);
+        this.pdf.text('Foto del paciente:', this.margin + 2, this.currentY + 2);
+        this.currentY += 3;
+        // Photo size: 18mm x 14mm - más compacta
+        this.pdf.addImage(data.patientPhoto, 'JPEG', this.margin + 2, this.currentY, 18, 14);
+        this.currentY += 15;
       } catch (error) {
         console.error('Error adding patient photo:', error);
       }
@@ -636,16 +624,16 @@ export class BasePDFGenerator {
 
   protected drawSectionHeader(title: string) {
     this.pdf.setFillColor(200, 220, 240);
-    this.pdf.rect(this.margin, this.currentY, this.contentWidth, 6, 'F');
-    this.pdf.setLineWidth(0.3);
-    this.pdf.rect(this.margin, this.currentY, this.contentWidth, 6);
+    this.pdf.rect(this.margin, this.currentY, this.contentWidth, 5, 'F');
+    this.pdf.setLineWidth(0.2);
+    this.pdf.rect(this.margin, this.currentY, this.contentWidth, 5);
     
-    this.pdf.setFontSize(8);
+    this.pdf.setFontSize(7);
     this.pdf.setFont('helvetica', 'bold');
     this.pdf.setTextColor(0, 0, 0);
-    this.pdf.text(title, this.margin + this.contentWidth / 2, this.currentY + 4, { align: 'center' });
+    this.pdf.text(title, this.margin + this.contentWidth / 2, this.currentY + 3.5, { align: 'center' });
     
-    this.currentY += 7;
+    this.currentY += 5.5;
   }
 
   protected drawFooter() {
