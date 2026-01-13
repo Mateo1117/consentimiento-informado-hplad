@@ -558,16 +558,17 @@ export class BasePDFGenerator {
     
     this.currentY += 18;
     
-    // Add patient photo if available
+    // Add patient photo below patient signature (left column)
     if (data.patientPhoto && 
         typeof data.patientPhoto === 'string' &&
         data.patientPhoto.length > 100) {
       try {
-        this.pdf.setFontSize(5);
-        this.pdf.text('Foto del paciente:', this.margin, this.currentY);
-        this.currentY += 2;
-        this.pdf.addImage(data.patientPhoto, 'JPEG', this.margin, this.currentY, 20, 16);
-        this.currentY += 18;
+        this.pdf.setFontSize(6);
+        this.pdf.text('Foto del paciente:', this.margin + 2, this.currentY + 3);
+        this.currentY += 4;
+        // Photo size: 25mm x 20mm positioned below patient signature
+        this.pdf.addImage(data.patientPhoto, 'JPEG', this.margin + 2, this.currentY, 25, 20);
+        this.currentY += 22;
       } catch (error) {
         console.error('Error adding patient photo:', error);
       }
