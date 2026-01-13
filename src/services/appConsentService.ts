@@ -349,8 +349,10 @@ class AppConsentService {
         consentType: data.consentType
       });
 
-      // Determinar si el paciente aceptó o rechazó (siempre aceptó si firmó desde la app)
-      const aceptacionProcedimiento = 'Aceptado';
+      const normalizedConsentType = this.normalizeConsentType(data.consentType);
+      const procedimientoMedico =
+        this.getProcedureNameFromPayload(data.payload) || this.getProcedureName(normalizedConsentType);
+      const aceptacionProcedimiento = this.getAceptacionProcedimiento(data.payload);
 
       const { data: response, error } = await supabase.functions.invoke('enviar-consentimiento', {
         body: {
@@ -362,9 +364,11 @@ class AppConsentService {
           paciente_telefono: data.patientPhone || null,
           paciente_firma: data.patientSignature || null,
           paciente_foto: data.patientPhotoUrl || null,
-          tipo_procedimiento: this.getProcedureName(data.consentType),
-          procedimiento_medico: this.getProcedureName(data.consentType),
-          nombre_consentimiento: this.getConsentDisplayName(data.consentType),
+          // El webhook requiere el nombre completo del procedimiento
+          tipo_procedimiento: procedimientoMedico,
+          procedimiento_medico: procedimientoMedico,
+          nombre_consentimiento: this.getConsentDisplayName(normalizedConsentType),
+          // Debe reflejar la decisión real del paciente (APROBAR/DISENTIR)
           aceptacion_procedimiento: aceptacionProcedimiento,
           fecha_firma: data.signedAt || new Date().toISOString(),
           profesional_nombre_completo: data.professionalName || '',
