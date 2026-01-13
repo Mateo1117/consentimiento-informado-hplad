@@ -128,5 +128,5 @@ export class HemocomponentesPDFGenerator extends BasePDFGenerator {
 // Export helper function for backwards compatibility
 export async function generateHemocomponentesPDF(data: HemocomponentesPDFData): Promise<jsPDF> {
   const generator = new HemocomponentesPDFGenerator();
-  return await generator.generate(data);
+  return await generator.generateFromData(data);
 }

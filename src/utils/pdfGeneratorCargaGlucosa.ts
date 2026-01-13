@@ -124,5 +124,5 @@ export class CargaGlucosaPDFGenerator extends BasePDFGenerator {
 // Export helper function for backwards compatibility
 export async function generateCargaGlucosaPDF(data: CargaGlucosaPDFData): Promise<jsPDF> {
   const generator = new CargaGlucosaPDFGenerator();
-  return await generator.generate(data);
+  return await generator.generateFromData(data);
 }

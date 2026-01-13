@@ -128,5 +128,5 @@ export class VenopuncionPDFGenerator extends BasePDFGenerator {
 // Export helper function for backwards compatibility
 export async function generateVenopuncionPDF(data: VenopuncionPDFData): Promise<jsPDF> {
   const generator = new VenopuncionPDFGenerator();
-  return await generator.generate(data);
+  return await generator.generateFromData(data);
 }
