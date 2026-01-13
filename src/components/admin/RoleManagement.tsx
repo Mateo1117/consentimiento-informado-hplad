@@ -370,13 +370,34 @@ export function RoleManagement() {
   };
 
   const getRoleBadgeClass = (role: string) => {
+    // First check dynamic roles
+    const dynamicRole = dynamicRoles.find(r => r.name === role);
+    if (dynamicRole) {
+      return ROLE_COLORS[role] || "bg-indigo-100 text-indigo-800 border-indigo-200";
+    }
+    // Fallback to static definitions
     const roleDef = ROLE_DEFINITIONS.find(r => r.role === role);
-    return roleDef?.color || "bg-gray-100 text-gray-800";
+    return roleDef?.color || "bg-indigo-100 text-indigo-800 border-indigo-200";
   };
 
   const getRoleLabel = (role: string) => {
+    // First check dynamic roles
+    const dynamicRole = dynamicRoles.find(r => r.name === role);
+    if (dynamicRole) {
+      return dynamicRole.display_name;
+    }
+    // Fallback to static definitions
     const roleDef = ROLE_DEFINITIONS.find(r => r.role === role);
     return roleDef?.label || role;
+  };
+
+  const getRoleDescription = (role: string) => {
+    const dynamicRole = dynamicRoles.find(r => r.name === role);
+    if (dynamicRole) {
+      return dynamicRole.description || "";
+    }
+    const roleDef = ROLE_DEFINITIONS.find(r => r.role === role);
+    return roleDef?.description || "";
   };
 
   return (
@@ -753,28 +774,43 @@ export function RoleManagement() {
 
               <div className="space-y-3">
                 <Label className="text-sm font-medium">Seleccione los roles:</Label>
-                {ROLE_DEFINITIONS.map((roleDef) => (
-                  <div
-                    key={roleDef.role}
-                    className={`flex items-start space-x-3 p-3 rounded-lg border-2 cursor-pointer transition-colors ${
-                      selectedRoles.includes(roleDef.role) 
-                        ? 'border-medical-blue bg-medical-blue/5' 
-                        : 'border-gray-200 hover:border-gray-300'
-                    }`}
-                    onClick={() => handleRoleToggle(roleDef.role)}
-                  >
-                    <Checkbox
-                      checked={selectedRoles.includes(roleDef.role)}
-                      onCheckedChange={() => handleRoleToggle(roleDef.role)}
-                    />
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <Badge className={roleDef.color}>{roleDef.label}</Badge>
+                <ScrollArea className="h-[300px] pr-4">
+                  {dynamicRoles.map((role) => (
+                    <div
+                      key={role.id}
+                      className={`flex items-start space-x-3 p-3 rounded-lg border-2 cursor-pointer transition-colors mb-2 ${
+                        selectedRoles.includes(role.name) 
+                          ? 'border-medical-blue bg-medical-blue/5' 
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      onClick={() => handleRoleToggle(role.name)}
+                    >
+                      <Checkbox
+                        checked={selectedRoles.includes(role.name)}
+                        onCheckedChange={() => handleRoleToggle(role.name)}
+                      />
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <Badge className={getRoleBadgeClass(role.name)}>{role.display_name}</Badge>
+                          {role.is_system && (
+                            <Badge variant="outline" className="text-xs">
+                              <Lock className="h-3 w-3 mr-1" />
+                              Sistema
+                            </Badge>
+                          )}
+                        </div>
+                        {role.description && (
+                          <p className="text-sm text-gray-600 mt-1">{role.description}</p>
+                        )}
                       </div>
-                      <p className="text-sm text-gray-600 mt-1">{roleDef.description}</p>
                     </div>
-                  </div>
-                ))}
+                  ))}
+                  {dynamicRoles.length === 0 && (
+                    <p className="text-center text-muted-foreground py-4">
+                      Cargando roles...
+                    </p>
+                  )}
+                </ScrollArea>
               </div>
 
               {selectedRoles.length === 0 && (
