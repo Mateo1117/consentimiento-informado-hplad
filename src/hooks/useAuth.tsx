@@ -3,12 +3,17 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
+type AppRole = 'admin' | 'doctor' | 'lab_technician' | 'receptionist' | 'viewer';
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   isLoading: boolean;
   signOut: () => Promise<void>;
   isAuthenticated: boolean;
+  roles: AppRole[];
+  hasRole: (role: AppRole) => boolean;
+  isAdmin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -17,6 +22,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [roles, setRoles] = useState<AppRole[]>([]);
 
   const cleanupAuthState = () => {
     Object.keys(localStorage).forEach((key) => {
@@ -24,6 +30,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         localStorage.removeItem(key);
       }
     });
+  };
+
+  const fetchUserRoles = async (userId: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId);
+
+      if (error) {
+        console.error('Error fetching roles:', error);
+        return [];
+      }
+
+      return (data || []).map(r => r.role as AppRole);
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      return [];
+    }
   };
 
   const signOut = async () => {
@@ -43,6 +68,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // Clear local state
       setUser(null);
       setSession(null);
+      setRoles([]);
       
       toast.success("Sesión cerrada correctamente");
       
@@ -54,6 +80,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const hasRole = (role: AppRole): boolean => {
+    return roles.includes(role);
   };
 
   useEffect(() => {
@@ -72,6 +102,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         
         if (event === 'SIGNED_OUT') {
           cleanupAuthState();
+          setRoles([]);
+        }
+        
+        // Fetch roles using setTimeout to avoid deadlock
+        if (session?.user) {
+          setTimeout(async () => {
+            if (mounted) {
+              const userRoles = await fetchUserRoles(session.user.id);
+              setRoles(userRoles);
+            }
+          }, 0);
         }
         
         setIsLoading(false);
@@ -85,6 +126,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (mounted) {
           setSession(session);
           setUser(session?.user ?? null);
+          
+          // Fetch roles if user exists
+          if (session?.user) {
+            const userRoles = await fetchUserRoles(session.user.id);
+            setRoles(userRoles);
+          }
+          
           setIsLoading(false);
         }
       } catch (error) {
@@ -108,7 +156,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     session,
     isLoading,
     signOut,
-    isAuthenticated: !!user
+    isAuthenticated: !!user,
+    roles,
+    hasRole,
+    isAdmin: roles.includes('admin')
   };
 
   return (
