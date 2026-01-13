@@ -9,7 +9,7 @@ import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Search, User, Calendar as CalendarIcon, MapPin, Phone, IdCard, Wifi, WifiOff, Clock, ServerCrash, AlertCircle, FileWarning, UserX, RefreshCw, Trash2 } from "lucide-react";
+import { Search, User, Calendar as CalendarIcon, MapPin, Phone, IdCard, WifiOff, Clock, ServerCrash, AlertCircle, FileWarning, UserX } from "lucide-react";
 import { toast } from "sonner";
 import { patientApiService, type PatientData, type PatientSearchResult } from "@/services/patientApi";
 import { format } from "date-fns";
@@ -68,8 +68,6 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
   const [selectedSede, setSelectedSede] = useState<string>("");
   const [editableAge, setEditableAge] = useState<number | null>(null);
   const [searchError, setSearchError] = useState<{ message: string; type?: string } | null>(null);
-  const [isFromCache, setIsFromCache] = useState(false);
-
   const documentTypes = [
     { value: "CC", label: "Cédula de Ciudadanía (CC)" },
     { value: "TI", label: "Tarjeta de Identidad (TI)" },
@@ -134,7 +132,6 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
 
     setIsLoading(true);
     setSearchError(null);
-    setIsFromCache(false);
     try {
       // Forzar actualización para obtener datos frescos
       const result = await patientApiService.searchByDocument(searchDocument);
@@ -168,8 +165,7 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
         setBirthDate(finalBirthDate); // Establecer la fecha parseada
         setEditableAge(finalAge);
         setSearchError(null);
-        setIsFromCache(result.fromCache || false);
-        toast.success(result.fromCache ? "Paciente encontrado (desde caché)" : "Paciente encontrado exitosamente");
+        toast.success("Paciente encontrado exitosamente");
       } else {
         // Mostrar mensaje de error específico con indicador visual
         setSearchError({ 
@@ -273,27 +269,6 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
               </Button>
             </div>
           </div>
-          
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-medical-gray">
-              Conectado al webhook local para consulta de pacientes
-            </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                patientApiService.clearCache();
-                setPatientData(null);
-                setSearchDocument("");
-                setIsFromCache(false);
-                toast.success("Caché de pacientes limpiada");
-              }}
-              className="text-xs text-red-500 hover:text-red-700 hover:bg-red-50"
-            >
-              <Trash2 className="h-3 w-3 mr-1" />
-              Limpiar caché
-            </Button>
-          </div>
         </div>
 
         {/* Indicador visual de error */}
@@ -324,29 +299,10 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
             <Separator className="bg-medical-blue/20" />
             
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-medical-blue flex items-center gap-2">
-                  <IdCard className="h-4 w-4" />
-                  Datos del Paciente
-                  {isFromCache && (
-                    <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">
-                      Desde caché
-                    </span>
-                  )}
-                </h3>
-                {isFromCache && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleSearch(true)}
-                    disabled={isLoading}
-                    className="text-xs"
-                  >
-                    <RefreshCw className={`h-3 w-3 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
-                    Actualizar datos
-                  </Button>
-                )}
-              </div>
+              <h3 className="font-semibold text-medical-blue flex items-center gap-2">
+                <IdCard className="h-4 w-4" />
+                Datos del Paciente
+              </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
