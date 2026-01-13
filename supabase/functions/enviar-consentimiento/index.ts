@@ -21,9 +21,11 @@ interface ConsentPayload {
   // Datos del consentimiento
   tipo_procedimiento: string;
   procedimiento_medico: string; // Nombre completo del procedimiento médico
+  diagnostico: string; // Nombre del procedimiento (igual a procedimiento_medico)
   nombre_consentimiento: string;
   aceptacion_procedimiento: string; // Aceptado o Rechazado
   fecha_firma: string;
+  fecha_documento: string; // Formato YYYY-MM-DD
   
   // Datos del profesional
   profesional_nombre_completo: string;
@@ -60,11 +62,13 @@ serve(async (req: Request) => {
       paciente_telefono: body.paciente_telefono,
       tipo_procedimiento: body.tipo_procedimiento,
       procedimiento_medico: body.procedimiento_medico,
+      diagnostico: body.diagnostico,
       nombre_consentimiento: body.nombre_consentimiento,
       aceptacion_procedimiento: body.aceptacion_procedimiento,
+      fecha_firma: body.fecha_firma,
+      fecha_documento: body.fecha_documento,
       profesional: body.profesional_nombre_completo,
       profesional_documento: body.profesional_documento,
-      fecha_firma: body.fecha_firma,
       tiene_firma_paciente: !!body.paciente_firma,
       firma_paciente_length: body.paciente_firma?.length || 0,
       tiene_foto_paciente: !!body.paciente_foto,
@@ -117,9 +121,11 @@ serve(async (req: Request) => {
       // Datos del consentimiento
       tipo_procedimiento: body.tipo_procedimiento || "",
       procedimiento_medico: body.procedimiento_medico || body.tipo_procedimiento || "",
+      diagnostico: body.diagnostico || body.procedimiento_medico || body.tipo_procedimiento || "",
       nombre_consentimiento: body.nombre_consentimiento || "",
       aceptacion_procedimiento: body.aceptacion_procedimiento || "Aceptado",
       fecha_firma: body.fecha_firma || new Date().toISOString(),
+      fecha_documento: body.fecha_documento || new Date().toISOString().split('T')[0],
       
       // Datos del profesional
       profesional_nombre_completo: body.profesional_nombre_completo || "",
@@ -144,9 +150,11 @@ serve(async (req: Request) => {
 
     params.set('tipo_procedimiento', webhookPayload.tipo_procedimiento);
     params.set('procedimiento_medico', webhookPayload.procedimiento_medico);
+    params.set('diagnostico', webhookPayload.diagnostico);
     params.set('nombre_consentimiento', webhookPayload.nombre_consentimiento);
     params.set('aceptacion_procedimiento', webhookPayload.aceptacion_procedimiento);
     params.set('fecha_firma', webhookPayload.fecha_firma);
+    params.set('fecha_documento', webhookPayload.fecha_documento);
 
     params.set('profesional_nombre_completo', webhookPayload.profesional_nombre_completo);
     if (webhookPayload.profesional_documento) params.set('profesional_documento', webhookPayload.profesional_documento);
