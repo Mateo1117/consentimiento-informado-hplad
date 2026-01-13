@@ -16,6 +16,8 @@ import { WebhookReceiver } from "@/components/WebhookReceiver";
 import { WebhookConfig } from "@/components/WebhookConfig";
 import { ApiConfig } from "@/components/ApiConfig";
 import { AuthenticatedHeader } from "@/components/AuthenticatedHeader";
+import { UserManagement } from "@/components/admin/UserManagement";
+import { RoleManagement } from "@/components/admin/RoleManagement";
 import { 
   ArrowLeft, 
   BarChart3, 
@@ -33,7 +35,9 @@ import {
   Shield,
   Activity,
   Mail,
-  Globe
+  Globe,
+  UserCog,
+  Key
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -269,42 +273,50 @@ export default function AdminPanel() {
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-9">
+          <TabsList className="grid w-full grid-cols-11">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
-              Dashboard
+              <span className="hidden lg:inline">Dashboard</span>
             </TabsTrigger>
             <TabsTrigger value="consents" className="flex items-center gap-2">
               <FileText className="h-4 w-4" />
-              Consentimientos
+              <span className="hidden lg:inline">Consentimientos</span>
+            </TabsTrigger>
+            <TabsTrigger value="users" className="flex items-center gap-2">
+              <UserCog className="h-4 w-4" />
+              <span className="hidden lg:inline">Usuarios</span>
+            </TabsTrigger>
+            <TabsTrigger value="roles" className="flex items-center gap-2">
+              <Key className="h-4 w-4" />
+              <span className="hidden lg:inline">Permisos</span>
             </TabsTrigger>
             <TabsTrigger value="analytics" className="flex items-center gap-2">
               <TrendingUp className="h-4 w-4" />
-              Análisis
+              <span className="hidden lg:inline">Análisis</span>
             </TabsTrigger>
             <TabsTrigger value="notifications" className="flex items-center gap-2">
               <Mail className="h-4 w-4" />
-              Notificaciones
+              <span className="hidden lg:inline">Notificaciones</span>
             </TabsTrigger>
             <TabsTrigger value="automation" className="flex items-center gap-2">
               <Database className="h-4 w-4" />
-              Automatización
+              <span className="hidden lg:inline">Automatización</span>
             </TabsTrigger>
             <TabsTrigger value="api-config" className="flex items-center gap-2">
               <Globe className="h-4 w-4" />
-              Configuración API
+              <span className="hidden lg:inline">Config API</span>
             </TabsTrigger>
             <TabsTrigger value="patient-api" className="flex items-center gap-2">
               <Users className="h-4 w-4" />
-              API Pacientes
+              <span className="hidden lg:inline">API Pacientes</span>
             </TabsTrigger>
             <TabsTrigger value="webhooks" className="flex items-center gap-2">
               <Activity className="h-4 w-4" />
-              Webhooks
+              <span className="hidden lg:inline">Webhooks</span>
             </TabsTrigger>
             <TabsTrigger value="system" className="flex items-center gap-2">
               <Settings className="h-4 w-4" />
-              Sistema
+              <span className="hidden lg:inline">Sistema</span>
             </TabsTrigger>
           </TabsList>
 
@@ -577,6 +589,16 @@ export default function AdminPanel() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Users Tab */}
+          <TabsContent value="users" className="space-y-6">
+            <UserManagement />
+          </TabsContent>
+
+          {/* Roles Tab */}
+          <TabsContent value="roles" className="space-y-6">
+            <RoleManagement />
           </TabsContent>
 
           {/* Analytics Tab */}
