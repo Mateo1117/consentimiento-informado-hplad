@@ -20,7 +20,9 @@ interface ConsentPayload {
   
   // Datos del consentimiento
   tipo_procedimiento: string;
+  procedimiento_medico: string; // Nombre completo del procedimiento médico
   nombre_consentimiento: string;
+  aceptacion_procedimiento: string; // Aceptado o Rechazado
   fecha_firma: string;
   
   // Datos del profesional
@@ -57,7 +59,9 @@ serve(async (req: Request) => {
       paciente_email: body.paciente_email,
       paciente_telefono: body.paciente_telefono,
       tipo_procedimiento: body.tipo_procedimiento,
+      procedimiento_medico: body.procedimiento_medico,
       nombre_consentimiento: body.nombre_consentimiento,
+      aceptacion_procedimiento: body.aceptacion_procedimiento,
       profesional: body.profesional_nombre_completo,
       profesional_documento: body.profesional_documento,
       fecha_firma: body.fecha_firma,
@@ -112,7 +116,9 @@ serve(async (req: Request) => {
       
       // Datos del consentimiento
       tipo_procedimiento: body.tipo_procedimiento || "",
+      procedimiento_medico: body.procedimiento_medico || body.tipo_procedimiento || "",
       nombre_consentimiento: body.nombre_consentimiento || "",
+      aceptacion_procedimiento: body.aceptacion_procedimiento || "Aceptado",
       fecha_firma: body.fecha_firma || new Date().toISOString(),
       
       // Datos del profesional
@@ -137,7 +143,9 @@ serve(async (req: Request) => {
     if (webhookPayload.paciente_foto) params.set('paciente_foto', webhookPayload.paciente_foto);
 
     params.set('tipo_procedimiento', webhookPayload.tipo_procedimiento);
+    params.set('procedimiento_medico', webhookPayload.procedimiento_medico);
     params.set('nombre_consentimiento', webhookPayload.nombre_consentimiento);
+    params.set('aceptacion_procedimiento', webhookPayload.aceptacion_procedimiento);
     params.set('fecha_firma', webhookPayload.fecha_firma);
 
     params.set('profesional_nombre_completo', webhookPayload.profesional_nombre_completo);

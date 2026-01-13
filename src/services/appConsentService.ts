@@ -349,6 +349,9 @@ class AppConsentService {
         consentType: data.consentType
       });
 
+      // Determinar si el paciente aceptó o rechazó (siempre aceptó si firmó desde la app)
+      const aceptacionProcedimiento = 'Aceptado';
+
       const { data: response, error } = await supabase.functions.invoke('enviar-consentimiento', {
         body: {
           consent_id: data.consentId,
@@ -360,7 +363,9 @@ class AppConsentService {
           paciente_firma: data.patientSignature || null,
           paciente_foto: data.patientPhotoUrl || null,
           tipo_procedimiento: this.getProcedureName(data.consentType),
+          procedimiento_medico: this.getProcedureName(data.consentType),
           nombre_consentimiento: this.getConsentDisplayName(data.consentType),
+          aceptacion_procedimiento: aceptacionProcedimiento,
           fecha_firma: data.signedAt || new Date().toISOString(),
           profesional_nombre_completo: data.professionalName || '',
           profesional_documento: data.professionalDocument || null,
