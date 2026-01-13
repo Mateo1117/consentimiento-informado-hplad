@@ -1,4 +1,5 @@
 import jsPDF from 'jspdf';
+import { getLogoBase64 } from './pdfLogoHelper';
 
 interface PatientData {
   nombre: string;
@@ -41,6 +42,7 @@ export class VenopuncionPDFGenerator {
   private margin: number;
   private currentY: number;
   private lineHeight: number;
+  private logoBase64: string | null = null;
 
   constructor() {
     this.pdf = new jsPDF({
@@ -55,7 +57,16 @@ export class VenopuncionPDFGenerator {
     this.lineHeight = 4;
   }
 
-  generate(data: VenopuncionPDFData): jsPDF {
+  async loadLogo(): Promise<void> {
+    try {
+      this.logoBase64 = await getLogoBase64();
+    } catch (error) {
+      console.error('Error loading logo:', error);
+    }
+  }
+
+  async generate(data: VenopuncionPDFData): Promise<jsPDF> {
+    await this.loadLogo();
     this.drawHeader(data);
     this.drawPatientData(data);
     this.drawGuardianData(data);
@@ -81,16 +92,35 @@ export class VenopuncionPDFGenerator {
     // Draw main border rectangle for header
     this.pdf.rect(this.margin, this.margin, this.pageWidth - 2 * this.margin, 25);
     
-    // Left section - Hospital info
+    // Left section - Hospital info with logo
     const leftBoxWidth = 50;
     this.pdf.rect(this.margin, this.margin, leftBoxWidth, 25);
     
-    this.pdf.setFontSize(9);
-    this.pdf.text('E.S.E', this.margin + 15, this.margin + 6);
-    this.pdf.text('HOSPITAL', this.margin + 10, this.margin + 10);
-    this.pdf.text('LA MESA', this.margin + 12, this.margin + 14);
-    this.pdf.setFontSize(7);
-    this.pdf.text('PEDRO LEÓN ÁLVAREZ DÍAZ', this.margin + 2, this.margin + 18);
+    // Add logo if available
+    if (this.logoBase64) {
+      try {
+        const logoSize = 21;
+        const logoX = this.margin + 2;
+        const logoY = this.margin + 2;
+        this.pdf.addImage(this.logoBase64, 'PNG', logoX, logoY, logoSize, logoSize);
+      } catch (error) {
+        console.error('Error adding logo to PDF:', error);
+        // Fallback to text if logo fails
+        this.pdf.setFontSize(9);
+        this.pdf.text('E.S.E', this.margin + 15, this.margin + 6);
+        this.pdf.text('HOSPITAL', this.margin + 10, this.margin + 10);
+        this.pdf.text('LA MESA', this.margin + 12, this.margin + 14);
+        this.pdf.setFontSize(7);
+        this.pdf.text('PEDRO LEÓN ÁLVAREZ DÍAZ', this.margin + 2, this.margin + 18);
+      }
+    } else {
+      this.pdf.setFontSize(9);
+      this.pdf.text('E.S.E', this.margin + 15, this.margin + 6);
+      this.pdf.text('HOSPITAL', this.margin + 10, this.margin + 10);
+      this.pdf.text('LA MESA', this.margin + 12, this.margin + 14);
+      this.pdf.setFontSize(7);
+      this.pdf.text('PEDRO LEÓN ÁLVAREZ DÍAZ', this.margin + 2, this.margin + 18);
+    }
     
     // Center section - Format title
     const centerX = this.margin + leftBoxWidth;
@@ -594,7 +624,7 @@ export class VenopuncionPDFGenerator {
   }
 }
 
-export function generateVenopuncionPDF(data: VenopuncionPDFData): jsPDF {
+export async function generateVenopuncionPDF(data: VenopuncionPDFData): Promise<jsPDF> {
   const generator = new VenopuncionPDFGenerator();
-  return generator.generate(data);
+  return await generator.generate(data);
 }

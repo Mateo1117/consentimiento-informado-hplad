@@ -120,7 +120,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         consentDecision: pdfData.consentDecision
       });
       
-      const pdf = generateVenopuncionPDF(pdfData);
+      const pdf = await generateVenopuncionPDF(pdfData);
       
       console.log("📄 PDF generado exitosamente");
       

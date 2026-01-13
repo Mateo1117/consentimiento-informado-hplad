@@ -225,7 +225,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         time: new Date().toLocaleTimeString('es-CO', { hour12: false })
       };
 
-      const pdf = generateFrotisVaginalPDF(pdfData);
+      const pdf = await generateFrotisVaginalPDF(pdfData);
       const fileName = `Consentimiento_FrotisVaginal_${patientData.nombre}_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
       

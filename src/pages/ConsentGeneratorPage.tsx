@@ -35,7 +35,7 @@ const ConsentimientoInformado = () => {
     }));
   };
 
-  const generatePDF = () => {
+  const generatePDF = async () => {
     // Transform form data to match the PDF generator interface
     const [nombres, ...apellidos] = formData.nombreCompleto.split(' ');
     
@@ -71,7 +71,7 @@ const ConsentimientoInformado = () => {
     };
 
     try {
-      const pdf = generateCargaGlucosaPDF(pdfData);
+      const pdf = await generateCargaGlucosaPDF(pdfData);
       const fileName = `Consentimiento_${formData.nombreCompleto || 'Paciente'}_${new Date().toISOString().split('T')[0]}.pdf`;
       pdf.save(fileName);
     } catch (error) {
