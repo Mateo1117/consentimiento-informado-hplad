@@ -124,8 +124,8 @@ serve(async (req: Request) => {
       diagnostico: body.diagnostico || body.procedimiento_medico || body.tipo_procedimiento || "",
       nombre_consentimiento: body.nombre_consentimiento || "",
       aceptacion_procedimiento: body.aceptacion_procedimiento || "Aceptado",
-      fecha_firma: body.fecha_firma || new Date().toISOString(),
-      fecha_documento: body.fecha_documento || new Date().toISOString().split('T')[0],
+      fecha_firma: new Date().toISOString(), // Siempre usar la hora actual
+      fecha_documento: new Date().toISOString().split('T')[0], // Siempre fecha actual en formato YYYY-MM-DD
       
       // Datos del profesional
       profesional_nombre_completo: body.profesional_nombre_completo || "",
