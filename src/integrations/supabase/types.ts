@@ -323,6 +323,13 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      assign_user_roles: {
+        Args: {
+          p_roles: Database["public"]["Enums"]["app_role"][]
+          p_user_id: string
+        }
+        Returns: undefined
+      }
       get_consent_by_token: {
         Args: { p_token: string }
         Returns: {
