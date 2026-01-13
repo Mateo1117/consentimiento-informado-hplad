@@ -77,9 +77,9 @@ export class BasePDFGenerator {
     });
     this.pageWidth = this.pdf.internal.pageSize.getWidth(); // 215.9mm
     this.pageHeight = this.pdf.internal.pageSize.getHeight(); // 279.4mm
-    this.margin = 8; // Margen de 8mm para mayor espacio de contenido
+    this.margin = 12; // Margen de 12mm para evitar sobreposición
     this.currentY = this.margin;
-    this.lineHeight = 3.5;
+    this.lineHeight = 4;
     this.contentWidth = this.pageWidth - 2 * this.margin;
   }
 
@@ -455,21 +455,25 @@ export class BasePDFGenerator {
       `Actuando en nombre propio (${data.guardianData ? ' ' : 'X'}) / en calidad de representante legal (${data.guardianData ? 'X' : ' '}) de la/del paciente cuyos nombres e identificación están registrados en el encabezado de este documento, autorizo al personal asistencial de esta institución, para que me/le realice el/los procedimiento(s) enseguida señalado(s) y, en caso de ser necesario, tome las medidas y conductas médicas necesarias para salvaguardar mí integridad física, de acuerdo a como se presenten las situaciones imprevistas en el curso del procedimiento.`
     ];
     
-    this.pdf.setFontSize(6);
+    this.pdf.setFontSize(7);
     this.pdf.setFont('helvetica', 'normal');
+    const lineSpacing = 3.5; // Mayor espaciado entre líneas
     
     for (const paragraph of consentParagraphs) {
-      const lines = this.pdf.splitTextToSize(paragraph, this.contentWidth - 4);
-      const textHeight = lines.length * 3;
+      const lines = this.pdf.splitTextToSize(paragraph, this.contentWidth - 6);
+      const textHeight = lines.length * lineSpacing;
       
-      if (this.currentY + textHeight > this.pageHeight - 45) {
+      if (this.currentY + textHeight > this.pageHeight - 50) {
         this.drawFooter();
         this.pdf.addPage();
         this.currentY = this.margin;
       }
       
-      this.pdf.text(lines, this.margin + 2, this.currentY);
-      this.currentY += textHeight + 1;
+      // Dibujar línea por línea con espaciado adecuado
+      for (let i = 0; i < lines.length; i++) {
+        this.pdf.text(lines[i], this.margin + 2, this.currentY + (i * lineSpacing));
+      }
+      this.currentY += textHeight + 4; // Más espacio entre párrafos
     }
     
     // Extract date components from fechaHora
@@ -479,24 +483,24 @@ export class BasePDFGenerator {
     const year = now.getFullYear();
     
     const dateText = `En manifestación de aceptación firmo/pongo mi huella en este documento a los ___${day}___ días del mes de ___${month}___ de ${year}.`;
-    const dateLines = this.pdf.splitTextToSize(dateText, this.contentWidth - 4);
+    const dateLines = this.pdf.splitTextToSize(dateText, this.contentWidth - 6);
     this.pdf.text(dateLines, this.margin + 2, this.currentY);
-    this.currentY += dateLines.length * 3 + 3;
+    this.currentY += dateLines.length * lineSpacing + 5;
   }
 
   protected drawSignatureSection(data: BasePDFData) {
     // Check if we need a new page
-    if (this.currentY + 40 > this.pageHeight - 20) {
+    if (this.currentY + 50 > this.pageHeight - 25) {
       this.drawFooter();
       this.pdf.addPage();
       this.currentY = this.margin;
     }
     
-    const signatureHeight = 22;
+    const signatureHeight = 28; // Mayor altura para firmas
     const colWidth = this.contentWidth / 3;
     
     // Draw three signature columns
-    this.pdf.setLineWidth(0.2);
+    this.pdf.setLineWidth(0.3);
     for (let i = 0; i < 3; i++) {
       const xPos = this.margin + i * colWidth;
       this.pdf.rect(xPos, this.currentY, colWidth, signatureHeight);
@@ -508,7 +512,7 @@ export class BasePDFGenerator {
         data.patientSignature.length > 100 && 
         data.patientSignature.startsWith('data:image')) {
       try {
-        this.pdf.addImage(data.patientSignature, 'PNG', this.margin + 2, this.currentY + 1, colWidth - 4, signatureHeight - 6);
+        this.pdf.addImage(data.patientSignature, 'PNG', this.margin + 3, this.currentY + 2, colWidth - 6, signatureHeight - 8);
       } catch (error) {
         console.error('Error adding patient signature:', error);
       }
@@ -520,7 +524,7 @@ export class BasePDFGenerator {
         data.professionalData.firma.length > 100 && 
         data.professionalData.firma.startsWith('data:image')) {
       try {
-        this.pdf.addImage(data.professionalData.firma, 'PNG', this.margin + 2 * colWidth + 2, this.currentY + 1, colWidth - 4, signatureHeight - 6);
+        this.pdf.addImage(data.professionalData.firma, 'PNG', this.margin + 2 * colWidth + 3, this.currentY + 2, colWidth - 6, signatureHeight - 8);
       } catch (error) {
         console.error('Error adding professional signature:', error);
       }
@@ -528,31 +532,31 @@ export class BasePDFGenerator {
     
     this.currentY += signatureHeight;
     
-    // Signature labels
+    // Signature labels con mayor espaciado
     const labelY = this.currentY;
-    this.pdf.setFontSize(5);
+    this.pdf.setFontSize(6);
     this.pdf.setFont('helvetica', 'normal');
     
     // Patient signature label
-    this.pdf.text('Firma paciente', this.margin + 2, labelY + 3);
-    this.pdf.text(`Documento: ${data.patientData.numeroDocumento}`, this.margin + 2, labelY + 6);
+    this.pdf.text('Firma paciente', this.margin + 2, labelY + 4);
+    this.pdf.text(`Documento: ${data.patientData.numeroDocumento}`, this.margin + 2, labelY + 8);
     
     // Representative signature label (middle column)
-    this.pdf.text('Firma Representante legal:', this.margin + colWidth + 2, labelY + 3);
+    this.pdf.text('Firma Representante legal:', this.margin + colWidth + 2, labelY + 4);
     if (data.guardianData) {
-      this.pdf.text(`Documento: ${data.guardianData.documento}`, this.margin + colWidth + 2, labelY + 6);
+      this.pdf.text(`Documento: ${data.guardianData.documento}`, this.margin + colWidth + 2, labelY + 8);
     } else {
-      this.pdf.text('Documento:', this.margin + colWidth + 2, labelY + 6);
+      this.pdf.text('Documento:', this.margin + colWidth + 2, labelY + 8);
     }
     
     // Professional signature label
-    this.pdf.text('Nombre y documento de quien toma el', this.margin + 2 * colWidth + 2, labelY + 3);
-    this.pdf.text('consentimiento:', this.margin + 2 * colWidth + 2, labelY + 6);
-    this.pdf.setFontSize(5);
-    this.pdf.text(data.professionalData.nombreCompleto, this.margin + 2 * colWidth + 2, labelY + 9);
-    this.pdf.text(`Doc: ${data.professionalData.documento}`, this.margin + 2 * colWidth + 2, labelY + 12);
+    this.pdf.text('Nombre y documento de quien toma el', this.margin + 2 * colWidth + 2, labelY + 4);
+    this.pdf.text('consentimiento:', this.margin + 2 * colWidth + 2, labelY + 8);
+    this.pdf.setFontSize(6);
+    this.pdf.text(data.professionalData.nombreCompleto, this.margin + 2 * colWidth + 2, labelY + 12);
+    this.pdf.text(`Doc: ${data.professionalData.documento}`, this.margin + 2 * colWidth + 2, labelY + 16);
     
-    this.currentY += 14;
+    this.currentY += 18;
     
     // Add patient photo if available
     if (data.patientPhoto && 
@@ -631,16 +635,16 @@ export class BasePDFGenerator {
 
   protected drawSectionHeader(title: string) {
     this.pdf.setFillColor(200, 220, 240);
-    this.pdf.rect(this.margin, this.currentY, this.contentWidth, 5, 'F');
-    this.pdf.setLineWidth(0.2);
-    this.pdf.rect(this.margin, this.currentY, this.contentWidth, 5);
+    this.pdf.rect(this.margin, this.currentY, this.contentWidth, 6, 'F');
+    this.pdf.setLineWidth(0.3);
+    this.pdf.rect(this.margin, this.currentY, this.contentWidth, 6);
     
-    this.pdf.setFontSize(7);
+    this.pdf.setFontSize(8);
     this.pdf.setFont('helvetica', 'bold');
     this.pdf.setTextColor(0, 0, 0);
-    this.pdf.text(title, this.margin + this.contentWidth / 2, this.currentY + 3.5, { align: 'center' });
+    this.pdf.text(title, this.margin + this.contentWidth / 2, this.currentY + 4, { align: 'center' });
     
-    this.currentY += 5.5;
+    this.currentY += 7;
   }
 
   protected drawFooter() {
