@@ -252,6 +252,36 @@ export type Database = {
         }
         Relationships: []
       }
+      role_permissions: {
+        Row: {
+          created_at: string
+          id: string
+          is_enabled: boolean
+          permission_key: string
+          permission_label: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          permission_key: string
+          permission_label: string
+          role: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_enabled?: boolean
+          permission_key?: string
+          permission_label?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -323,10 +353,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_role_permission: {
+        Args: {
+          p_is_enabled?: boolean
+          p_permission_key: string
+          p_permission_label: string
+          p_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: undefined
+      }
       assign_user_roles: {
         Args: {
           p_roles: Database["public"]["Enums"]["app_role"][]
           p_user_id: string
+        }
+        Returns: undefined
+      }
+      delete_role_permission: {
+        Args: {
+          p_permission_key: string
+          p_role: Database["public"]["Enums"]["app_role"]
         }
         Returns: undefined
       }
@@ -364,6 +410,14 @@ export type Database = {
           signed_at: string
           signed_by_name: string
           status: string
+        }[]
+      }
+      get_role_permissions: {
+        Args: { p_role: Database["public"]["Enums"]["app_role"] }
+        Returns: {
+          is_enabled: boolean
+          permission_key: string
+          permission_label: string
         }[]
       }
       get_users_with_roles: {
@@ -446,6 +500,18 @@ export type Database = {
           signed_at: string
           status: string
         }[]
+      }
+      update_role_permission: {
+        Args: {
+          p_is_enabled: boolean
+          p_permission_key: string
+          p_role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: undefined
+      }
+      user_has_permission: {
+        Args: { p_permission_key: string }
+        Returns: boolean
       }
     }
     Enums: {
