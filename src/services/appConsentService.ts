@@ -367,10 +367,12 @@ class AppConsentService {
           // El webhook requiere el nombre completo del procedimiento
           tipo_procedimiento: procedimientoMedico,
           procedimiento_medico: procedimientoMedico,
+          diagnostico: procedimientoMedico,
           nombre_consentimiento: this.getConsentDisplayName(normalizedConsentType),
           // Debe reflejar la decisión real del paciente (APROBAR/DISENTIR)
           aceptacion_procedimiento: aceptacionProcedimiento,
           fecha_firma: data.signedAt || new Date().toISOString(),
+          fecha_documento: new Date().toISOString().split('T')[0],
           profesional_nombre_completo: data.professionalName || '',
           profesional_documento: data.professionalDocument || null,
           profesional_firma: data.professionalSignature || null,
