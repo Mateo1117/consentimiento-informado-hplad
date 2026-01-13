@@ -9,32 +9,47 @@ import logoHospital from "@/assets/logo_hospital_transparent.png";
 export function AuthenticatedHeader() {
   const {
     user,
-    signOut
+    signOut,
+    isAdmin,
+    roles
   } = useAuth();
   const navigate = useNavigate();
-  const getUserRole = () => {
-    return user?.user_metadata?.role || 'usuario';
+  
+  const getRoleLabel = () => {
+    if (roles.includes('admin')) return 'Administrador';
+    if (roles.includes('doctor')) return 'Médico';
+    if (roles.includes('lab_technician')) return 'Técnico de Laboratorio';
+    if (roles.includes('receptionist')) return 'Recepcionista';
+    if (roles.includes('viewer')) return 'Visualizador';
+    return 'Usuario';
   };
-  const getRoleBadge = (role: string) => {
-    const roleConfig = {
-      doctor: {
-        label: "Médico",
-        className: "bg-blue-100 text-blue-800"
-      },
-      nurse: {
-        label: "Enfermero/a",
-        className: "bg-green-100 text-green-800"
-      },
+  const getRoleBadge = () => {
+    const roleConfig: Record<string, { label: string; className: string }> = {
       admin: {
         label: "Administrador",
         className: "bg-purple-100 text-purple-800"
       },
-      usuario: {
-        label: "Usuario",
+      doctor: {
+        label: "Médico",
+        className: "bg-blue-100 text-blue-800"
+      },
+      lab_technician: {
+        label: "Técnico Lab",
+        className: "bg-green-100 text-green-800"
+      },
+      receptionist: {
+        label: "Recepcionista",
+        className: "bg-orange-100 text-orange-800"
+      },
+      viewer: {
+        label: "Visualizador",
         className: "bg-gray-100 text-gray-800"
       }
     };
-    const config = roleConfig[role as keyof typeof roleConfig] || roleConfig.usuario;
+    
+    const primaryRole = roles[0] || 'viewer';
+    const config = roleConfig[primaryRole] || roleConfig.viewer;
+    
     return <Badge className={config.className}>
         {config.label}
       </Badge>;
@@ -64,15 +79,19 @@ export function AuthenticatedHeader() {
                 Gestionar Consentimientos
               </Button>
               
-              <Button onClick={() => navigate("/doctor-registration")} variant="outline" className="text-white border-white bg-transparent hover:bg-white hover:text-medical-blue font-medium">
-                <UserPlus className="h-4 w-4 mr-2" />
-                Registrar Médico
-              </Button>
-              
-              <Button onClick={() => navigate("/admin")} variant="outline" className="text-white border-white bg-transparent hover:bg-white hover:text-medical-blue font-medium">
-                <Settings className="h-4 w-4 mr-2" />
-                Panel Admin
-              </Button>
+              {isAdmin && (
+                <>
+                  <Button onClick={() => navigate("/doctor-registration")} variant="outline" className="text-white border-white bg-transparent hover:bg-white hover:text-medical-blue font-medium">
+                    <UserPlus className="h-4 w-4 mr-2" />
+                    Registrar Médico
+                  </Button>
+                  
+                  <Button onClick={() => navigate("/admin")} variant="outline" className="text-white border-white bg-transparent hover:bg-white hover:text-medical-blue font-medium">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Panel Admin
+                  </Button>
+                </>
+              )}
             </div>
 
             {/* User Menu */}
@@ -93,22 +112,26 @@ export function AuthenticatedHeader() {
                       {user?.email}
                     </p>
                     <div className="mt-1">
-                      {getRoleBadge(getUserRole())}
+                      {getRoleBadge()}
                     </div>
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => navigate("/admin")}>
-                  <Shield className="h-4 w-4 mr-2" />
-                  Panel de Administración
-                </DropdownMenuItem>
+                {isAdmin && (
+                  <>
+                    <DropdownMenuItem onClick={() => navigate("/admin")}>
+                      <Shield className="h-4 w-4 mr-2" />
+                      Panel de Administración
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onClick={() => navigate("/doctor-registration")}>
+                      <UserPlus className="h-4 w-4 mr-2" />
+                      Registrar Médico
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuItem onClick={() => navigate("/consent-management")}>
                   <Database className="h-4 w-4 mr-2" />
                   Gestión de Consentimientos
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => navigate("/doctor-registration")}>
-                  <UserPlus className="h-4 w-4 mr-2" />
-                  Registrar Médico
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={signOut} className="text-red-600">
