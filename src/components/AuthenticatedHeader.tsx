@@ -1,83 +1,60 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu";
-import { Settings, Database, User, LogOut, Shield, UserPlus } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { FileHeart, Settings, Database, User, LogOut, Shield, UserPlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
-import logoHospital from "@/assets/logo_hospital.png";
-
 export function AuthenticatedHeader() {
-  const { user, signOut } = useAuth();
+  const {
+    user,
+    signOut
+  } = useAuth();
   const navigate = useNavigate();
-
   const getUserRole = () => {
     return user?.user_metadata?.role || 'usuario';
   };
-
   const getRoleBadge = (role: string) => {
     const roleConfig = {
-      doctor: { label: "Médico", className: "bg-blue-100 text-blue-800" },
-      nurse: { label: "Enfermero/a", className: "bg-green-100 text-green-800" },
-      admin: { label: "Administrador", className: "bg-purple-100 text-purple-800" },
-      usuario: { label: "Usuario", className: "bg-gray-100 text-gray-800" }
+      doctor: {
+        label: "Médico",
+        className: "bg-blue-100 text-blue-800"
+      },
+      nurse: {
+        label: "Enfermero/a",
+        className: "bg-green-100 text-green-800"
+      },
+      admin: {
+        label: "Administrador",
+        className: "bg-purple-100 text-purple-800"
+      },
+      usuario: {
+        label: "Usuario",
+        className: "bg-gray-100 text-gray-800"
+      }
     };
-    
     const config = roleConfig[role as keyof typeof roleConfig] || roleConfig.usuario;
-    return (
-      <Badge className={config.className}>
+    return <Badge className={config.className}>
         {config.label}
-      </Badge>
-    );
+      </Badge>;
   };
-
-  return (
-    <header className="bg-gradient-to-r from-medical-blue to-medical-blue/90 text-white shadow-lg">
+  return <header className="bg-gradient-to-r from-medical-blue to-medical-blue/90 text-white shadow-lg">
       <div className="container mx-auto px-4 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <img 
-              src={logoHospital} 
-              alt="Logo E.S.E Hospital La Mesa" 
-              className="h-14 w-auto object-contain bg-white rounded-lg p-1"
-            />
-            <div>
-              <h1 className="text-xl font-bold">Sistema de Consentimientos Informados</h1>
-              <p className="text-blue-100 text-sm">E.S.E Hospital La Mesa Pedro León Álvarez Díaz - Laboratorio</p>
-            </div>
-          </div>
+        <div className="flex-row flex items-end justify-between text-primary-foreground bg-primary border-0">
+          
           
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <Button
-                onClick={() => navigate("/consent-management")}
-                variant="outline"
-                className="text-white border-white bg-transparent hover:bg-white hover:text-medical-blue font-medium"
-              >
+              <Button onClick={() => navigate("/consent-management")} variant="outline" className="text-white border-white bg-transparent hover:bg-white hover:text-medical-blue font-medium">
                 <Database className="h-4 w-4 mr-2" />
                 Gestionar Consentimientos
               </Button>
               
-              <Button
-                onClick={() => navigate("/doctor-registration")}
-                variant="outline"
-                className="text-white border-white bg-transparent hover:bg-white hover:text-medical-blue font-medium"
-              >
+              <Button onClick={() => navigate("/doctor-registration")} variant="outline" className="text-white border-white bg-transparent hover:bg-white hover:text-medical-blue font-medium">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Registrar Médico
               </Button>
               
-              <Button
-                onClick={() => navigate("/admin")}
-                variant="outline"
-                className="text-white border-white bg-transparent hover:bg-white hover:text-medical-blue font-medium"
-              >
+              <Button onClick={() => navigate("/admin")} variant="outline" className="text-white border-white bg-transparent hover:bg-white hover:text-medical-blue font-medium">
                 <Settings className="h-4 w-4 mr-2" />
                 Panel Admin
               </Button>
@@ -128,6 +105,5 @@ export function AuthenticatedHeader() {
           </div>
         </div>
       </div>
-    </header>
-  );
+    </header>;
 }
