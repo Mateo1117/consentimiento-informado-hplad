@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -23,7 +24,8 @@ import {
   Info,
   Edit,
   Save,
-  X
+  X,
+  Lock
 } from "lucide-react";
 
 type AppRole = 'admin' | 'doctor' | 'lab_technician' | 'receptionist' | 'viewer';
@@ -41,12 +43,29 @@ interface RolePermission {
   is_enabled: boolean;
 }
 
+interface DynamicRole {
+  id: string;
+  name: string;
+  display_name: string;
+  description: string | null;
+  is_system: boolean;
+  is_active: boolean;
+}
+
 interface RoleDefinition {
   role: AppRole;
   label: string;
   description: string;
   color: string;
 }
+
+const ROLE_COLORS: Record<string, string> = {
+  admin: "bg-red-100 text-red-800 border-red-200",
+  doctor: "bg-blue-100 text-blue-800 border-blue-200",
+  lab_technician: "bg-green-100 text-green-800 border-green-200",
+  receptionist: "bg-purple-100 text-purple-800 border-purple-200",
+  viewer: "bg-gray-100 text-gray-800 border-gray-200"
+};
 
 const ROLE_DEFINITIONS: RoleDefinition[] = [
   {
@@ -95,8 +114,16 @@ export function RoleManagement() {
   const [isAddPermissionDialogOpen, setIsAddPermissionDialogOpen] = useState(false);
   const [newPermission, setNewPermission] = useState({ key: "", label: "" });
 
+  // Dynamic roles management state
+  const [dynamicRoles, setDynamicRoles] = useState<DynamicRole[]>([]);
+  const [isLoadingRoles, setIsLoadingRoles] = useState(false);
+  const [isRoleFormDialogOpen, setIsRoleFormDialogOpen] = useState(false);
+  const [editingRole, setEditingRole] = useState<DynamicRole | null>(null);
+  const [roleForm, setRoleForm] = useState({ name: "", display_name: "", description: "" });
+
   useEffect(() => {
     loadUsers();
+    loadDynamicRoles();
   }, []);
 
   useEffect(() => {
@@ -136,6 +163,104 @@ export function RoleManagement() {
       toast.error("Error al cargar permisos: " + error.message);
     } finally {
       setIsLoadingPermissions(false);
+    }
+  };
+
+  const loadDynamicRoles = async () => {
+    setIsLoadingRoles(true);
+    try {
+      const { data, error } = await supabase.rpc('get_all_roles');
+      
+      if (error) throw error;
+      
+      setDynamicRoles(data || []);
+    } catch (error: any) {
+      console.error('Error loading roles:', error);
+      toast.error("Error al cargar roles: " + error.message);
+    } finally {
+      setIsLoadingRoles(false);
+    }
+  };
+
+  const openRoleFormDialog = (role?: DynamicRole) => {
+    if (role) {
+      setEditingRole(role);
+      setRoleForm({
+        name: role.name,
+        display_name: role.display_name,
+        description: role.description || ""
+      });
+    } else {
+      setEditingRole(null);
+      setRoleForm({ name: "", display_name: "", description: "" });
+    }
+    setIsRoleFormDialogOpen(true);
+  };
+
+  const handleSaveRole = async () => {
+    if (!roleForm.display_name.trim()) {
+      toast.error("El nombre del rol es requerido");
+      return;
+    }
+
+    try {
+      if (editingRole) {
+        // Update existing role
+        const { error } = await supabase.rpc('update_role', {
+          p_role_id: editingRole.id,
+          p_display_name: roleForm.display_name.trim(),
+          p_description: roleForm.description.trim() || null
+        });
+
+        if (error) throw error;
+        toast.success("Rol actualizado exitosamente");
+      } else {
+        // Create new role
+        if (!roleForm.name.trim()) {
+          toast.error("La clave del rol es requerida");
+          return;
+        }
+
+        const { error } = await supabase.rpc('create_role', {
+          p_name: roleForm.name.trim(),
+          p_display_name: roleForm.display_name.trim(),
+          p_description: roleForm.description.trim() || null
+        });
+
+        if (error) throw error;
+        toast.success("Rol creado exitosamente");
+      }
+
+      setIsRoleFormDialogOpen(false);
+      setRoleForm({ name: "", display_name: "", description: "" });
+      setEditingRole(null);
+      loadDynamicRoles();
+    } catch (error: any) {
+      console.error('Error saving role:', error);
+      toast.error("Error al guardar rol: " + error.message);
+    }
+  };
+
+  const handleDeleteRole = async (role: DynamicRole) => {
+    if (role.is_system) {
+      toast.error("No se pueden eliminar roles del sistema");
+      return;
+    }
+
+    if (!confirm(`¿Está seguro de eliminar el rol "${role.display_name}"?`)) return;
+
+    try {
+      const { error } = await supabase.rpc('delete_role', {
+        p_role_id: role.id
+      });
+
+      if (error) throw error;
+
+      toast.success("Rol eliminado exitosamente");
+      loadDynamicRoles();
+    } catch (error: any) {
+      console.error('Error deleting role:', error);
+      toast.error("Error al eliminar rol: " + error.message);
     }
   };
 
@@ -256,8 +381,12 @@ export function RoleManagement() {
 
   return (
     <div className="space-y-6">
-      <Tabs defaultValue="permissions" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs defaultValue="roles" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="roles" className="flex items-center gap-2">
+            <Shield className="h-4 w-4" />
+            Gestión de Roles
+          </TabsTrigger>
           <TabsTrigger value="permissions" className="flex items-center gap-2">
             <Key className="h-4 w-4" />
             Gestión de Permisos
@@ -267,6 +396,116 @@ export function RoleManagement() {
             Asignación de Roles
           </TabsTrigger>
         </TabsList>
+
+        {/* Roles Tab */}
+        <TabsContent value="roles" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Shield className="h-5 w-5" />
+                    Gestión de Roles del Sistema
+                  </CardTitle>
+                  <CardDescription>
+                    Cree, edite y elimine roles personalizados
+                  </CardDescription>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Button 
+                    onClick={() => openRoleFormDialog()}
+                    className="bg-medical-blue hover:bg-medical-blue/90"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Crear Rol
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    onClick={loadDynamicRoles}
+                    disabled={isLoadingRoles}
+                  >
+                    <RefreshCw className={`h-4 w-4 ${isLoadingRoles ? 'animate-spin' : ''}`} />
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ScrollArea className="h-[500px]">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Rol</TableHead>
+                      <TableHead>Clave</TableHead>
+                      <TableHead>Descripción</TableHead>
+                      <TableHead className="text-center">Tipo</TableHead>
+                      <TableHead className="text-center">Acciones</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dynamicRoles.map((role) => (
+                      <TableRow key={role.id}>
+                        <TableCell>
+                          <Badge className={ROLE_COLORS[role.name] || "bg-indigo-100 text-indigo-800 border-indigo-200"}>
+                            {role.display_name}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="font-mono text-sm text-muted-foreground">
+                          {role.name}
+                        </TableCell>
+                        <TableCell className="max-w-[300px] truncate text-muted-foreground">
+                          {role.description || "-"}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          {role.is_system ? (
+                            <Badge variant="outline" className="gap-1">
+                              <Lock className="h-3 w-3" />
+                              Sistema
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary">Personalizado</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            {!role.is_system && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => openRoleFormDialog(role)}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                                  onClick={() => handleDeleteRole(role)}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                            {role.is_system && (
+                              <span className="text-sm text-muted-foreground">No editable</span>
+                            )}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {dynamicRoles.length === 0 && !isLoadingRoles && (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                          No hay roles configurados
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
         {/* Permissions Tab */}
         <TabsContent value="permissions" className="space-y-6">
@@ -609,6 +848,81 @@ export function RoleManagement() {
             <Button onClick={handleAddPermission} className="bg-medical-blue hover:bg-medical-blue/90">
               <Save className="h-4 w-4 mr-2" />
               Guardar Permiso
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Create/Edit Role Dialog */}
+      <Dialog open={isRoleFormDialogOpen} onOpenChange={setIsRoleFormDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {editingRole ? <Edit className="h-5 w-5" /> : <Plus className="h-5 w-5" />}
+              {editingRole ? "Editar Rol" : "Crear Nuevo Rol"}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {!editingRole && (
+              <div className="space-y-2">
+                <Label htmlFor="role-name">Clave del Rol *</Label>
+                <Input
+                  id="role-name"
+                  placeholder="ej: supervisor"
+                  value={roleForm.name}
+                  onChange={(e) => setRoleForm(prev => ({ 
+                    ...prev, 
+                    name: e.target.value.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '') 
+                  }))}
+                  disabled={!!editingRole}
+                />
+                <p className="text-xs text-muted-foreground">
+                  Identificador único en formato snake_case (no se puede cambiar después)
+                </p>
+              </div>
+            )}
+
+            <div className="space-y-2">
+              <Label htmlFor="role-display-name">Nombre del Rol *</Label>
+              <Input
+                id="role-display-name"
+                placeholder="ej: Supervisor de Área"
+                value={roleForm.display_name}
+                onChange={(e) => setRoleForm(prev => ({ ...prev, display_name: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Nombre visible para los usuarios
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="role-description">Descripción</Label>
+              <Textarea
+                id="role-description"
+                placeholder="ej: Puede supervisar y aprobar consentimientos de su área"
+                value={roleForm.description}
+                onChange={(e) => setRoleForm(prev => ({ ...prev, description: e.target.value }))}
+                rows={3}
+              />
+              <p className="text-xs text-muted-foreground">
+                Descripción de las responsabilidades y accesos del rol
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsRoleFormDialogOpen(false);
+                setRoleForm({ name: "", display_name: "", description: "" });
+                setEditingRole(null);
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveRole} className="bg-medical-blue hover:bg-medical-blue/90">
+              <Save className="h-4 w-4 mr-2" />
+              {editingRole ? "Guardar Cambios" : "Crear Rol"}
             </Button>
           </DialogFooter>
         </DialogContent>
