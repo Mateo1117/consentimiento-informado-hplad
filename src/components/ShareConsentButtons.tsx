@@ -146,7 +146,7 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
           size="sm"
           variant="outline"
           onClick={() => openExternalLink(
-            consentService.generateWhatsAppLink(shareableConsent.shareUrl, consentData.patientName)
+            consentService.generateWhatsAppLink(shareableConsent.shareUrl, consentData.patientName, patientPhone)
           )}
           className="text-green-600 hover:text-green-700"
         >

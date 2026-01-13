@@ -143,11 +143,13 @@ class ConsentService {
     }
   }
 
-  generateWhatsAppLink(shareUrl: string, patientName: string): string {
+  generateWhatsAppLink(shareUrl: string, patientName: string, phone?: string): string {
     const message = encodeURIComponent(
       `Hola ${patientName}, necesitas firmar un consentimiento informado. Por favor ingresa al siguiente enlace: ${shareUrl}`
     );
-    return `https://wa.me/?text=${message}`;
+    // Use wa.me for better compatibility - if phone provided, send to specific number
+    const phoneNumber = phone ? phone.replace(/\D/g, '') : '';
+    return phoneNumber ? `https://wa.me/${phoneNumber}?text=${message}` : `https://wa.me/?text=${message}`;
   }
 
   generateSMSLink(phone: string, shareUrl: string, patientName: string): string {

@@ -128,5 +128,5 @@ export class HIVPDFGenerator extends BasePDFGenerator {
 // Export helper function for backwards compatibility
 export async function generateHIVPDF(data: HIVPDFData): Promise<jsPDF> {
   const generator = new HIVPDFGenerator();
-  return await generator.generate(data);
+  return await generator.generateFromData(data);
 }

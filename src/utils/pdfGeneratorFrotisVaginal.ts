@@ -127,5 +127,5 @@ export class FrotisVaginalPDFGenerator extends BasePDFGenerator {
 // Export helper function for backwards compatibility
 export async function generateFrotisVaginalPDF(data: FrotisVaginalPDFData): Promise<jsPDF> {
   const generator = new FrotisVaginalPDFGenerator();
-  return await generator.generate(data);
+  return await generator.generateFromData(data);
 }
