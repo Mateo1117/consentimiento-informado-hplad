@@ -1,5 +1,5 @@
 import jsPDF from 'jspdf';
-import { getLogoBase64 } from './pdfLogoHelper';
+import { BasePDFGenerator, BasePDFData, BasePDFProcedureItem } from './pdfGeneratorBase';
 
 interface PatientData {
   nombre: string;
@@ -35,596 +35,97 @@ interface HIVPDFData {
   time: string;
 }
 
-export class HIVPDFGenerator {
-  private pdf: jsPDF;
-  private pageWidth: number;
-  private pageHeight: number;
-  private margin: number;
-  private currentY: number;
-  private lineHeight: number;
-  private logoBase64: string | null = null;
-
-  constructor() {
-    this.pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: 'a4'
-    });
-    this.pageWidth = this.pdf.internal.pageSize.getWidth();
-    this.pageHeight = this.pdf.internal.pageSize.getHeight();
-    this.margin = 10;
-    this.currentY = this.margin;
-    this.lineHeight = 4;
+// Datos del procedimiento de Prueba VIH
+const HIV_PROCEDURE_DATA: BasePDFProcedureItem[] = [
+  {
+    label: 'PROCEDIMIENTO',
+    value: 'PRUEBA PRESUNTIVA DE VIH'
+  },
+  {
+    label: 'DESCRIPCIÓN DEL PROCEDIMIENTO',
+    value: 'Por medio de una muestra de sangre, se procesa y se identifica o descarta la presencia activa del virus de la inmunodeficiencia Humana (VIH), el cual puede infectar y destruir las células del sistema de defensa del cuerpo (Sistema inmune), originando una falla progresiva y grave en las defensas del organismo, el cual queda expuesto a infecciones y ciertos tipos de tumores. La prueba inicial, es una prueba presuntiva, y debe ser interpretada por un médico. Ya que, el hecho de salir reactiva no implica que usted esté infectado por el virus. Lo que es muy importante, es consultar con un médico.'
+  },
+  {
+    label: 'PROPÓSITO',
+    value: 'Detectar a tiempo la infección por VIH para recibir tratamiento oportuno.'
+  },
+  {
+    label: 'BENEFICIOS ESPERADOS',
+    value: 'Detección oportuna del VIH.'
+  },
+  {
+    label: 'RIESGOS',
+    value: '1. Sangrado excesivo, 2. Desmayo o sensación de mareo, 3. Hematoma (acumulación de sangre debajo de la piel, que se pone de color morado a negro), 4. Infección de la piel, 5. Necesidad de hacer punciones múltiples para localizar las venas, 6. Punción traumática, 7. Trauma posterior a la entrega del resultado por error de interpretación de los resultados o por no consultar con un médico.'
+  },
+  {
+    label: 'IMPLICACIONES',
+    value: 'A algunas personas cuando se les informa que tiene anticuerpos contra VIH (resultado reactivo) pueden llegar a presentar fuertes reacciones emocionales, incluyendo ansiedad y depresión. También puede ser objeto de discriminación o rechazo por otras personas e instituciones.'
+  },
+  {
+    label: 'EFECTOS INEVITABLES',
+    value: '1. Dolor en el sitio de punción para toma de muestra, 2. Molestia por presión ejercida con el torniquete, 3. Impresión fuerte al observar la sangre en el tubo contenedor.'
+  },
+  {
+    label: 'ALTERNATIVAS RAZONABLES A ESTE PROCEDIMIENTO',
+    value: 'Ninguna.'
+  },
+  {
+    label: 'POSIBLES CONSECUENCIAS EN CASO QUE DECIDA NO ACEPTAR EL PROCEDIMIENTO',
+    value: 'Impedimento para que el personal médico pueda realizar un diagnóstico y generar un plan de tratamiento.'
+  },
+  {
+    label: 'RIESGOS EN FUNCIÓN DE LA SITUACIÓN CLÍNICA DEL PACIENTE',
+    value: '[Campo a completar según situación específica del paciente]'
   }
+];
 
-  async loadLogo(): Promise<void> {
-    try {
-      this.logoBase64 = await getLogoBase64();
-    } catch (error) {
-      console.error('Error loading logo:', error);
-    }
-  }
-
-  async generate(data: HIVPDFData): Promise<jsPDF> {
-    await this.loadLogo();
-    this.drawHeader(data);
-    this.drawPatientData(data);
-    this.drawGuardianData(data);
-    this.drawProcedureData();
-    
-    if (data.consentDecision === 'aprobar') {
-      // Patient accepts: draw consent section with signatures
-      this.drawConsentText();
-      this.drawSignatures(data);
-    } else {
-      // Patient declines: only draw dissent section
-      this.drawDissentSection(data);
-    }
-    
-    return this.pdf;
-  }
-
-  private drawHeader(data: HIVPDFData) {
-    // E.S.E HOSPITAL LA MESA - PEDRO LEÓN ÁLVAREZ DÍAZ
-    this.pdf.setFontSize(8);
-    this.pdf.setFont('helvetica', 'bold');
-    
-    // Draw main border rectangle for header
-    this.pdf.rect(this.margin, this.margin, this.pageWidth - 2 * this.margin, 25);
-    
-    // Left section - Hospital info with logo
-    const leftBoxWidth = 50;
-    this.pdf.rect(this.margin, this.margin, leftBoxWidth, 25);
-    
-    // Add logo if available
-    if (this.logoBase64) {
-      try {
-        const logoSize = 21;
-        const logoX = this.margin + 2;
-        const logoY = this.margin + 2;
-        this.pdf.addImage(this.logoBase64, 'PNG', logoX, logoY, logoSize, logoSize);
-      } catch (error) {
-        console.error('Error adding logo to PDF:', error);
-        // Fallback to text if logo fails
-        this.pdf.setFontSize(9);
-        this.pdf.text('E.S.E', this.margin + 15, this.margin + 6);
-        this.pdf.text('HOSPITAL', this.margin + 10, this.margin + 10);
-        this.pdf.text('LA MESA', this.margin + 12, this.margin + 14);
-        this.pdf.setFontSize(7);
-        this.pdf.text('PEDRO LEÓN ÁLVAREZ DÍAZ', this.margin + 2, this.margin + 18);
-      }
-    } else {
-      this.pdf.setFontSize(9);
-      this.pdf.text('E.S.E', this.margin + 15, this.margin + 6);
-      this.pdf.text('HOSPITAL', this.margin + 10, this.margin + 10);
-      this.pdf.text('LA MESA', this.margin + 12, this.margin + 14);
-      this.pdf.setFontSize(7);
-      this.pdf.text('PEDRO LEÓN ÁLVAREZ DÍAZ', this.margin + 2, this.margin + 18);
-    }
-    
-    // Center section - Format title
-    const centerX = this.margin + leftBoxWidth;
-    const centerWidth = this.pageWidth - 2 * this.margin - leftBoxWidth - 50;
-    this.pdf.rect(centerX, this.margin, centerWidth, 25);
-    
-    this.pdf.setFontSize(9);
-    this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('FORMATO 39', centerX + centerWidth/2 - 15, this.margin + 6);
-    this.pdf.text('CONSENTIMIENTO INFORMADO', centerX + centerWidth/2 - 25, this.margin + 10);
-    this.pdf.text('PARA PRUEBA PRESUNTIVA DE VIH', centerX + centerWidth/2 - 30, this.margin + 14);
-    
-    // Right section - Code table
-    const rightX = this.pageWidth - this.margin - 50;
-    this.pdf.rect(rightX, this.margin, 50, 25);
-    
-    // Code sub-sections
-    this.pdf.rect(rightX, this.margin, 25, 8);
-    this.pdf.rect(rightX + 25, this.margin, 25, 8);
-    this.pdf.setFontSize(6);
-    this.pdf.text('Código', rightX + 2, this.margin + 5);
-    this.pdf.text('SC-M-09.39', rightX + 27, this.margin + 5);
-    
-    this.pdf.rect(rightX, this.margin + 8, 25, 8);
-    this.pdf.rect(rightX + 25, this.margin + 8, 25, 8);
-    this.pdf.text('Versión', rightX + 2, this.margin + 13);
-    this.pdf.text('02', rightX + 27, this.margin + 13);
-    
-    this.pdf.rect(rightX, this.margin + 16, 25, 9);
-    this.pdf.rect(rightX + 25, this.margin + 16, 25, 9);
-    this.pdf.text('Fecha', rightX + 2, this.margin + 21);
-    this.pdf.text('28-12-2022', rightX + 26, this.margin + 21);
-    
-    this.currentY = this.margin + 30;
-  }
-
-  private drawPatientData(data: HIVPDFData) {
-    // Patient data section
-    this.pdf.setFillColor(240, 240, 240);
-    this.pdf.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, 6, 'F');
-    
-    this.pdf.setFontSize(9);
-    this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('DATOS DEL PACIENTE', this.margin + 2, this.currentY + 4);
-    
-    this.currentY += 8;
-    
-    // Patient table
-    const tableStartY = this.currentY;
-    const tableWidth = this.pageWidth - 2 * this.margin;
-    const colWidths = [60, 20, 30, 20, 30, 30];
-    
-    // Headers
-    this.pdf.setFontSize(7);
-    this.pdf.setFont('helvetica', 'bold');
-    
-    let currentX = this.margin;
-    const headers = ['NOMBRE COMPLETO', 'SEXO', 'FECHA Y HORA', 'EDAD', 'EAPB', 'RÉGIMEN'];
-    
-    for (let i = 0; i < headers.length; i++) {
-      this.pdf.rect(currentX, tableStartY, colWidths[i], 8);
-      this.pdf.text(headers[i], currentX + 2, tableStartY + 5);
-      currentX += colWidths[i];
-    }
-    
-    // Data row
-    this.pdf.setFont('helvetica', 'normal');
-    currentX = this.margin;
-    const patientName = `${data.patientData.nombre} ${data.patientData.apellidos}`;
-    const fechaHora = `${data.date} ${data.time}`;
-    
-    const dataValues = [
-      patientName,
-      data.patientData.sexo || 'N/D',
-      fechaHora,
-      data.patientData.edad.toString(),
-      data.patientData.eps || 'N/D',
-      'S' // Régimen - would need to be added to patient data
-    ];
-    
-    for (let i = 0; i < dataValues.length; i++) {
-      this.pdf.rect(currentX, tableStartY + 8, colWidths[i], 8);
-      // Wrap text if too long
-      const lines = this.pdf.splitTextToSize(dataValues[i], colWidths[i] - 2);
-      this.pdf.text(lines, currentX + 1, tableStartY + 13);
-      currentX += colWidths[i];
-    }
-    
-    // Document section
-    this.currentY = tableStartY + 18;
-    const docTableY = this.currentY;
-    
-    // Document headers
-    this.pdf.setFont('helvetica', 'bold');
-    const docHeaders = ['DOCUMENTO - N° HC', 'TIPO', 'EDAD'];
-    const docColWidths = [50, 30, 20];
-    
-    currentX = this.margin;
-    for (let i = 0; i < docHeaders.length; i++) {
-      this.pdf.rect(currentX, docTableY, docColWidths[i], 8);
-      this.pdf.text(docHeaders[i], currentX + 2, docTableY + 5);
-      currentX += docColWidths[i];
-    }
-    
-    // Document data
-    this.pdf.setFont('helvetica', 'normal');
-    currentX = this.margin;
-    const docValues = [data.patientData.numeroDocumento, data.patientData.tipoDocumento, data.patientData.edad.toString()];
-    
-    for (let i = 0; i < docValues.length; i++) {
-      this.pdf.rect(currentX, docTableY + 8, docColWidths[i], 8);
-      this.pdf.text(docValues[i], currentX + 1, docTableY + 13);
-      currentX += docColWidths[i];
-    }
-    
-    this.currentY = docTableY + 20;
-  }
-
-  private drawGuardianData(data: HIVPDFData) {
-    if (!data.guardianData) return;
-    
-    // Guardian section header
-    this.pdf.setFillColor(240, 240, 240);
-    this.pdf.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, 6, 'F');
-    
-    this.pdf.setFontSize(9);
-    this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('DATOS DEL ACUDIENTE O REPRESENTANTE', this.margin + 2, this.currentY + 4);
-    
-    this.currentY += 8;
-    
-    // Guardian table
-    const guardianTableY = this.currentY;
-    const guardianHeaders = ['NOMBRE COMPLETO:', 'DOCUMENTO:'];
-    const guardianColWidths = [100, 80];
-    
-    let currentX = this.margin;
-    for (let i = 0; i < guardianHeaders.length; i++) {
-      this.pdf.rect(currentX, guardianTableY, guardianColWidths[i], 8);
-      this.pdf.setFont('helvetica', 'bold');
-      this.pdf.text(guardianHeaders[i], currentX + 2, guardianTableY + 5);
-      currentX += guardianColWidths[i];
-    }
-    
-    // Guardian data
-    currentX = this.margin;
-    const guardianValues = [data.guardianData.name, data.guardianData.document];
-    
-    for (let i = 0; i < guardianValues.length; i++) {
-      this.pdf.rect(currentX, guardianTableY + 8, guardianColWidths[i], 8);
-      this.pdf.setFont('helvetica', 'normal');
-      this.pdf.text(guardianValues[i], currentX + 1, guardianTableY + 13);
-      currentX += guardianColWidths[i];
-    }
-    
-    // Phone and relationship
-    this.currentY = guardianTableY + 18;
-    const phoneRelTableY = this.currentY;
-    
-    currentX = this.margin;
-    this.pdf.rect(currentX, phoneRelTableY, 100, 8);
-    this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('TELÉFONO:', currentX + 2, phoneRelTableY + 5);
-    
-    this.pdf.rect(currentX + 100, phoneRelTableY, 80, 8);
-    this.pdf.text('VÍNCULO O PARENTESCO CON EL PACIENTE:', currentX + 102, phoneRelTableY + 5);
-    
-    // Phone and relationship data
-    this.pdf.rect(currentX, phoneRelTableY + 8, 100, 8);
-    this.pdf.setFont('helvetica', 'normal');
-    this.pdf.text(data.guardianData.phone || '', currentX + 1, phoneRelTableY + 13);
-    
-    this.pdf.rect(currentX + 100, phoneRelTableY + 8, 80, 8);
-    this.pdf.text(data.guardianData.relationship, currentX + 101, phoneRelTableY + 13);
-    
-    this.currentY = phoneRelTableY + 20;
-  }
-
-  private drawProcedureData() {
-    // Procedure section header
-    this.pdf.setFillColor(240, 240, 240);
-    this.pdf.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, 6, 'F');
-    
-    this.pdf.setFontSize(9);
-    this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('DATOS DEL PROCEDIMIENTO', this.margin + 2, this.currentY + 4);
-    
-    this.currentY += 8;
-    
-    // Procedure table
-    const procedureData = [
-      {
-        label: 'PROCEDIMIENTO',
-        value: 'PRUEBA PRESUNTIVA DE VIH'
+export class HIVPDFGenerator extends BasePDFGenerator {
+  async generateFromData(data: HIVPDFData): Promise<jsPDF> {
+    // Transform data to base format
+    const baseData: BasePDFData = {
+      documentMeta: {
+        formatoNumero: 'FORMATO 39',
+        titulo: 'CONSENTIMIENTO INFORMADO',
+        subtitulo: 'PARA PRUEBA PRESUNTIVA DE VIH',
+        codigo: 'SC-M-09.39',
+        version: '02',
+        fecha: '28-12-2022'
       },
-      {
-        label: 'DESCRIPCIÓN DEL PROCEDIMIENTO',
-        value: 'Por medio de una muestra de sangre, se procesa y se identifica o descarta la presencia activa del virus de la inmunodeficiencia Humana (VIH), el cual puede infectar y destruir las células del sistema de defensa del cuerpo (Sistema inmune), originando una falla progresiva y grave en las defensas del organismo, el cual queda expuesto a infecciones y ciertos tipos de tumores. La prueba inicial, es una prueba presuntiva, y debe ser interpretada por un médico. Ya que, el hecho de salir reactiva no implica que usted esté infectado por el virus. Lo que es muy importante, es consultar con un médico.'
+      patientData: {
+        nombreCompleto: `${data.patientData.nombre} ${data.patientData.apellidos}`,
+        tipoDocumento: data.patientData.tipoDocumento,
+        numeroDocumento: data.patientData.numeroDocumento,
+        fechaNacimiento: data.patientData.fechaNacimiento,
+        edad: data.patientData.edad,
+        sexo: data.patientData.sexo,
+        eps: data.patientData.eps,
+        telefono: data.patientData.telefono,
+        direccion: data.patientData.direccion,
+        regimen: 'S'
       },
-      {
-        label: 'PROPÓSITO',
-        value: 'Detectar a tiempo la infección por VIH para recibir tratamiento oportuno.'
+      guardianData: data.guardianData ? {
+        nombreCompleto: data.guardianData.name,
+        documento: data.guardianData.document,
+        telefono: data.guardianData.phone,
+        vinculo: data.guardianData.relationship
+      } : null,
+      procedureData: HIV_PROCEDURE_DATA,
+      professionalData: {
+        nombreCompleto: data.professionalName,
+        documento: data.professionalDocument,
+        firma: data.professionalSignature || undefined
       },
-      {
-        label: 'BENEFICIOS ESPERADOS',
-        value: 'Detección oportuna del VIH.'
-      },
-      {
-        label: 'RIESGOS',
-        value: '1. Sangrado excesivo, 2. Desmayo o sensación de mareo, 3. Hematoma (acumulación de sangre debajo de la piel, que se pone de color morado a negro), 4. Infección de la piel, 5. Necesidad de hacer punciones múltiples para localizar las venas, 6. Punción traumática, 7. Trauma posterior a la entrega del resultado por error de interpretación de los resultados o por no consultar con un médico.'
-      },
-      {
-        label: 'IMPLICACIONES',
-        value: 'A algunas personas cuando se les informa que tiene anticuerpos contra VIH (resultado reactivo) pueden llegar a presentar fuertes reacciones emocionales, incluyendo ansiedad y depresión. También puede ser objeto de discriminación o rechazo por otras personas e instituciones.'
-      },
-      {
-        label: 'EFECTOS INEVITABLES',
-        value: '1. Dolor en el sitio de punción para toma de muestra, 2. Molestia por presión ejercida con el torniquete, 3. Impresión fuerte al observar la sangre en el tubo contenedor.'
-      },
-      {
-        label: 'ALTERNATIVAS RAZONABLES A ESTE PROCEDIMIENTO',
-        value: 'Ninguna.'
-      },
-      {
-        label: 'POSIBLES CONSECUENCIAS EN CASO QUE DECIDA NO ACEPTAR EL PROCEDIMIENTO',
-        value: 'Impedimento para que el personal médico pueda realizar un diagnóstico y generar un plan de tratamiento.'
-      },
-      {
-        label: 'RIESGOS EN FUNCIÓN DE LA SITUACIÓN CLÍNICA DEL PACIENTE',
-        value: '[Campo a completar según situación específica del paciente]'
-      }
-    ];
-    
-    for (const item of procedureData) {
-      const itemHeight = this.calculateTextHeight(item.value, this.pageWidth - 80);
-      const totalHeight = Math.max(itemHeight + 6, 12);
-      
-      // Check if we need a new page
-      if (this.currentY + totalHeight > this.pageHeight - this.margin) {
-        this.pdf.addPage();
-        this.currentY = this.margin;
-      }
-      
-      // Draw label cell
-      this.pdf.rect(this.margin, this.currentY, 40, totalHeight);
-      this.pdf.setFont('helvetica', 'bold');
-      this.pdf.setFontSize(7);
-      const labelLines = this.pdf.splitTextToSize(item.label, 38);
-      this.pdf.text(labelLines, this.margin + 1, this.currentY + 4);
-      
-      // Draw value cell
-      this.pdf.rect(this.margin + 40, this.currentY, this.pageWidth - 2 * this.margin - 40, totalHeight);
-      this.pdf.setFont('helvetica', 'normal');
-      const valueLines = this.pdf.splitTextToSize(item.value, this.pageWidth - 2 * this.margin - 42);
-      this.pdf.text(valueLines, this.margin + 41, this.currentY + 4);
-      
-      this.currentY += totalHeight;
-    }
-  }
+      patientSignature: data.patientSignature || undefined,
+      patientPhoto: data.patientPhoto || undefined,
+      consentDecision: data.consentDecision,
+      fechaHora: `${data.date} ${data.time}`
+    };
 
-  private drawConsentText() {
-    this.currentY += 5;
-    
-    // Consent section header
-    this.pdf.setFillColor(240, 240, 240);
-    this.pdf.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, 6, 'F');
-    
-    this.pdf.setFontSize(9);
-    this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('CONSENTIMIENTO', this.margin + 2, this.currentY + 4);
-    
-    this.currentY += 10;
-    
-    // Consent text
-    this.pdf.setFont('helvetica', 'normal');
-    this.pdf.setFontSize(8);
-    
-    const consentTexts = [
-      'Yo, identificado(a) como aparece junto a mi firma/huella, hago constar que he recibido información clara relacionada con: Garantía de confidencialidad de mis datos personales y demás información que yo entregue, con salvedad de la información que deba ser comunicada a personas, o a las autoridades competentes según mi caso. También me informaron sobre el procedimiento en sí, su propósito(s), los beneficios esperados, los posibles riesgos frecuentes o graves, las posibles consecuencias si decido no aceptar el procedimiento, las posibles molestias, la posibilidad de participación de personal en formación bajo supervisión.',
-      '',
-      'Fui informado(a) también que: a) Puedo denegar mi consentimiento, sin que ello implique desmejora del trato que recibiré de parte del equipo de salud, y que puedo acceder a otros servicios en salud que requiera en tanto estén disponibles, b) Aunque firme en este momento este documento, aceptando me sea(n) realizada(s) la(s) intervención(es), puedo retirar mi consentimiento de manera parcial o total, en cualquier momento anterior a la realización de la intervención, y sin que para ello precise dar explicaciones o justificar mi decisión, c) Que en caso tal que mi decisión sea anular o cancelar, mi consentimiento, dejaré constancia de ella por escrito y firmada o con mi huella dactilar.',
-      '',
-      'Actuando en nombre propio [X] / en calidad de representante legal [ ] de la/del paciente cuyos nombres e identificación están registrados en el encabezado de este documento, autorizo al personal asistencial de esta institución, para que me/le realice el/los procedimiento(s) arriba señalado(s) y, en caso de ser necesario, tome las medidas y conductas médicas necesarias para salvaguardar mí integridad física, de acuerdo a como se presenten las situaciones imprevistas en el curso del procedimiento.',
-      '',
-      `En manifestación de aceptación firmo/pongo mi huella en este documento a los ${new Date().getDate()} días del mes de ${new Date().toLocaleDateString('es-ES', { month: 'long' })} de ${new Date().getFullYear()}`
-    ];
-    
-    for (const text of consentTexts) {
-      if (text === '') {
-        this.currentY += 3;
-        continue;
-      }
-      
-      const lines = this.pdf.splitTextToSize(text, this.pageWidth - 2 * this.margin - 4);
-      const textHeight = lines.length * 4;
-      
-      if (this.currentY + textHeight > this.pageHeight - this.margin - 40) {
-        this.pdf.addPage();
-        this.currentY = this.margin;
-      }
-      
-      this.pdf.text(lines, this.margin + 2, this.currentY + 4);
-      this.currentY += textHeight;
-    }
-  }
-
-  private drawSignatures(data: HIVPDFData) {
-    // Add space for signatures
-    this.currentY += 10;
-    
-    if (this.currentY > this.pageHeight - 80) {
-      this.pdf.addPage();
-      this.currentY = this.margin;
-    }
-    
-    // Signature section header
-    this.pdf.setFillColor(240, 240, 240);
-    this.pdf.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, 6, 'F');
-    
-    this.pdf.setFontSize(9);
-    this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('FIRMAS', this.margin + 2, this.currentY + 4);
-    
-    this.currentY += 10;
-    
-    // Signature boxes
-    const boxWidth = 80;
-    const boxHeight = 40;
-    const spacing = 10;
-    const startX = this.margin;
-    
-    // Patient signature
-    this.pdf.rect(startX, this.currentY, boxWidth, boxHeight);
-    this.pdf.setFontSize(8);
-    this.pdf.setFont('helvetica', 'normal');
-    
-    // Add patient signature
-    if (data.patientSignature && 
-        typeof data.patientSignature === 'string' && 
-        data.patientSignature.length > 50 && 
-        data.patientSignature.startsWith('data:image/png;base64,')) {
-      try {
-        this.pdf.addImage(data.patientSignature, 'PNG', startX + 2, this.currentY + 2, boxWidth - 4, 30);
-      } catch (error) {
-        console.error('Error adding patient signature:', error);
-      }
-    }
-    
-    this.pdf.setFillColor(255, 255, 255);
-    this.pdf.text('_________________________', startX + 5, this.currentY + boxHeight - 5);
-    this.pdf.text('Firma Paciente/Acudiente', startX + 15, this.currentY + boxHeight + 5);
-    this.pdf.text(`Doc: ${data.patientData.numeroDocumento}`, startX + 15, this.currentY + boxHeight + 10);
-    
-    // Professional signature
-    const profX = startX + boxWidth + spacing;
-    this.pdf.rect(profX, this.currentY, boxWidth, boxHeight);
-    
-    // Add professional signature
-    if (data.professionalSignature && 
-        typeof data.professionalSignature === 'string' &&
-        data.professionalSignature.length > 50 && 
-        data.professionalSignature.startsWith('data:image/png;base64,')) {
-      try {
-        this.pdf.addImage(data.professionalSignature, 'PNG', profX + 2, this.currentY + 2, boxWidth - 4, 30);
-      } catch (error) {
-        console.error('Error adding professional signature:', error);
-      }
-    }
-    
-    this.pdf.text('_________________________', profX + 5, this.currentY + boxHeight - 5);
-    this.pdf.text('Firma Profesional', profX + 20, this.currentY + boxHeight + 5);
-    this.pdf.text(`${data.professionalName}`, profX + 5, this.currentY + boxHeight + 10);
-    this.pdf.text(`Doc: ${data.professionalDocument}`, profX + 5, this.currentY + boxHeight + 15);
-    
-    this.currentY += boxHeight + 25;
-    
-    // Add patient photo if available
-    if (data.patientPhoto) {
-      try {
-        this.pdf.text('Foto del Paciente:', this.margin, this.currentY);
-        this.currentY += 5;
-        this.pdf.addImage(data.patientPhoto, 'JPEG', this.margin, this.currentY, 40, 30);
-        this.currentY += 35;
-      } catch (error) {
-        console.error('Error adding patient photo:', error);
-      }
-    }
-    
-    // Date and time
-    this.pdf.setFontSize(8);
-    this.pdf.text(`Fecha: ${data.date} - Hora: ${data.time}`, this.margin, this.currentY);
-    this.pdf.text(`Decisión: ${data.consentDecision === 'aprobar' ? 'APROBÓ el procedimiento' : 'DISENTIÓ el procedimiento'}`, this.margin, this.currentY + 5);
-  }
-
-  private drawDissentSection(data: HIVPDFData) {
-    this.currentY += 10;
-    
-    // Check if we need a new page
-    if (this.currentY > this.pageHeight - 100) {
-      this.pdf.addPage();
-      this.currentY = this.margin;
-    }
-    
-    // Separator line
-    this.pdf.line(this.margin, this.currentY, this.pageWidth - this.margin, this.currentY);
-    this.currentY += 5;
-    
-    // Dissent section header
-    this.pdf.setFillColor(240, 240, 240);
-    this.pdf.rect(this.margin, this.currentY, this.pageWidth - 2 * this.margin, 6, 'F');
-    
-    this.pdf.setFontSize(9);
-    this.pdf.setFont('helvetica', 'bold');
-    this.pdf.text('DECISIÓN DE DESISTIMIENTO', this.margin + 2, this.currentY + 4);
-    
-    this.currentY += 10;
-    
-    // Dissent text with filled patient name
-    this.pdf.setFont('helvetica', 'normal');
-    this.pdf.setFontSize(8);
-    
-    const patientName = `${data.patientData.nombre} ${data.patientData.apellidos}`;
-    const currentDate = new Date();
-    const day = currentDate.getDate();
-    const monthNames = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 
-                       'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-    const month = monthNames[currentDate.getMonth()];
-    const year = currentDate.getFullYear();
-    
-    const dissentText = `Yo, ${patientName}, identificada(o) como aparece junto a mi firma/huella, actuando en nombre propio [X] / en calidad de representante legal [ ] de la/del paciente cuyo nombre e identificación están registrados en el encabezado de este documento, manifiesto -de forma libre, informada y consciente-, mi voluntad de retirar mi consentimiento respecto de la realización de la intervención/ del procedimiento arriba nombrado, que me/le había sido propuesta(o) realizarme (le). He sido informada(o) que, por causa de mi decisión, no cambia la disposición del equipo asistencial a proporcionarme (le) las alternativas de atención, con las limitaciones, que mi decisión genera; Manifiesto que me hago responsable de las consecuencias que puedan derivarse de esta decisión.`;
-    
-    const lines = this.pdf.splitTextToSize(dissentText, this.pageWidth - 2 * this.margin - 4);
-    const textHeight = lines.length * 4;
-    
-    if (this.currentY + textHeight > this.pageHeight - this.margin - 40) {
-      this.pdf.addPage();
-      this.currentY = this.margin;
-    }
-    
-    this.pdf.text(lines, this.margin + 2, this.currentY + 4);
-    this.currentY += textHeight + 5;
-    
-    // Date text with filled values
-    const dateText = `En manifestación de aceptación firmo/pongo mi huella en este documento a los ${day} días del mes de ${month} de ${year}`;
-    const dateLines = this.pdf.splitTextToSize(dateText, this.pageWidth - 2 * this.margin - 4);
-    this.pdf.text(dateLines, this.margin + 2, this.currentY + 4);
-    this.currentY += dateLines.length * 4 + 10;
-    
-    // Signature section for withdrawal
-    const boxWidth = 55;
-    const boxHeight = 25;
-    const startX = this.margin + 5;
-    
-    // Patient/Guardian signature
-    this.pdf.rect(startX, this.currentY, boxWidth, boxHeight);
-    if (data.patientSignature) {
-      try {
-        this.pdf.addImage(data.patientSignature, 'PNG', startX + 2, this.currentY + 2, boxWidth - 4, boxHeight - 4);
-      } catch (error) {
-        console.error('Error adding patient signature to withdrawal:', error);
-      }
-    }
-    
-    // Professional signature
-    this.pdf.rect(startX + boxWidth + 10, this.currentY, boxWidth, boxHeight);
-    if (data.professionalSignature) {
-      try {
-        this.pdf.addImage(data.professionalSignature, 'PNG', startX + boxWidth + 12, this.currentY + 2, boxWidth - 4, boxHeight - 4);
-      } catch (error) {
-        console.error('Error adding professional signature to withdrawal:', error);
-      }
-    }
-    
-    // Professional details box
-    this.pdf.rect(startX + 2 * (boxWidth + 10), this.currentY, boxWidth, boxHeight);
-    
-    this.currentY += boxHeight + 5;
-    
-    // Labels under signature boxes
-    this.pdf.setFontSize(7);
-    const signatureLabels = data.guardianData ? 
-      'Firma Acudiente                     Firma Profesional                   Nombre y documento de quien toma el' : 
-      'Firma Paciente                      Firma Profesional                   Nombre y documento de quien toma el';
-    
-    this.pdf.text(signatureLabels, this.margin + 5, this.currentY);
-    this.currentY += 3;
-    this.pdf.text('                                                                            consentimiento', this.margin + 5, this.currentY);
-    this.currentY += 5;
-    
-    // Document numbers
-    const documentNumbers = `Documento: ${data.guardianData ? data.guardianData.document : data.patientData.numeroDocumento}              Documento: ${data.professionalDocument}              Documento: ${data.guardianData ? data.guardianData.document : data.patientData.numeroDocumento}`;
-    this.pdf.text(documentNumbers, this.margin + 5, this.currentY);
-    this.currentY += 5;
-    
-    // Decision text
-    this.pdf.text('Decisión: DISENTIÓ el procedimiento', this.margin + 5, this.currentY);
-  }
-
-  private calculateTextHeight(text: string, maxWidth: number): number {
-    const lines = this.pdf.splitTextToSize(text, maxWidth);
-    return lines.length * 4;
+    return await super.generate(baseData);
   }
 }
 
+// Export helper function for backwards compatibility
 export async function generateHIVPDF(data: HIVPDFData): Promise<jsPDF> {
   const generator = new HIVPDFGenerator();
   return await generator.generate(data);
