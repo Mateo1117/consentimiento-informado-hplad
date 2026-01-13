@@ -9,7 +9,7 @@ import { AlertCircle, Shield, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import logoHospital from "@/assets/logo_hospital.png";
+import logoHospital from "@/assets/logo_hospital_transparent.png";
 
 export default function Auth() {
   const navigate = useNavigate();
