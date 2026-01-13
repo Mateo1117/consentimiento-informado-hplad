@@ -48,7 +48,7 @@ export function AuthenticatedHeader() {
             <img 
               src={logoHospital} 
               alt="Logo Hospital" 
-              className="h-12 w-auto cursor-pointer"
+              className="h-20 w-auto cursor-pointer"
               onClick={() => navigate("/")}
             />
           </div>
