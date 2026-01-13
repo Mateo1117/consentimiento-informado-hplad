@@ -388,31 +388,104 @@ class AppConsentService {
   }
 
   /**
+   * Normaliza el tipo de consentimiento para usarlo como clave estable.
+   * Acepta valores como: "VENOPUNCION", "Venopunción", "Carga de Glucosa", etc.
+   */
+  private normalizeConsentType(consentType: string): string {
+    const raw = (consentType || '').toString().trim().toLowerCase();
+    const noAccents = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const cleaned = noAccents
+      .replace(/[^\w\s-]/g, '')
+      .replace(/[\s-]+/g, '_')
+      .replace(/^_+|_+$/g, '');
+
+    const aliases: Record<string, string> = {
+      vih: 'hiv',
+      prueba_vih: 'hiv',
+      venopuncion: 'venopuncion',
+      toma_de_muestra_por_venopuncion: 'venopuncion',
+      carga_de_glucosa: 'carga_glucosa',
+      carga_glucosa: 'carga_glucosa',
+      frotis_vaginal: 'frotis_vaginal',
+      hemocomponentes: 'hemocomponentes',
+      hemocomponentes_sanguineos: 'hemocomponentes',
+    };
+
+    return aliases[cleaned] || cleaned;
+  }
+
+  private getProcedureNameFromPayload(payload: any): string | null {
+    if (!payload) return null;
+
+    const arrCandidates = [payload.procedures, payload.selected_procedures, payload.selectedProcedures];
+    for (const arr of arrCandidates) {
+      if (Array.isArray(arr) && arr.length > 0) {
+        const joined = arr.filter(Boolean).join(' - ').trim();
+        if (joined) return joined;
+      }
+    }
+
+    const strCandidates = [
+      payload.procedimiento_medico,
+      payload.procedimientoMedico,
+      payload.procedureName,
+      payload.procedure,
+    ];
+
+    for (const s of strCandidates) {
+      if (typeof s === 'string' && s.trim()) return s.trim();
+    }
+
+    return null;
+  }
+
+  private getAceptacionProcedimiento(payload: any): 'Aceptado' | 'Rechazado' {
+    const decisionRaw =
+      payload?.decision ??
+      payload?.consentDecision ??
+      payload?.consent_decision ??
+      payload?.consent_decision;
+
+    if (typeof decisionRaw === 'string') {
+      const d = decisionRaw.toLowerCase().trim();
+      if (d === 'disentir' || d.includes('rechaz') || d.includes('no')) return 'Rechazado';
+      if (d === 'aprobar' || d.includes('acept') || d.includes('si')) return 'Aceptado';
+    }
+
+    if (payload?.accepted === false) return 'Rechazado';
+
+    // Fallback por compatibilidad
+    return 'Aceptado';
+  }
+
+  /**
    * Get display name for consent type
    */
   private getConsentDisplayName(consentType: string): string {
+    const key = this.normalizeConsentType(consentType);
     const displayNames: Record<string, string> = {
-      'venopuncion': 'Consentimiento Informado de Venopunción',
-      'hiv': 'Consentimiento Informado para Prueba de VIH',
-      'hemocomponentes': 'Consentimiento Informado de Hemocomponentes',
-      'carga_glucosa': 'Consentimiento Informado Curva de Carga de Glucosa',
-      'frotis_vaginal': 'Consentimiento Informado Frotis Vaginal'
+      venopuncion: 'Consentimiento Informado de Venopunción',
+      hiv: 'Consentimiento Informado para Prueba de VIH',
+      hemocomponentes: 'Consentimiento Informado de Hemocomponentes',
+      carga_glucosa: 'Consentimiento Informado Curva de Carga de Glucosa',
+      frotis_vaginal: 'Consentimiento Informado Frotis Vaginal'
     };
-    return displayNames[consentType] || `Consentimiento ${consentType}`;
+    return displayNames[key] || `Consentimiento ${key}`;
   }
 
   /**
    * Get full procedure name for webhook
    */
   private getProcedureName(consentType: string): string {
+    const key = this.normalizeConsentType(consentType);
     const procedureNames: Record<string, string> = {
-      'venopuncion': 'Toma de Muestra por Venopunción',
-      'hiv': 'Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)',
-      'hemocomponentes': 'Transfusión de Hemocomponentes Sanguíneos',
-      'carga_glucosa': 'Administración oral de carga de glucosa (Dextrosa Anhidra)',
-      'frotis_vaginal': 'Toma de Muestra para Frotis Vaginal - Cultivo Recto-Vaginal'
+      venopuncion: 'Toma de Muestra por Venopunción',
+      hiv: 'Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)',
+      hemocomponentes: 'Transfusión de Hemocomponentes Sanguíneos',
+      carga_glucosa: 'Administración oral de carga de glucosa (Dextrosa Anhidra)',
+      frotis_vaginal: 'Toma de Muestra para Frotis Vaginal - Cultivo Recto-Vaginal'
     };
-    return procedureNames[consentType] || consentType;
+    return procedureNames[key] || key;
   }
 }
 

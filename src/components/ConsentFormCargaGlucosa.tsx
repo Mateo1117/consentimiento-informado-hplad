@@ -267,6 +267,8 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
   return (
     <ConsentFormWrapper
       consentType="Carga de Glucosa"
+      consentTypeCode="carga_glucosa"
+      consentDecision={consentDecision}
       patientData={{
         nombre: patientData.nombre,
         apellidos: patientData.apellidos,

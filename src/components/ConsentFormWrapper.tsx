@@ -7,7 +7,12 @@ import { toast } from 'sonner';
 
 interface ConsentFormWrapperProps {
   children: React.ReactNode;
+  /** Etiqueta visible / nombre del consentimiento (para UI/archivo). */
   consentType: string;
+  /** Código interno estable (para BD/webhook). Ej: "venopuncion", "carga_glucosa", "hiv" */
+  consentTypeCode?: string;
+  /** Decisión del paciente: aprobar o disentir */
+  consentDecision?: "aprobar" | "disentir";
   patientData: {
     nombre: string;
     apellidos: string;
@@ -32,6 +37,8 @@ interface ConsentFormWrapperProps {
 export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
   children,
   consentType,
+  consentTypeCode,
+  consentDecision,
   patientData,
   onGeneratePDF,
   onGetHTMLContent,
@@ -48,6 +55,7 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       // Obtener firma y foto justo antes de guardar (usando callbacks si están disponibles)
       const currentPatientSignature = getPatientSignature?.() || patientSignature;
       const currentPatientPhoto = getPatientPhoto?.() || patientPhotoUrl;
+      const currentConsentDecision = consentDecision;
 
       // No loggear datos sensibles (base64). Solo presencia/longitud.
       console.log('📝 ConsentFormWrapper - Validación previa:', {
@@ -55,6 +63,9 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         signatureLength: currentPatientSignature?.length || 0,
         hasPhoto: !!currentPatientPhoto,
         photoLength: currentPatientPhoto?.length || 0,
+        consentDecision: currentConsentDecision,
+        consentType,
+        consentTypeCode,
       });
 
       // Validación requerida: firma del paciente
@@ -79,10 +90,12 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         patientDocumentNumber: patientData.numeroDocumento,
         patientEmail: patientData.email,
         patientPhone: patientData.telefono,
-        consentType,
+        consentType: consentTypeCode || consentType,
         payload: {
           patientData,
           professionalData,
+          decision: currentConsentDecision,
+          consentDecision: currentConsentDecision,
           patientSignature: currentPatientSignature,
           patientPhotoUrl: currentPatientPhoto,
           generatedAt: new Date().toISOString()

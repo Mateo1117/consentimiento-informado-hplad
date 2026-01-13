@@ -168,6 +168,8 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
   return (
     <ConsentFormWrapper
       consentType="Venopunción"
+      consentTypeCode="venopuncion"
+      consentDecision={consentDecision}
       patientData={{
         nombre: patientData.nombre,
         apellidos: patientData.apellidos,
