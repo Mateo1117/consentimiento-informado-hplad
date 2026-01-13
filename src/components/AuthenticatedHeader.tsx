@@ -8,9 +8,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
-import { FileHeart, Settings, Database, User, LogOut, Shield, UserPlus } from "lucide-react";
+import { Settings, Database, User, LogOut, Shield, UserPlus } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
+import logoHospital from "@/assets/logo_hospital.png";
 
 export function AuthenticatedHeader() {
   const { user, signOut } = useAuth();
@@ -40,11 +41,15 @@ export function AuthenticatedHeader() {
     <header className="bg-gradient-to-r from-medical-blue to-medical-blue/90 text-white shadow-lg">
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <FileHeart className="h-8 w-8" />
+          <div className="flex items-center gap-4">
+            <img 
+              src={logoHospital} 
+              alt="Logo E.S.E Hospital La Mesa" 
+              className="h-14 w-auto object-contain bg-white rounded-lg p-1"
+            />
             <div>
               <h1 className="text-xl font-bold">Sistema de Consentimientos Informados</h1>
-              <p className="text-blue-100 text-sm">Hospital Pedro Leon Alvarez Diaz de la Mesa - Laboratorio</p>
+              <p className="text-blue-100 text-sm">E.S.E Hospital La Mesa Pedro León Álvarez Díaz - Laboratorio</p>
             </div>
           </div>
           
