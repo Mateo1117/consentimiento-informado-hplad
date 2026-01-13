@@ -171,7 +171,7 @@ export default function Auth() {
             <img 
               src={logoHospital} 
               alt="Logo E.S.E Hospital La Mesa Pedro León Álvarez Díaz" 
-              className="h-28 w-auto object-contain"
+              className="h-40 w-auto object-contain"
             />
             <div>
               <h1 className="text-xl font-bold text-medical-blue">E.S.E Hospital La Mesa Pedro León Álvarez Díaz</h1>
