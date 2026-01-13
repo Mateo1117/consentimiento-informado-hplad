@@ -51,8 +51,9 @@ export function AuthenticatedHeader() {
               className="h-20 w-auto"
             />
             <div className="flex flex-col">
-              <span className="text-xl font-bold leading-tight">Hospital</span>
-              <span className="text-lg font-semibold leading-tight">San Francisco de Asís</span>
+              <span className="text-sm font-medium leading-tight">E.S.E. Hospital</span>
+              <span className="text-lg font-bold leading-tight">Pedro León Álvarez Díaz</span>
+              <span className="text-xs font-medium leading-tight text-white/80">La Mesa</span>
             </div>
           </div>
           
