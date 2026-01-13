@@ -43,14 +43,17 @@ export function AuthenticatedHeader() {
       <div className="container mx-auto px-4 py-4">
         <div className="flex-row flex items-center justify-between text-primary-foreground bg-primary border-0">
           
-          {/* Logo */}
-          <div className="flex items-center">
+          {/* Logo y Nombre */}
+          <div className="flex items-center gap-3 cursor-pointer" onClick={() => navigate("/")}>
             <img 
               src={logoHospital} 
               alt="Logo Hospital" 
-              className="h-20 w-auto cursor-pointer"
-              onClick={() => navigate("/")}
+              className="h-20 w-auto"
             />
+            <div className="flex flex-col">
+              <span className="text-xl font-bold leading-tight">Hospital</span>
+              <span className="text-lg font-semibold leading-tight">San Francisco de Asís</span>
+            </div>
           </div>
           
           <div className="flex items-center gap-4">
