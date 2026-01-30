@@ -465,18 +465,18 @@ class AppConsentService {
   }
 
   /**
-   * Get display name for consent type
+   * Get display name for consent type - debe coincidir con los botones de la UI
    */
   private getConsentDisplayName(consentType: string): string {
     const key = this.normalizeConsentType(consentType);
     const displayNames: Record<string, string> = {
-      venopuncion: 'Consentimiento Informado de Venopunción',
-      hiv: 'Consentimiento Informado para Prueba de VIH',
-      hemocomponentes: 'Consentimiento Informado de Hemocomponentes',
-      carga_glucosa: 'Consentimiento Informado Curva de Carga de Glucosa',
-      frotis_vaginal: 'Consentimiento Informado Frotis Vaginal'
+      hiv: 'VIH',
+      venopuncion: 'Venopunción',
+      carga_glucosa: 'Carga Glucosa',
+      frotis_vaginal: 'Frotis Vaginal',
+      hemocomponentes: 'Hemocomponentes'
     };
-    return displayNames[key] || `Consentimiento ${key}`;
+    return displayNames[key] || consentType;
   }
 
   /**
