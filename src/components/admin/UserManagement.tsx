@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
@@ -22,7 +22,10 @@ import {
   Mail,
   Phone,
   Building,
-  Briefcase
+  Briefcase,
+  Key,
+  Eye,
+  EyeOff
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -64,7 +67,12 @@ export function UserManagement() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   
   const [newUser, setNewUser] = useState({
     email: "",
@@ -223,6 +231,63 @@ export function UserManagement() {
     } catch (error: any) {
       console.error('Error toggling user status:', error);
       toast.error("Error al cambiar estado: " + error.message);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!selectedUser) return;
+
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("La contraseña debe tener al menos 6 caracteres");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      toast.error("Las contraseñas no coinciden");
+      return;
+    }
+
+    setIsResettingPassword(true);
+    
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (!session?.access_token) {
+        toast.error("No hay sesión activa");
+        return;
+      }
+
+      const response = await fetch(
+        `https://dbhamokkweyadibngphq.supabase.co/functions/v1/admin-reset-password`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({
+            user_id: selectedUser.user_id,
+            new_password: newPassword
+          })
+        }
+      );
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Error al cambiar contraseña');
+      }
+
+      toast.success("Contraseña actualizada exitosamente");
+      setIsPasswordDialogOpen(false);
+      setNewPassword("");
+      setConfirmPassword("");
+      setSelectedUser(null);
+    } catch (error: any) {
+      console.error('Error resetting password:', error);
+      toast.error("Error: " + error.message);
+    } finally {
+      setIsResettingPassword(false);
     }
   };
 
@@ -469,8 +534,23 @@ export function UserManagement() {
                             setSelectedUser(user);
                             setIsEditDialogOpen(true);
                           }}
+                          title="Editar perfil"
                         >
                           <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setNewPassword("");
+                            setConfirmPassword("");
+                            setIsPasswordDialogOpen(true);
+                          }}
+                          title="Cambiar contraseña"
+                          className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+                        >
+                          <Key className="h-4 w-4" />
                         </Button>
                         <Switch
                           checked={user.is_active}
@@ -568,6 +648,92 @@ export function UserManagement() {
             </Button>
             <Button onClick={handleUpdateProfile} className="bg-medical-blue hover:bg-medical-blue/90">
               Guardar Cambios
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Password Reset Dialog */}
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="h-5 w-5 text-orange-600" />
+              Cambiar Contraseña
+            </DialogTitle>
+            <DialogDescription>
+              Establezca una nueva contraseña para el usuario: <strong>{selectedUser?.full_name || selectedUser?.email}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label>Nueva Contraseña *</Label>
+              <div className="relative">
+                <Input
+                  type={showPassword ? "text" : "password"}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <Eye className="h-4 w-4 text-gray-400" />
+                  )}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>Confirmar Contraseña *</Label>
+              <Input
+                type={showPassword ? "text" : "password"}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                placeholder="Repita la contraseña"
+              />
+              {confirmPassword && newPassword !== confirmPassword && (
+                <p className="text-sm text-red-500">Las contraseñas no coinciden</p>
+              )}
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm text-amber-800">
+              <strong>Nota:</strong> El usuario deberá usar esta nueva contraseña la próxima vez que inicie sesión.
+            </div>
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setIsPasswordDialogOpen(false);
+                setNewPassword("");
+                setConfirmPassword("");
+              }}
+            >
+              Cancelar
+            </Button>
+            <Button 
+              onClick={handleResetPassword}
+              disabled={!newPassword || !confirmPassword || newPassword !== confirmPassword || isResettingPassword}
+              className="bg-orange-600 hover:bg-orange-700"
+            >
+              {isResettingPassword ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Actualizando...
+                </>
+              ) : (
+                <>
+                  <Key className="h-4 w-4 mr-2" />
+                  Cambiar Contraseña
+                </>
+              )}
             </Button>
           </DialogFooter>
         </DialogContent>
