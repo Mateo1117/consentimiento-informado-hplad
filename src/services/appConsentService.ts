@@ -465,18 +465,18 @@ class AppConsentService {
   }
 
   /**
-   * Get display name for consent type - debe coincidir con los botones de la UI
+   * Get display name for consent type - en MAYÚSCULAS para el webhook
    */
   private getConsentDisplayName(consentType: string): string {
     const key = this.normalizeConsentType(consentType);
     const displayNames: Record<string, string> = {
       hiv: 'VIH',
-      venopuncion: 'Venopunción',
-      carga_glucosa: 'Carga Glucosa',
-      frotis_vaginal: 'Frotis Vaginal',
-      hemocomponentes: 'Hemocomponentes'
+      venopuncion: 'VENOPUNCION',
+      carga_glucosa: 'GLUCOSA',
+      frotis_vaginal: 'FROTIS VAGINAL',
+      hemocomponentes: 'HEMOCOMPONENTES'
     };
-    return displayNames[key] || consentType;
+    return displayNames[key] || consentType.toUpperCase();
   }
 
   /**
