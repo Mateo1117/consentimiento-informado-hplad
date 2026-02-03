@@ -69,21 +69,21 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
   const [editableAge, setEditableAge] = useState<number | null>(null);
   const [searchError, setSearchError] = useState<{ message: string; type?: string } | null>(null);
   const documentTypes = [
-    { value: "NI", label: "Ninguno" },
-    { value: "CC", label: "Cédula de Ciudadanía" },
-    { value: "CE", label: "Cédula de Extranjería" },
-    { value: "TI", label: "Tarjeta de Identidad" },
-    { value: "RC", label: "Registro Civil" },
-    { value: "PA", label: "Pasaporte" },
-    { value: "AS", label: "Adulto sin Identificar" },
-    { value: "MS", label: "Menor sin Identificar" },
-    { value: "SC", label: "Salvoconducto de Permanencia" },
-    { value: "CN", label: "Certificado Nacido Vivo" },
-    { value: "CD", label: "Carné Diplomático" },
-    { value: "PE", label: "Permiso Especial de Permanencia" },
-    { value: "PT", label: "Permiso por Protección Temporal" },
-    { value: "DE", label: "Documento Extranjero" },
-    { value: "SI", label: "Sin Identificación" }
+    { value: "NI", label: "NI - Ninguno" },
+    { value: "CC", label: "CC - Cédula de Ciudadanía" },
+    { value: "CE", label: "CE - Cédula de Extranjería" },
+    { value: "TI", label: "TI - Tarjeta de Identidad" },
+    { value: "RC", label: "RC - Registro Civil" },
+    { value: "PA", label: "PA - Pasaporte" },
+    { value: "AS", label: "AS - Adulto sin Identificar" },
+    { value: "MS", label: "MS - Menor sin Identificar" },
+    { value: "SC", label: "SC - Salvoconducto de Permanencia" },
+    { value: "CN", label: "CN - Certificado Nacido Vivo" },
+    { value: "CD", label: "CD - Carné Diplomático" },
+    { value: "PE", label: "PE - Permiso Especial de Permanencia" },
+    { value: "PT", label: "PT - Permiso por Protección Temporal" },
+    { value: "DE", label: "DE - Documento Extranjero" },
+    { value: "SI", label: "SI - Sin Identificación" }
   ];
 
   // Function to calculate age from birth date
