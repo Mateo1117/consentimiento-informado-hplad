@@ -112,7 +112,10 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
         } : null,
         professionalName: professionalData.name,
         professionalDocument: professionalData.document,
-        patientSignature: requiresGuardian ? guardianSignatureData : patientSignatureData,
+        // Firma del paciente: solo cuando NO hay acudiente
+        patientSignature: requiresGuardian ? null : patientSignatureData,
+        // Firma del acudiente: solo cuando hay acudiente
+        guardianSignature: requiresGuardian ? guardianSignatureData : null,
         professionalSignature,
         patientPhoto: capturedPhoto,
         consentDecision,

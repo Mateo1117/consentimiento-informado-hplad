@@ -136,7 +136,10 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         } : null,
         professionalName: professionalData.name,
         professionalDocument: professionalData.document,
-        patientSignature: requiresGuardian ? guardianSignatureData : patientSignatureData,
+        // Firma del paciente: solo cuando NO hay acudiente
+        patientSignature: requiresGuardian ? null : patientSignatureData,
+        // Firma del acudiente: solo cuando hay acudiente
+        guardianSignature: requiresGuardian ? guardianSignatureData : null,
         professionalSignature: professionalSignatureData || '',
         patientPhoto: capturedPhoto,
         consentDecision,

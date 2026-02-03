@@ -28,6 +28,7 @@ interface VenopuncionPDFData {
   professionalName: string;
   professionalDocument: string;
   patientSignature: string | null;
+  guardianSignature?: string | null; // Firma del representante cuando aplica
   professionalSignature: string | null;
   patientPhoto?: string | null;
   consentDecision: "aprobar" | "disentir";
@@ -116,6 +117,7 @@ export class VenopuncionPDFGenerator extends BasePDFGenerator {
         firma: data.professionalSignature || undefined
       },
       patientSignature: data.patientSignature || undefined,
+      guardianSignature: data.guardianSignature || undefined,
       patientPhoto: data.patientPhoto || undefined,
       consentDecision: data.consentDecision,
       fechaHora: `${data.date} ${data.time}`
