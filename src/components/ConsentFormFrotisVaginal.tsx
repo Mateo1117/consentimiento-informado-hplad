@@ -148,27 +148,34 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
       return false;
     }
 
-    if (!patientSignature) {
-      toast.error("La firma del paciente es obligatoria");
-      return false;
-    }
-
     if (!professionalSignature) {
       toast.error("La firma del profesional es obligatoria");
       return false;
     }
 
-    if (isMinor) {
+    // Si tiene discapacidad o es menor, validar datos del acudiente
+    if (isMinor || hasDisability) {
       if (!guardianName.trim()) {
-        toast.error("El nombre del acudiente es obligatorio para menores de edad");
+        toast.error("El nombre del acudiente es obligatorio");
         return false;
       }
       if (!guardianDocument.trim()) {
-        toast.error("El documento del acudiente es obligatorio para menores de edad");
+        toast.error("El documento del acudiente es obligatorio");
         return false;
       }
       if (!guardianRelationship.trim()) {
-        toast.error("El parentesco del acudiente es obligatorio para menores de edad");
+        toast.error("El parentesco del acudiente es obligatorio");
+        return false;
+      }
+      if (!guardianSignature) {
+        toast.error("La firma del acudiente es obligatoria");
+        return false;
+      }
+      // Si tiene discapacidad, la firma del paciente no es obligatoria
+    } else {
+      // Solo si no tiene discapacidad ni es menor, la firma del paciente es obligatoria
+      if (!patientSignature) {
+        toast.error("La firma del paciente es obligatoria");
         return false;
       }
     }

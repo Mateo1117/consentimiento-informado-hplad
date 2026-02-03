@@ -93,6 +93,38 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
   const generatePDF = async (): Promise<Blob> => {
     console.log("🚀 INICIANDO GENERACIÓN DE PDF VENOPUNCIÓN");
     
+    // Validaciones
+    if (!professionalName.trim()) {
+      throw new Error("El nombre del profesional es obligatorio");
+    }
+    if (!professionalDocument.trim()) {
+      throw new Error("El documento del profesional es obligatorio");
+    }
+    if (!professionalSignature) {
+      throw new Error("La firma del profesional es obligatoria");
+    }
+
+    // Si tiene discapacidad o es menor, validar acudiente
+    const requiresGuardian = isMinor || hasDisability;
+    if (requiresGuardian) {
+      if (!guardianName.trim()) {
+        throw new Error("El nombre del acudiente es obligatorio");
+      }
+      if (!guardianDocument.trim()) {
+        throw new Error("El documento del acudiente es obligatorio");
+      }
+      if (!guardianRelationship.trim()) {
+        throw new Error("El parentesco del acudiente es obligatorio");
+      }
+      if (!guardianSignature) {
+        throw new Error("La firma del acudiente es obligatoria");
+      }
+    } else {
+      if (!patientSignature) {
+        throw new Error("La firma del paciente es obligatoria");
+      }
+    }
+    
     try {
       const currentDate = new Date();
       const date = currentDate.toLocaleDateString('es-CO');
@@ -101,30 +133,35 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
       console.log("📋 Verificando estado de las firmas...");
       console.log("🖊️ Firma del paciente:", patientSignature ? "SÍ EXISTE" : "NO EXISTE");
       console.log("👨‍⚕️ Firma del profesional:", professionalSignature ? "SÍ EXISTE" : "NO EXISTE");
+      console.log("👨‍👧 Firma del acudiente:", guardianSignature ? "SÍ EXISTE" : "NO EXISTE");
       
-      // Datos para el PDF - usar datos reales si existen
+      // Datos para el PDF
       const pdfData = {
         patientData: { ...patientData, sexo: patientData.sexo || 'N/D' },
-        guardianData: isMinor ? {
-          name: guardianName || "ACUDIENTE TEST",
-          document: guardianDocument || "87654321",
-          relationship: guardianRelationship || "PADRE/MADRE",
-          phone: guardianPhone || "3009876543"
+        guardianData: requiresGuardian ? {
+          name: guardianName,
+          document: guardianDocument,
+          relationship: guardianRelationship,
+          phone: guardianPhone
         } : null,
-        professionalName: professionalName || "DR. PROFESIONAL DE PRUEBA",
-        professionalDocument: professionalDocument || "12345678",
+        professionalName: professionalName,
+        professionalDocument: professionalDocument,
         patientSignature: patientSignature,
+        guardianSignature: guardianSignature,
         professionalSignature: professionalSignature,
         patientPhoto: patientPhoto,
         consentDecision: consentDecision || "aprobar",
         date,
-        time
+        time,
+        hasDisability,
+        isMinor
       };
 
       console.log("🔧 Generando PDF con datos:", {
         patientName: pdfData.patientData.nombre,
         professionalName: pdfData.professionalName,
         hasPatientSignature: !!pdfData.patientSignature,
+        hasGuardianSignature: !!pdfData.guardianSignature,
         hasProfessionalSignature: !!pdfData.professionalSignature,
         consentDecision: pdfData.consentDecision
       });
