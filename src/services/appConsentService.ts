@@ -61,11 +61,13 @@ class AppConsentService {
       // Normalizar firma/foto: si vienen como base64, subir a Storage para enviar URLs cortas al webhook
       const rawPatientSignature = data.patientSignature || data.payload?.patientSignature || null;
       const rawPatientPhoto = data.patientPhotoUrl || data.payload?.patientPhotoUrl || null;
+      const rawGuardianSignature = data.guardianSignature || data.payload?.guardianSignature || null;
 
       let patientSignatureForDb: string | null = rawPatientSignature;
       let patientPhotoForDb: string | null = rawPatientPhoto;
+      let guardianSignatureForDb: string | null = rawGuardianSignature;
 
-      // Subir firma (si es data URL) y usar URL pública
+      // Subir firma del paciente (si es data URL) y usar URL pública
       if (rawPatientSignature && rawPatientSignature.startsWith('data:image')) {
         const uploaded = await PhotoService.uploadPhoto(rawPatientSignature, 'firma_paciente');
         if (uploaded?.url) {
@@ -81,11 +83,21 @@ class AppConsentService {
         }
       }
 
+      // Subir firma del acudiente (si es data URL) y usar URL pública
+      if (rawGuardianSignature && rawGuardianSignature.startsWith('data:image')) {
+        const uploaded = await PhotoService.uploadPhoto(rawGuardianSignature, 'firma_acudiente');
+        if (uploaded?.url) {
+          guardianSignatureForDb = uploaded.url;
+        }
+      }
+
       logger.info('Firma/foto normalizadas', {
         hasSignature: !!patientSignatureForDb,
         hasPhoto: !!patientPhotoForDb,
+        hasGuardianSignature: !!guardianSignatureForDb,
         signatureIsUrl: !!patientSignatureForDb && patientSignatureForDb.startsWith('http'),
-        photoIsUrl: !!patientPhotoForDb && patientPhotoForDb.startsWith('http')
+        photoIsUrl: !!patientPhotoForDb && patientPhotoForDb.startsWith('http'),
+        guardianSignatureIsUrl: !!guardianSignatureForDb && guardianSignatureForDb.startsWith('http')
       });
 
       // Insert consent record con firma y foto del paciente
@@ -184,7 +196,7 @@ class AppConsentService {
           guardianDocument: data.guardianDocument,
           guardianRelationship: data.guardianRelationship,
           guardianPhone: data.guardianPhone,
-          guardianSignature: data.guardianSignature
+          guardianSignature: guardianSignatureForDb || undefined // Usar URL en lugar de base64
         });
         logger.info('Webhook de consentimiento enviado exitosamente');
       } catch (webhookError) {
