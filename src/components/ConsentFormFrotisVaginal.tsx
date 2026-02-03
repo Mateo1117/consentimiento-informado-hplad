@@ -684,62 +684,49 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
       </Card>
 
 
-      {/* Share Consent Buttons */}
-      <ShareConsentButtons
-        consentData={{
-          patientName: `${patientData.nombre} ${patientData.apellidos}`,
-          patientDocumentType: patientData.tipoDocumento,
-          patientDocumentNumber: patientData.numeroDocumento,
-          patientEmail: patientData.eps,
-          patientPhone: patientData.telefono,
-          consentType: 'FROTIS_VAGINAL',
-          payload: {
-            procedures: ['Toma de Muestra Frotis Vaginal - Cultivo Recto-Vaginal'],
-            risks: ['Ardor, dolor, picazón o incomodidad al momento de introducir el espéculo y el aplicador'],
-            benefits: ['Orientar y/o confirmar un diagnóstico y realizar seguimiento oportuno de una condición en salud'],
-            alternatives: ['Ninguna'],
-            decision: consentDecision
-          }
-        }}
-        onConsentCreated={(shareableConsent) => {
-          console.log('Enlace de consentimiento creado:', shareableConsent);
-        }}
-      />
+      <Separator />
 
-      {/* Botones de Acción */}
-      <Card className="border-medical-blue/20">
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              onClick={onBack}
-              variant="outline"
-              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 text-lg"
-              size="lg"
-            >
-              Volver
-            </Button>
-            
-            <Button
-              onClick={saveConsent}
-              disabled={isGeneratingPDF}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 text-lg gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-              size="lg"
-            >
-              {isGeneratingPDF ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Guardando...
-                </>
-              ) : (
-                <>
-                  <Download className="h-4 w-4" />
-                  Guardar Consentimiento
-                </>
-              )}
-            </Button>
+      {/* Botones de acción - orden unificado para todos los módulos */}
+      <div className="space-y-4">
+        {/* Botón principal: Generar Consentimiento */}
+        <div className="flex justify-center">
+          <Button
+            onClick={saveConsent}
+            disabled={isGeneratingPDF}
+            size="lg"
+            className="w-full sm:w-auto min-w-[300px]"
+          >
+            <FileText className="h-5 w-5 mr-2" />
+            {isGeneratingPDF ? 'Generando...' : 'Generar Consentimiento'}
+          </Button>
+        </div>
+        
+        {/* Botón secundario: Crear Enlace para Firma */}
+        <div className="flex justify-center">
+          <div className="w-full sm:w-auto min-w-[300px]">
+            <ShareConsentButtons 
+              consentData={{
+                patientName: `${patientData.nombre} ${patientData.apellidos}`,
+                patientDocumentType: patientData.tipoDocumento,
+                patientDocumentNumber: patientData.numeroDocumento,
+                patientEmail: patientData.eps,
+                patientPhone: patientData.telefono,
+                consentType: 'frotis_vaginal',
+                payload: {
+                  procedures: ['Toma de Muestra Frotis Vaginal - Cultivo Recto-Vaginal'],
+                  risks: ['Ardor, dolor, picazón o incomodidad al momento de introducir el espéculo y el aplicador'],
+                  benefits: ['Orientar y/o confirmar un diagnóstico y realizar seguimiento oportuno de una condición en salud'],
+                  alternatives: ['Ninguna'],
+                  decision: consentDecision
+                }
+              }}
+              onConsentCreated={(shareableConsent) => {
+                console.log('Enlace de consentimiento creado:', shareableConsent);
+              }}
+            />
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
     </div>
   );
