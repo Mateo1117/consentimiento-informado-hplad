@@ -12,6 +12,7 @@ import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, Shield, Download, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { ShareConsentButtons } from './ShareConsentButtons';
+import { GuardianSignatureSection, GuardianSignatureRef } from './GuardianSignatureSection';
 import { toast } from "sonner";
 
 
@@ -47,6 +48,12 @@ const procedimientos = [
 ];
 
 export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormProps) => {
+  // Determinar si es menor de edad
+  const isMinor = patientData.edad < 18;
+  
+  // Estado para discapacidad
+  const [hasDisability, setHasDisability] = useState(false);
+  
   const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [professionalName, setProfessionalName] = useState("");
@@ -55,10 +62,11 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
   const [agreedToConsent, setAgreedToConsent] = useState(false);
   const [consentDecision, setConsentDecision] = useState<"aprobar" | "disentir">("aprobar");
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [isMinor, setIsMinor] = useState(false);
   const [guardianName, setGuardianName] = useState("");
   const [guardianDocument, setGuardianDocument] = useState("");
   const [guardianRelationship, setGuardianRelationship] = useState("");
+  const [guardianPhone, setGuardianPhone] = useState("");
+  const [guardianSignature, setGuardianSignature] = useState<string | null>(null);
   const [enfoqueData, setEnfoqueData] = useState({
     gender: false,
     ethnicity: false,
@@ -72,6 +80,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
   const patientSignatureRef = useRef<SignatureRef>(null);
   const professionalSignatureRef = useRef<SignatureRef>(null);
   const cameraCaptureRef = useRef<CameraCaptureRef>(null);
+  const guardianSignatureRef = useRef<GuardianSignatureRef>(null);
   
   // Nuevos estados para las firmas
   const [patientSignature, setPatientSignature] = useState<string>("");
@@ -79,11 +88,8 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
   const [patientPhoto, setPatientPhoto] = useState<string | null>(null);
   const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
 
-  useEffect(() => {
-    if (patientData && patientData.edad < 18) {
-      setIsMinor(true);
-    }
-  }, [patientData]);
+  // Determinar si requiere firma de acudiente
+  const requiresGuardian = isMinor || hasDisability;
 
   const handleProcedureChange = (procedureId: string) => {
     setSelectedProcedures(prev => 
@@ -542,51 +548,23 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
       </Card>
 
 
-      {/* Minor Information */}
-      {isMinor && (
-        <Card className="border-orange-200 bg-orange-50">
-          <CardHeader>
-            <CardTitle className="text-orange-700 flex items-center gap-2">
-              <AlertCircle className="h-5 w-5" />
-              Información del Acudiente (Menor de Edad)
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="guardianName" className="text-orange-700">Nombre del Acudiente *</Label>
-                <Input
-                  id="guardianName"
-                  value={guardianName}
-                  onChange={(e) => setGuardianName(e.target.value)}
-                  placeholder="Nombre completo del acudiente"
-                  className="border-orange-200 focus:border-orange-400"
-                />
-              </div>
-              <div>
-                <Label htmlFor="guardianDocument" className="text-orange-700">Documento del Acudiente *</Label>
-                <Input
-                  id="guardianDocument"
-                  value={guardianDocument}
-                  onChange={(e) => setGuardianDocument(e.target.value)}
-                  placeholder="Número de documento"
-                  className="border-orange-200 focus:border-orange-400"
-                />
-              </div>
-              <div className="md:col-span-2">
-                <Label htmlFor="guardianRelationship" className="text-orange-700">Parentesco *</Label>
-                <Input
-                  id="guardianRelationship"
-                  value={guardianRelationship}
-                  onChange={(e) => setGuardianRelationship(e.target.value)}
-                  placeholder="Ej: Padre, Madre, Tutor legal"
-                  className="border-orange-200 focus:border-orange-400"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Sección de Acudiente - Menor de edad o discapacidad */}
+      <GuardianSignatureSection
+        ref={guardianSignatureRef}
+        isMinor={isMinor}
+        hasDisability={hasDisability}
+        onDisabilityChange={setHasDisability}
+        guardianName={guardianName}
+        onGuardianNameChange={setGuardianName}
+        guardianDocument={guardianDocument}
+        onGuardianDocumentChange={setGuardianDocument}
+        guardianRelationship={guardianRelationship}
+        onGuardianRelationshipChange={setGuardianRelationship}
+        guardianPhone={guardianPhone}
+        onGuardianPhoneChange={setGuardianPhone}
+        guardianSignature={guardianSignature}
+        onGuardianSignatureChange={setGuardianSignature}
+      />
 
 
       {/* Firmas Digitales */}

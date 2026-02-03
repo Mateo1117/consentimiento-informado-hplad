@@ -14,6 +14,7 @@ import { ProfessionalSelector } from './ProfessionalSelector';
 import { generateHIVPDF } from '@/utils/pdfGeneratorHIV';
 import { ShareConsentButtons } from './ShareConsentButtons';
 import { ConsentFormWrapper } from './ConsentFormWrapper';
+import { GuardianSignatureSection, GuardianSignatureRef } from './GuardianSignatureSection';
 
 interface PatientData {
   id: string;
@@ -36,12 +37,20 @@ interface ConsentFormHIVProps {
 }
 
 export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onBack }) => {
+  // Determinar si es menor de edad
+  const isMinor = patientData.edad < 18;
+  
+  // Estado para discapacidad
+  const [hasDisability, setHasDisability] = useState(false);
+  
+  // Estados para datos del acudiente
+  const [guardianName, setGuardianName] = useState('');
+  const [guardianDocument, setGuardianDocument] = useState('');
+  const [guardianRelationship, setGuardianRelationship] = useState('');
+  const [guardianPhone, setGuardianPhone] = useState('');
+  const [guardianSignature, setGuardianSignature] = useState<string | null>(null);
+
   const [formData, setFormData] = useState({
-    nombreAcudiente: '',
-    documentoAcudiente: '',
-    telefonoAcudiente: '',
-    vinculoAcudiente: '',
-    actuandoEnNombre: 'propio',
     fecha: new Date().toISOString().split('T')[0],
     hora: new Date().toLocaleTimeString('es-ES', { hour12: false }).slice(0, 5)
   });
@@ -56,37 +65,60 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
   });
   const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
   
-  // Refs para SignaturePads y CameraCapture
+  // Refs para SignaturePads, CameraCapture y GuardianSignature
   const signatureRef = useRef<SignatureRef>(null);
   const professionalSignatureRef = useRef<SignatureRef>(null);
   const cameraRef = useRef<CameraCaptureRef>(null);
+  const guardianSignatureRef = useRef<GuardianSignatureRef>(null);
+  
+  // Determinar si requiere firma de acudiente
+  const requiresGuardian = isMinor || hasDisability;
 
   const generatePDF = async (): Promise<Blob> => {
     if (!professionalData.name || !professionalData.document) {
       throw new Error('Por favor complete los datos del profesional');
     }
 
+    // Validar datos del acudiente si es requerido
+    if (requiresGuardian) {
+      if (!guardianName.trim()) {
+        throw new Error('El nombre del acudiente es obligatorio');
+      }
+      if (!guardianDocument.trim()) {
+        throw new Error('El documento del acudiente es obligatorio');
+      }
+      if (!guardianRelationship.trim()) {
+        throw new Error('El parentesco del acudiente es obligatorio');
+      }
+      if (!guardianSignature) {
+        throw new Error('La firma del acudiente es obligatoria');
+      }
+    }
+
     try {
       // Get captured photo and signature
       const capturedPhoto = cameraRef.current?.getCapturedPhoto();
       const patientSignatureData = signatureRef.current?.getSignatureData();
+      const guardianSignatureData = guardianSignatureRef.current?.getSignatureData();
 
       const pdfData = {
         patientData,
-        guardianData: formData.nombreAcudiente ? {
-          name: formData.nombreAcudiente,
-          document: formData.documentoAcudiente,
-          relationship: formData.vinculoAcudiente,
-          phone: formData.telefonoAcudiente
+        guardianData: requiresGuardian ? {
+          name: guardianName,
+          document: guardianDocument,
+          relationship: guardianRelationship,
+          phone: guardianPhone
         } : null,
         professionalName: professionalData.name,
         professionalDocument: professionalData.document,
-        patientSignature: patientSignatureData,
+        patientSignature: requiresGuardian ? guardianSignatureData : patientSignatureData,
         professionalSignature,
         patientPhoto: capturedPhoto,
         consentDecision,
         date: formData.fecha,
-        time: formData.hora
+        time: formData.hora,
+        hasDisability,
+        isMinor
       };
 
       const pdf = await generateHIVPDF(pdfData);
@@ -389,6 +421,23 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
         </CardContent>
       </Card>
 
+      {/* Sección de Acudiente - Menor de edad o discapacidad */}
+      <GuardianSignatureSection
+        ref={guardianSignatureRef}
+        isMinor={isMinor}
+        hasDisability={hasDisability}
+        onDisabilityChange={setHasDisability}
+        guardianName={guardianName}
+        onGuardianNameChange={setGuardianName}
+        guardianDocument={guardianDocument}
+        onGuardianDocumentChange={setGuardianDocument}
+        guardianRelationship={guardianRelationship}
+        onGuardianRelationshipChange={setGuardianRelationship}
+        guardianPhone={guardianPhone}
+        onGuardianPhoneChange={setGuardianPhone}
+        guardianSignature={guardianSignature}
+        onGuardianSignatureChange={setGuardianSignature}
+      />
 
       {/* Firmas Digitales */}
       <Card className="border-medical-blue/20">
@@ -399,6 +448,8 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Firma del Paciente - solo si no requiere acudiente */}
+            {!requiresGuardian && (
             <div>
               <Label className="text-medical-blue font-medium">Firma del Paciente *</Label>
               <div className="border rounded-lg p-4 bg-gray-50">
@@ -413,15 +464,19 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
                   <div>• Use "Limpiar" para reiniciar la firma</div>
                   <div>• Use "Guardar" para confirmar la firma</div>
                 </div>
-                
-                {/* Foto del Paciente */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <CameraCapture
-                    ref={cameraRef}
-                    title="Foto del Paciente"
-                    required
-                  />
-                </div>
+              </div>
+            </div>
+            )}
+
+            {/* Foto del Paciente - siempre visible */}
+            <div>
+              <Label className="text-medical-blue font-medium">Foto del Paciente</Label>
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <CameraCapture
+                  ref={cameraRef}
+                  title="Foto del Paciente"
+                  required
+                />
               </div>
             </div>
 

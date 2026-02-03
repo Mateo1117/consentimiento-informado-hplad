@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, Shield, Download, TestTube, CheckCircle, ChevronDown, ChevronUp, Camera, RotateCcw } from "lucide-react";
 import { ShareConsentButtons } from './ShareConsentButtons';
 import { ConsentFormWrapper } from './ConsentFormWrapper';
+import { GuardianSignatureSection, GuardianSignatureRef } from './GuardianSignatureSection';
 import { toast } from "sonner";
 import { generateVenopuncionPDF } from "@/utils/pdfGeneratorVenopuncion";
 
@@ -37,6 +38,12 @@ interface ConsentFormProps {
 }
 
 export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps) => {
+  // Determinar si es menor de edad
+  const isMinor = patientData.edad < 18;
+  
+  // Estado para discapacidad
+  const [hasDisability, setHasDisability] = useState(false);
+  
   const [professionalName, setProfessionalName] = useState("");
   const [professionalDocument, setProfessionalDocument] = useState("");
   const [showProfessionalForm, setShowProfessionalForm] = useState(false);
@@ -46,6 +53,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
   const [guardianDocument, setGuardianDocument] = useState("");
   const [guardianRelationship, setGuardianRelationship] = useState("");
   const [guardianPhone, setGuardianPhone] = useState("");
+  const [guardianSignature, setGuardianSignature] = useState<string | null>(null);
   const [patientSignature, setPatientSignature] = useState<string | null>(null);
   const [professionalSignature, setProfessionalSignature] = useState<string | null>(null);
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -55,9 +63,10 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
   const patientSignatureRef = useRef<SignatureRef>(null);
   const professionalSignatureRef = useRef<SignatureRef>(null);
   const cameraCaptureRef = useRef<CameraCaptureRef>(null);
+  const guardianSignatureRef = useRef<GuardianSignatureRef>(null);
 
-  // Determinar si es menor de edad
-  const isMinor = patientData.edad < 18;
+  // Determinar si requiere firma de acudiente
+  const requiresGuardian = isMinor || hasDisability;
 
   // Validar si el formulario está completo para habilitar el botón
   const isFormComplete = () => {
@@ -249,58 +258,23 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         </CardContent>
       </Card>
 
-
-      {/* Guardian Info (for minors) */}
-      {isMinor && (
-        <Card className="border-medical-blue/20">
-          <CardHeader>
-            <CardTitle className="text-medical-blue flex items-center gap-2">
-              <Shield className="h-5 w-5" />
-              Información del Acudiente o Representante Legal
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <Label htmlFor="guardianName">Nombre Completo del Acudiente *</Label>
-                <Input
-                  id="guardianName"
-                  value={guardianName}
-                  onChange={(e) => setGuardianName(e.target.value)}
-                  placeholder="Nombre completo del acudiente"
-                />
-              </div>
-              <div>
-                <Label htmlFor="guardianDocument">Documento del Acudiente *</Label>
-                <Input
-                  id="guardianDocument"
-                  value={guardianDocument}
-                  onChange={(e) => setGuardianDocument(e.target.value)}
-                  placeholder="Número de documento"
-                />
-              </div>
-              <div>
-                <Label htmlFor="guardianRelationship">Parentesco *</Label>
-                <Input
-                  id="guardianRelationship"
-                  value={guardianRelationship}
-                  onChange={(e) => setGuardianRelationship(e.target.value)}
-                  placeholder="Relación con el paciente"
-                />
-              </div>
-              <div>
-                <Label htmlFor="guardianPhone">Teléfono del Acudiente</Label>
-                <Input
-                  id="guardianPhone"
-                  value={guardianPhone}
-                  onChange={(e) => setGuardianPhone(e.target.value)}
-                  placeholder="Número de teléfono"
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      {/* Sección de Acudiente - Menor de edad o discapacidad */}
+      <GuardianSignatureSection
+        ref={guardianSignatureRef}
+        isMinor={isMinor}
+        hasDisability={hasDisability}
+        onDisabilityChange={setHasDisability}
+        guardianName={guardianName}
+        onGuardianNameChange={setGuardianName}
+        guardianDocument={guardianDocument}
+        onGuardianDocumentChange={setGuardianDocument}
+        guardianRelationship={guardianRelationship}
+        onGuardianRelationshipChange={setGuardianRelationship}
+        guardianPhone={guardianPhone}
+        onGuardianPhoneChange={setGuardianPhone}
+        guardianSignature={guardianSignature}
+        onGuardianSignatureChange={setGuardianSignature}
+      />
 
       {/* Procedure Information - Expandable */}
       <Card className="medical-card">
