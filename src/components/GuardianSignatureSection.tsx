@@ -2,8 +2,22 @@ import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { SignaturePad, SignatureRef } from './SignaturePad';
 import { Shield, AlertTriangle, UserCheck } from 'lucide-react';
+
+const RELATIONSHIP_OPTIONS = [
+  { value: 'padre', label: 'Padre' },
+  { value: 'madre', label: 'Madre' },
+  { value: 'tutor_legal', label: 'Tutor Legal' },
+  { value: 'cuidador', label: 'Cuidador' },
+  { value: 'abuelo', label: 'Abuelo/a' },
+  { value: 'hermano', label: 'Hermano/a' },
+  { value: 'tio', label: 'Tío/a' },
+  { value: 'conyugue', label: 'Cónyuge' },
+  { value: 'hijo', label: 'Hijo/a' },
+  { value: 'otro', label: 'Otro familiar' },
+];
 
 export interface GuardianData {
   name: string;
@@ -144,13 +158,21 @@ export const GuardianSignatureSection = forwardRef<GuardianSignatureRef, Guardia
                 <Label htmlFor="guardianRelationship" className="text-medical-blue font-medium">
                   Parentesco / Relación <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  id="guardianRelationship"
+                <Select
                   value={guardianRelationship}
-                  onChange={(e) => onGuardianRelationshipChange(e.target.value)}
-                  placeholder="Ej: Padre, Madre, Tutor legal, Cuidador"
-                  className="border-medical-blue/30 focus:border-medical-blue"
-                />
+                  onValueChange={onGuardianRelationshipChange}
+                >
+                  <SelectTrigger className="border-medical-blue/30 focus:border-medical-blue bg-white">
+                    <SelectValue placeholder="Seleccione el parentesco" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white z-50">
+                    {RELATIONSHIP_OPTIONS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               {onGuardianPhoneChange && (
                 <div>
