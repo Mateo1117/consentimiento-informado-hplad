@@ -54,6 +54,7 @@ export interface BasePDFData {
   procedureData: BasePDFProcedureItem[];
   professionalData: BasePDFProfessionalData;
   patientSignature?: string;
+  guardianSignature?: string; // Firma del representante legal cuando aplica
   patientPhoto?: string;
   consentDecision: 'aprobar' | 'disentir';
   fechaHora: string;
@@ -500,8 +501,9 @@ export class BasePDFGenerator {
       this.pdf.rect(xPos, this.currentY, colWidth, signatureHeight);
     }
     
-    // Add patient/guardian signature
-    if (data.patientSignature && 
+    // Primera columna: Firma del paciente (solo si NO hay guardianData)
+    // Si hay guardianData, la firma del paciente queda vacía
+    if (!data.guardianData && data.patientSignature && 
         typeof data.patientSignature === 'string' &&
         data.patientSignature.length > 100 && 
         data.patientSignature.startsWith('data:image')) {
@@ -512,7 +514,19 @@ export class BasePDFGenerator {
       }
     }
     
-    // Add professional signature in third column
+    // Segunda columna: Firma del representante legal (cuando hay guardianData)
+    if (data.guardianData && data.guardianSignature && 
+        typeof data.guardianSignature === 'string' &&
+        data.guardianSignature.length > 100 && 
+        data.guardianSignature.startsWith('data:image')) {
+      try {
+        this.pdf.addImage(data.guardianSignature, 'PNG', this.margin + colWidth + 2, this.currentY + 1, colWidth - 4, signatureHeight - 4);
+      } catch (error) {
+        console.error('Error adding guardian signature:', error);
+      }
+    }
+    
+    // Tercera columna: Firma del profesional
     if (data.professionalData.firma && 
         typeof data.professionalData.firma === 'string' &&
         data.professionalData.firma.length > 100 && 

@@ -214,10 +214,13 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         console.log("🔍 Preview firma profesional:", professionalSignature.substring(0, 100));
       }
       
+      // Determinar si requiere firma del acudiente
+      const requiresGuardian = isMinor || hasDisability;
+      
       // Datos para el PDF - usar datos reales si existen
       const pdfData = {
         patientData: { ...patientData, sexo: patientData.sexo || 'N/D' },
-        guardianData: isMinor ? {
+        guardianData: requiresGuardian ? {
           name: guardianName || "ACUDIENTE TEST",
           document: guardianDocument || "87654321",
           relationship: guardianRelationship || "PADRE/MADRE",
@@ -225,7 +228,10 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         } : null,
         professionalName: professionalName || "DR. PROFESIONAL DE PRUEBA",
         professionalDocument: professionalDocument || "12345678",
-        patientSignature: patientSignature, // Usar firma real si existe
+        // Firma del paciente: solo cuando NO hay acudiente
+        patientSignature: requiresGuardian ? null : patientSignature,
+        // Firma del acudiente: solo cuando hay acudiente
+        guardianSignature: requiresGuardian ? guardianSignature : null,
         professionalSignature: professionalSignature, // Usar firma real si existe
         patientPhoto: patientPhoto,
         consentDecision: consentDecision || "aprobar",

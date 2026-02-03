@@ -27,7 +27,8 @@ interface CargaGlucosaPDFData {
   guardianData?: GuardianData | null;
   professionalName: string;
   professionalDocument: string;
-  patientSignature: string;
+  patientSignature: string | null;
+  guardianSignature?: string | null; // Firma del representante cuando aplica
   professionalSignature: string;
   patientPhoto?: string | null;
   consentDecision: "aprobar" | "disentir";
@@ -111,7 +112,8 @@ export class CargaGlucosaPDFGenerator extends BasePDFGenerator {
         documento: data.professionalDocument,
         firma: data.professionalSignature
       },
-      patientSignature: data.patientSignature,
+      patientSignature: data.patientSignature || undefined,
+      guardianSignature: data.guardianSignature || undefined,
       patientPhoto: data.patientPhoto || undefined,
       consentDecision: data.consentDecision,
       fechaHora: `${data.date} ${data.time}`

@@ -146,8 +146,10 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         } : null,
         professionalName: professionalName,
         professionalDocument: professionalDocument,
-        patientSignature: patientSignature,
-        guardianSignature: guardianSignature,
+        // Firma del paciente: solo cuando NO hay acudiente
+        patientSignature: requiresGuardian ? null : patientSignature,
+        // Firma del acudiente: solo cuando hay acudiente
+        guardianSignature: requiresGuardian ? guardianSignature : null,
         professionalSignature: professionalSignature,
         patientPhoto: patientPhoto,
         consentDecision: consentDecision || "aprobar",
