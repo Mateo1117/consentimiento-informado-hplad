@@ -465,18 +465,23 @@ class AppConsentService {
   }
 
   /**
-   * Get display name for consent type - en MAYÚSCULAS para el webhook
+   * Get display name for consent type - SIEMPRE en MAYÚSCULAS para el webhook
    */
   private getConsentDisplayName(consentType: string): string {
     const key = this.normalizeConsentType(consentType);
+    logger.info('getConsentDisplayName', { input: consentType, normalizedKey: key });
+    
     const displayNames: Record<string, string> = {
       hiv: 'VIH',
-      venopuncion: 'VENOPUNCION',
+      venopuncion: 'VENOPUNCION', 
       carga_glucosa: 'GLUCOSA',
       frotis_vaginal: 'FROTIS VAGINAL',
       hemocomponentes: 'HEMOCOMPONENTES'
     };
-    return displayNames[key] || consentType.toUpperCase();
+    
+    const result = displayNames[key] || key.toUpperCase().replace(/_/g, ' ');
+    logger.info('getConsentDisplayName result', { result });
+    return result;
   }
 
   /**
