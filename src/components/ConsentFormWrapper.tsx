@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Save } from 'lucide-react';
+import { FileText } from 'lucide-react';
 import { useAppConsent } from '@/hooks/useAppConsent';
 import { toast } from 'sonner';
+import { ShareConsentButtons } from './ShareConsentButtons';
+import { consentService, type ConsentData } from '@/services/consentService';
 
 interface ConsentFormWrapperProps {
   children: React.ReactNode;
@@ -129,22 +131,54 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
     }
   };
 
+  // Preparar datos para ShareConsentButtons
+  const shareConsentData: ConsentData = {
+    patientName: `${patientData.nombre} ${patientData.apellidos}`,
+    patientDocumentType: patientData.tipoDocumento,
+    patientDocumentNumber: patientData.numeroDocumento,
+    patientEmail: patientData.email,
+    patientPhone: patientData.telefono,
+    consentType: consentTypeCode || consentType,
+    payload: {
+      patientData,
+      professionalData,
+      decision: consentDecision,
+      consentDecision: consentDecision,
+    }
+  };
+
   return (
     <div className="space-y-6">
       {children}
       
       <Separator />
       
-      <div className="flex justify-center">
-        <Button
-          onClick={handleSaveAndGenerate}
-          disabled={isSaving}
-          size="lg"
-          className="w-full sm:w-auto min-w-[300px]"
-        >
-          <Save className="h-5 w-5 mr-2" />
-          {isSaving ? 'Guardando...' : 'Crear y Guardar Consentimiento'}
-        </Button>
+      {/* Botones de acción - orden unificado para todos los módulos */}
+      <div className="space-y-4">
+        {/* Botón principal: Generar Consentimiento */}
+        <div className="flex justify-center">
+          <Button
+            onClick={handleSaveAndGenerate}
+            disabled={isSaving}
+            size="lg"
+            className="w-full sm:w-auto min-w-[300px]"
+          >
+            <FileText className="h-5 w-5 mr-2" />
+            {isSaving ? 'Generando...' : 'Generar Consentimiento'}
+          </Button>
+        </div>
+        
+        {/* Botón secundario: Crear Enlace para Firma */}
+        <div className="flex justify-center">
+          <div className="w-full sm:w-auto min-w-[300px]">
+            <ShareConsentButtons 
+              consentData={shareConsentData}
+              onConsentCreated={(shareableConsent) => {
+                console.log('Enlace de consentimiento creado:', shareableConsent);
+              }}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );
