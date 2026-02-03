@@ -14,9 +14,10 @@ import { toast } from "sonner";
 import { patientApiService, type PatientData, type PatientSearchResult } from "@/services/patientApi";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface PatientFormProps {
-  onPatientSelect: (patient: PatientData) => void;
+  onPatientSelect: (patient: PatientData & { hasDisability?: boolean }) => void;
 }
 
 // Función para obtener el icono según el tipo de error
@@ -68,6 +69,7 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
   const [selectedSede, setSelectedSede] = useState<string>("");
   const [editableAge, setEditableAge] = useState<number | null>(null);
   const [searchError, setSearchError] = useState<{ message: string; type?: string } | null>(null);
+  const [hasDisability, setHasDisability] = useState(false);
   const documentTypes = [
     { value: "NI", label: "NI - Ninguno" },
     { value: "CC", label: "CC - Cédula de Ciudadanía" },
@@ -193,7 +195,7 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
 
   const handleConfirmPatient = () => {
     if (patientData && editableAge !== null) {
-      const finalPatientData = { ...patientData, edad: editableAge };
+      const finalPatientData = { ...patientData, edad: editableAge, hasDisability };
       onPatientSelect(finalPatientData);
       toast.success("Paciente seleccionado para consentimiento");
     }
@@ -356,10 +358,12 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                     max="120"
                   />
                   {editableAge !== null && (
-                    <p className={`text-xs ${editableAge < 18 ? 'text-amber-600' : 'text-green-600'}`}>
+                    <p className={`text-xs ${editableAge < 18 || hasDisability ? 'text-amber-600' : 'text-green-600'}`}>
                       {editableAge < 18 
                         ? '⚠️ Menor de edad - Se solicitarán datos del acudiente' 
-                        : '✓ Mayor de edad'
+                        : hasDisability
+                          ? '⚠️ Paciente con discapacidad - Se solicitarán datos del acudiente'
+                          : '✓ Mayor de edad'
                       }
                     </p>
                   )}
@@ -404,6 +408,29 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                   <p className="font-medium bg-signature-area p-2 rounded border">
                     {patientData.direccion}
                   </p>
+                </div>
+
+                {/* Casilla de discapacidad */}
+                <div className="md:col-span-2 mt-2">
+                  <div className="flex items-start space-x-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <Checkbox
+                      id="hasDisability"
+                      checked={hasDisability}
+                      onCheckedChange={(checked) => setHasDisability(checked as boolean)}
+                      className="mt-1 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+                    />
+                    <div className="flex-1">
+                      <Label 
+                        htmlFor="hasDisability" 
+                        className="cursor-pointer text-amber-800 font-medium flex items-center gap-2"
+                      >
+                        El paciente tiene algún tipo de discapacidad que le impide firmar
+                      </Label>
+                      <p className="text-sm text-amber-700 mt-1">
+                        Marque esta casilla si el paciente presenta alguna condición de discapacidad que le impida firmar el consentimiento. En este caso, un acudiente o representante legal deberá firmar.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
               

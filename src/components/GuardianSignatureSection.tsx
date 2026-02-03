@@ -2,7 +2,6 @@ import React, { useRef, useImperativeHandle, forwardRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Checkbox } from '@/components/ui/checkbox';
 import { SignaturePad, SignatureRef } from './SignaturePad';
 import { Shield, AlertTriangle, UserCheck } from 'lucide-react';
 
@@ -70,32 +69,6 @@ export const GuardianSignatureSection = forwardRef<GuardianSignatureRef, Guardia
 
   return (
     <div className="space-y-4">
-      {/* Checkbox de discapacidad - siempre visible */}
-      <Card className="border-amber-200 bg-amber-50/50">
-        <CardContent className="pt-4">
-          <div className="flex items-start space-x-3">
-            <Checkbox
-              id="hasDisability"
-              checked={hasDisability}
-              onCheckedChange={(checked) => onDisabilityChange(checked as boolean)}
-              className="mt-1 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-            />
-            <div className="flex-1">
-              <Label 
-                htmlFor="hasDisability" 
-                className="cursor-pointer text-amber-800 font-medium flex items-center gap-2"
-              >
-                <AlertTriangle className="h-4 w-4" />
-                El paciente tiene algún tipo de discapacidad que le impide firmar
-              </Label>
-              <p className="text-sm text-amber-700 mt-1">
-                Marque esta casilla si el paciente presenta alguna condición de discapacidad que le impida firmar el consentimiento por sí mismo. En este caso, un acudiente o representante legal deberá firmar en su nombre.
-              </p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Alerta de menor de edad */}
       {isMinor && (
         <Card className="border-orange-200 bg-orange-50">
@@ -103,7 +76,21 @@ export const GuardianSignatureSection = forwardRef<GuardianSignatureRef, Guardia
             <div className="flex items-center gap-2 text-orange-700">
               <UserCheck className="h-5 w-5" />
               <span className="font-medium">
-                El paciente es menor de edad ({isMinor ? 'menor de 18 años' : ''}) - Se requiere firma del acudiente o representante legal
+                El paciente es menor de edad (menor de 18 años) - Se requiere firma del acudiente o representante legal
+              </span>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Alerta de discapacidad */}
+      {hasDisability && !isMinor && (
+        <Card className="border-amber-200 bg-amber-50">
+          <CardContent className="pt-4">
+            <div className="flex items-center gap-2 text-amber-700">
+              <AlertTriangle className="h-5 w-5" />
+              <span className="font-medium">
+                El paciente tiene discapacidad que le impide firmar - Se requiere firma del acudiente o representante legal
               </span>
             </div>
           </CardContent>
