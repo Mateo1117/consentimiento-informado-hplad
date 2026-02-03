@@ -40,6 +40,11 @@ interface ConsentFormWrapperProps {
   isMinor?: boolean;
   guardianSignature?: string | null;
   getGuardianSignature?: () => string | null;
+  // Datos del acudiente
+  guardianName?: string;
+  guardianDocument?: string;
+  guardianRelationship?: string;
+  guardianPhone?: string;
 }
 
 export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
@@ -59,7 +64,11 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
   hasDisability = false,
   isMinor = false,
   guardianSignature,
-  getGuardianSignature
+  getGuardianSignature,
+  guardianName = '',
+  guardianDocument = '',
+  guardianRelationship = '',
+  guardianPhone = ''
 }) => {
   const { saveConsent, isSaving } = useAppConsent();
 
@@ -132,13 +141,24 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
           consentDecision: currentConsentDecision,
           patientSignature: currentPatientSignature,
           patientPhotoUrl: currentPatientPhoto,
+          guardianSignature: currentGuardianSignature,
+          hasDisability,
+          isMinor,
           generatedAt: new Date().toISOString()
         },
         professionalName: professionalData?.name,
         professionalDocument: professionalData?.document,
         pdfContent: htmlContent,
         patientSignature: currentPatientSignature || undefined,
-        patientPhotoUrl: currentPatientPhoto || undefined
+        patientPhotoUrl: currentPatientPhoto || undefined,
+        // Datos del acudiente
+        hasDisability,
+        isMinor,
+        guardianName: guardianName || undefined,
+        guardianDocument: guardianDocument || undefined,
+        guardianRelationship: guardianRelationship || undefined,
+        guardianPhone: guardianPhone || undefined,
+        guardianSignature: currentGuardianSignature || undefined
       });
 
       if (result.success) {

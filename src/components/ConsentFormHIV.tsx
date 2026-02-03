@@ -184,6 +184,10 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
       isMinor={isMinor}
       guardianSignature={guardianSignature}
       getGuardianSignature={() => guardianSignatureRef.current?.getSignatureData() || null}
+      guardianName={guardianName}
+      guardianDocument={guardianDocument}
+      guardianRelationship={guardianRelationship}
+      guardianPhone={guardianPhone}
     >
     <div id="consent-form-content" className="space-y-6">
       {/* Header */}
