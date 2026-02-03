@@ -69,12 +69,21 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
   const [editableAge, setEditableAge] = useState<number | null>(null);
   const [searchError, setSearchError] = useState<{ message: string; type?: string } | null>(null);
   const documentTypes = [
-    { value: "CC", label: "Cédula de Ciudadanía (CC)" },
-    { value: "TI", label: "Tarjeta de Identidad (TI)" },
-    { value: "RC", label: "Registro Civil (RC)" },
-    { value: "CE", label: "Cédula de Extranjería (CE)" },
-    { value: "PA", label: "Pasaporte (PA)" },
-    { value: "MS", label: "Menor sin Identificación (MS)" }
+    { value: "NI", label: "Ninguno" },
+    { value: "CC", label: "Cédula de Ciudadanía" },
+    { value: "CE", label: "Cédula de Extranjería" },
+    { value: "TI", label: "Tarjeta de Identidad" },
+    { value: "RC", label: "Registro Civil" },
+    { value: "PA", label: "Pasaporte" },
+    { value: "AS", label: "Adulto sin Identificar" },
+    { value: "MS", label: "Menor sin Identificar" },
+    { value: "SC", label: "Salvoconducto de Permanencia" },
+    { value: "CN", label: "Certificado Nacido Vivo" },
+    { value: "CD", label: "Carné Diplomático" },
+    { value: "PE", label: "Permiso Especial de Permanencia" },
+    { value: "PT", label: "Permiso por Protección Temporal" },
+    { value: "DE", label: "Documento Extranjero" },
+    { value: "SI", label: "Sin Identificación" }
   ];
 
   // Function to calculate age from birth date
