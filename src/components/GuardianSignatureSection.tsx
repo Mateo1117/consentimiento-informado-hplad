@@ -22,7 +22,6 @@ export interface GuardianSignatureRef {
 interface GuardianSignatureSectionProps {
   isMinor: boolean;
   hasDisability: boolean;
-  onDisabilityChange: (checked: boolean) => void;
   guardianName: string;
   onGuardianNameChange: (value: string) => void;
   guardianDocument: string;
@@ -38,7 +37,6 @@ interface GuardianSignatureSectionProps {
 export const GuardianSignatureSection = forwardRef<GuardianSignatureRef, GuardianSignatureSectionProps>(({
   isMinor,
   hasDisability,
-  onDisabilityChange,
   guardianName,
   onGuardianNameChange,
   guardianDocument,

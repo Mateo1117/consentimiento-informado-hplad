@@ -21,11 +21,12 @@ interface PatientData {
   numeroDocumento: string;
   fechaNacimiento: string;
   edad: number;
-  sexo: string; // Added missing property
+  sexo: string;
   eps: string;
   telefono: string;
   direccion: string;
   centroSalud: string;
+  hasDisability?: boolean;
 }
 
 const Index = () => {
