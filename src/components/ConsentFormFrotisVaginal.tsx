@@ -726,6 +726,18 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
             />
           </div>
         </div>
+        
+        {/* Botón Volver */}
+        <div className="flex justify-center">
+          <Button
+            onClick={onBack}
+            variant="outline"
+            size="lg"
+            className="w-full sm:w-auto min-w-[300px]"
+          >
+            ← Volver
+          </Button>
+        </div>
       </div>
 
     </div>

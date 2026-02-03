@@ -25,6 +25,7 @@ interface ConsentFormWrapperProps {
   };
   onGeneratePDF: () => Promise<Blob>;
   onGetHTMLContent: () => string;
+  onBack?: () => void;
   professionalData?: {
     name: string;
     document: string;
@@ -44,6 +45,7 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
   patientData,
   onGeneratePDF,
   onGetHTMLContent,
+  onBack,
   professionalData,
   patientSignature,
   patientPhotoUrl,
@@ -179,6 +181,20 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
             />
           </div>
         </div>
+        
+        {/* Botón Volver */}
+        {onBack && (
+          <div className="flex justify-center">
+            <Button
+              onClick={onBack}
+              variant="outline"
+              size="lg"
+              className="w-full sm:w-auto min-w-[300px]"
+            >
+              ← Volver
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

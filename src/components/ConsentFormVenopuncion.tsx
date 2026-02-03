@@ -180,6 +180,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
       }}
       onGeneratePDF={generatePDF}
       onGetHTMLContent={getHTMLContent}
+      onBack={onBack}
       professionalData={{
         name: professionalName,
         document: professionalDocument
@@ -604,43 +605,6 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         </CardContent>
       </Card>
 
-      {/* Share Consent Buttons */}
-      <ShareConsentButtons
-        consentData={{
-          patientName: `${patientData.nombre} ${patientData.apellidos}`,
-          patientDocumentType: patientData.tipoDocumento,
-          patientDocumentNumber: patientData.numeroDocumento,
-          patientEmail: patientData.eps, 
-          patientPhone: patientData.telefono,
-          consentType: 'VENOPUNCION',
-          payload: {
-            procedures: ['Toma de Muestras por Venopunción'],
-            risks: ['Dolor temporal en el sitio de punción', 'Sangrado mínimo', 'Hematoma (moretón)', 'Mareo o desmayo en personas sensibles'],
-            benefits: ['Obtener información diagnóstica precisa y confiable para el manejo médico adecuado'],
-            alternatives: ['Punción arterial o muestras de orina/saliva según el tipo de análisis'],
-            decision: consentDecision
-          }
-        }}
-        onConsentCreated={(shareableConsent) => {
-          console.log('Enlace de consentimiento creado:', shareableConsent);
-        }}
-      />
-
-      {/* Botones de Acción */}
-      <Card className="border-medical-blue/20">
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              onClick={onBack}
-              variant="outline"
-              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 text-lg"
-              size="lg"
-            >
-              Volver
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
     </ConsentFormWrapper>
   );
