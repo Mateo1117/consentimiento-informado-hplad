@@ -29,6 +29,7 @@ interface PatientData {
   telefono: string;
   direccion: string;
   centroSalud: string;
+  hasDisability?: boolean;
 }
 
 interface ConsentFormHIVProps {
@@ -40,8 +41,8 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
   // Determinar si es menor de edad
   const isMinor = patientData.edad < 18;
   
-  // Estado para discapacidad
-  const [hasDisability, setHasDisability] = useState(false);
+  // Usar el estado de discapacidad del paciente
+  const hasDisability = patientData.hasDisability || false;
   
   // Estados para datos del acudiente
   const [guardianName, setGuardianName] = useState('');
@@ -426,7 +427,6 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
         ref={guardianSignatureRef}
         isMinor={isMinor}
         hasDisability={hasDisability}
-        onDisabilityChange={setHasDisability}
         guardianName={guardianName}
         onGuardianNameChange={setGuardianName}
         guardianDocument={guardianDocument}

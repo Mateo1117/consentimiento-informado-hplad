@@ -28,6 +28,7 @@ interface PatientData {
   telefono: string;
   direccion: string;
   centroSalud: string;
+  hasDisability?: boolean;
 }
 
 interface ConsentFormProps {
@@ -51,9 +52,8 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
   // Determinar si es menor de edad
   const isMinor = patientData.edad < 18;
   
-  // Estado para discapacidad
-  const [hasDisability, setHasDisability] = useState(false);
-  
+  // Usar el estado de discapacidad del paciente
+  const hasDisability = patientData.hasDisability || false;
   const [selectedProcedures, setSelectedProcedures] = useState<string[]>([]);
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [professionalName, setProfessionalName] = useState("");
@@ -553,7 +553,6 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         ref={guardianSignatureRef}
         isMinor={isMinor}
         hasDisability={hasDisability}
-        onDisabilityChange={setHasDisability}
         guardianName={guardianName}
         onGuardianNameChange={setGuardianName}
         guardianDocument={guardianDocument}
