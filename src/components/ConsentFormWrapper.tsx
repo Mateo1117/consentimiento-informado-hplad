@@ -35,6 +35,11 @@ interface ConsentFormWrapperProps {
   // Funciones para obtener datos dinámicamente antes de guardar
   getPatientSignature?: () => string | null;
   getPatientPhoto?: () => string | null;
+  // Parámetros para casos de discapacidad/menores de edad
+  hasDisability?: boolean;
+  isMinor?: boolean;
+  guardianSignature?: string | null;
+  getGuardianSignature?: () => string | null;
 }
 
 export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
@@ -50,7 +55,11 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
   patientSignature,
   patientPhotoUrl,
   getPatientSignature,
-  getPatientPhoto
+  getPatientPhoto,
+  hasDisability = false,
+  isMinor = false,
+  guardianSignature,
+  getGuardianSignature
 }) => {
   const { saveConsent, isSaving } = useAppConsent();
 
@@ -59,26 +68,47 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       // Obtener firma y foto justo antes de guardar (usando callbacks si están disponibles)
       const currentPatientSignature = getPatientSignature?.() || patientSignature;
       const currentPatientPhoto = getPatientPhoto?.() || patientPhotoUrl;
+      const currentGuardianSignature = getGuardianSignature?.() || guardianSignature;
       const currentConsentDecision = consentDecision;
+      
+      // Determinar si requiere firma del acudiente en lugar del paciente
+      const requiresGuardian = isMinor || hasDisability;
 
       // No loggear datos sensibles (base64). Solo presencia/longitud.
       console.log('📝 ConsentFormWrapper - Validación previa:', {
-        hasSignature: !!currentPatientSignature,
-        signatureLength: currentPatientSignature?.length || 0,
+        hasPatientSignature: !!currentPatientSignature,
+        patientSignatureLength: currentPatientSignature?.length || 0,
+        hasGuardianSignature: !!currentGuardianSignature,
+        guardianSignatureLength: currentGuardianSignature?.length || 0,
         hasPhoto: !!currentPatientPhoto,
         photoLength: currentPatientPhoto?.length || 0,
         consentDecision: currentConsentDecision,
         consentType,
         consentTypeCode,
+        requiresGuardian,
+        hasDisability,
+        isMinor
       });
 
-      // Validación requerida: firma del paciente
-      if (!currentPatientSignature || currentPatientSignature.length < 100) {
-        toast.error('Falta la firma del paciente', {
-          description: 'La firma del paciente es obligatoria antes de guardar el consentimiento.',
-          duration: 5000,
-        });
-        return;
+      // Validación de firma: depende de si requiere acudiente o no
+      if (requiresGuardian) {
+        // Si tiene discapacidad o es menor, se requiere firma del acudiente
+        if (!currentGuardianSignature || currentGuardianSignature.length < 100) {
+          toast.error('Falta la firma del acudiente', {
+            description: 'La firma del acudiente es obligatoria cuando el paciente tiene discapacidad o es menor de edad.',
+            duration: 5000,
+          });
+          return;
+        }
+      } else {
+        // Si no requiere acudiente, se requiere firma del paciente
+        if (!currentPatientSignature || currentPatientSignature.length < 100) {
+          toast.error('Falta la firma del paciente', {
+            description: 'La firma del paciente es obligatoria antes de guardar el consentimiento.',
+            duration: 5000,
+          });
+          return;
+        }
       }
 
       // Get HTML content for storage first
