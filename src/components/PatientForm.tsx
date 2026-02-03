@@ -280,9 +280,28 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
               </Button>
             </div>
           </div>
-        </div>
 
-        {/* Indicador visual de error */}
+          {/* Casilla de discapacidad - siempre visible */}
+          <div className="flex items-start space-x-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+            <Checkbox
+              id="hasDisability"
+              checked={hasDisability}
+              onCheckedChange={(checked) => setHasDisability(checked as boolean)}
+              className="mt-1 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+            />
+            <div className="flex-1">
+              <Label 
+                htmlFor="hasDisability" 
+                className="cursor-pointer text-amber-800 font-medium"
+              >
+                El paciente tiene algún tipo de discapacidad que le impide firmar
+              </Label>
+              <p className="text-sm text-amber-700 mt-1">
+                Marque esta casilla si el paciente presenta alguna condición que le impida firmar el consentimiento. Un acudiente deberá firmar en su nombre.
+              </p>
+            </div>
+          </div>
+        </div>
         {searchError && !patientData && (
           <Alert className={cn("border-2", getErrorColor(searchError.type))}>
             <div className="flex items-center gap-3">
@@ -408,29 +427,6 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                   <p className="font-medium bg-signature-area p-2 rounded border">
                     {patientData.direccion}
                   </p>
-                </div>
-
-                {/* Casilla de discapacidad */}
-                <div className="md:col-span-2 mt-2">
-                  <div className="flex items-start space-x-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                    <Checkbox
-                      id="hasDisability"
-                      checked={hasDisability}
-                      onCheckedChange={(checked) => setHasDisability(checked as boolean)}
-                      className="mt-1 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
-                    />
-                    <div className="flex-1">
-                      <Label 
-                        htmlFor="hasDisability" 
-                        className="cursor-pointer text-amber-800 font-medium flex items-center gap-2"
-                      >
-                        El paciente tiene algún tipo de discapacidad que le impide firmar
-                      </Label>
-                      <p className="text-sm text-amber-700 mt-1">
-                        Marque esta casilla si el paciente presenta alguna condición de discapacidad que le impida firmar el consentimiento. En este caso, un acudiente o representante legal deberá firmar.
-                      </p>
-                    </div>
-                  </div>
                 </div>
               </div>
               
