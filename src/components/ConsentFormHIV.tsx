@@ -141,6 +141,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
       }}
       onGeneratePDF={generatePDF}
       onGetHTMLContent={getHTMLContent}
+      onBack={onBack}
       professionalData={professionalData}
       patientSignature={patientSignature}
       patientPhotoUrl={patientPhoto}
@@ -483,53 +484,6 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
       </Card>
 
 
-      {/* Share Consent Buttons */}
-      <ShareConsentButtons
-        consentData={{
-          patientName: `${patientData.nombre} ${patientData.apellidos}`,
-          patientDocumentType: patientData.tipoDocumento,
-          patientDocumentNumber: patientData.numeroDocumento,
-          patientEmail: patientData.eps, // Extraer email del EPS si está disponible
-          patientPhone: patientData.telefono,
-          consentType: 'HIV',
-          payload: {
-            procedures: ['Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)'],
-            risks: [
-              'Sangrado excesivo',
-              'Desmayo o sensación de mareo',
-              'Hematoma (acumulación de sangre debajo de la piel)',
-              'Infección del sitio de punción',
-              'Trauma posterior a la entrega del resultado'
-            ],
-            benefits: [
-              'Detección oportuna del VIH para iniciar tratamiento temprano',
-              'Prevenir complicaciones y reducir el riesgo de transmisión',
-              'Acceso a programas de apoyo y tratamiento antirretroviral'
-            ],
-            alternatives: ['Ninguna alternativa disponible para la detección del VIH'],
-            decision: consentDecision
-          }
-        }}
-        onConsentCreated={(shareableConsent) => {
-          console.log('Enlace de consentimiento creado:', shareableConsent);
-        }}
-      />
-
-      {/* Action Buttons */}
-      <Card className="border-medical-blue/20">
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              onClick={onBack}
-              variant="outline"
-              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 text-lg"
-              size="lg"
-            >
-              Volver
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
     </ConsentFormWrapper>
   );

@@ -279,6 +279,7 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
       }}
       onGeneratePDF={generatePDF}
       onGetHTMLContent={getHTMLContent}
+      onBack={onBack}
       professionalData={{
         name: professionalName,
         document: professionalDocument
@@ -735,43 +736,6 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
       </Card>
 
 
-      {/* Share Consent Buttons */}
-      <ShareConsentButtons
-        consentData={{
-          patientName: `${patientData.nombre} ${patientData.apellidos}`,
-          patientDocumentType: patientData.tipoDocumento,
-          patientDocumentNumber: patientData.numeroDocumento,
-          patientEmail: patientData.eps,
-          patientPhone: patientData.telefono,
-          consentType: 'CARGA_GLUCOSA',
-          payload: {
-            procedures: ['Carga Oral de Glucosa'],
-            risks: ['Molestias digestivas', 'Náuseas', 'Vómito', 'Reacciones alérgicas (raras)'],
-            benefits: ['Diagnóstico preciso de diabetes gestacional o intolerancia a la glucosa'],
-            alternatives: ['Medición de glucosa en ayunas'],
-            decision: consentDecision
-          }
-        }}
-        onConsentCreated={(shareableConsent) => {
-          console.log('Enlace de consentimiento creado:', shareableConsent);
-        }}
-      />
-
-      {/* Action Buttons */}
-      <Card className="border-medical-blue/20">
-        <CardContent className="p-6">
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              onClick={onBack}
-              variant="outline"
-              className="bg-white border-gray-300 text-gray-700 hover:bg-gray-50 px-8 py-3 text-lg"
-              size="lg"
-            >
-              Volver
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
     </div>
     </ConsentFormWrapper>
   );
