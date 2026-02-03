@@ -17,6 +17,15 @@ interface ConsentPayload {
   paciente_telefono: string | null;
   paciente_firma: string | null; // base64 de la firma
   paciente_foto: string | null; // URL de la foto
+  paciente_tiene_discapacidad: boolean; // Indica si tiene discapacidad
+  paciente_es_menor: boolean; // Indica si es menor de edad
+  
+  // Datos del acudiente/responsable (cuando aplica)
+  acudiente_nombre_completo: string | null;
+  acudiente_documento: string | null;
+  acudiente_parentesco: string | null;
+  acudiente_telefono: string | null;
+  acudiente_firma: string | null; // base64 de la firma del acudiente
   
   // Datos del consentimiento
   tipo_procedimiento: string;
@@ -93,18 +102,37 @@ serve(async (req: Request) => {
       );
     }
 
-    // Validación requerida: firma del paciente
-    if (!body.paciente_firma) {
-      return new Response(
-        JSON.stringify({
-          success: false,
-          error: "La firma del paciente es requerida"
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        }
-      );
+    // Validación de firma: depende de si requiere acudiente o no
+    const requiereAcudiente = body.paciente_tiene_discapacidad || body.paciente_es_menor;
+    
+    if (requiereAcudiente) {
+      // Si tiene discapacidad o es menor, se requiere firma del acudiente
+      if (!body.acudiente_firma) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "La firma del acudiente es requerida cuando el paciente tiene discapacidad o es menor de edad"
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
+    } else {
+      // Si no requiere acudiente, se requiere firma del paciente
+      if (!body.paciente_firma) {
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: "La firma del paciente es requerida"
+          }),
+          {
+            status: 400,
+            headers: { "Content-Type": "application/json", ...corsHeaders },
+          }
+        );
+      }
     }
 
     // Construir payload para el webhook
@@ -117,6 +145,15 @@ serve(async (req: Request) => {
       paciente_telefono: body.paciente_telefono || null,
       paciente_firma: body.paciente_firma || null,
       paciente_foto: body.paciente_foto || null,
+      paciente_tiene_discapacidad: body.paciente_tiene_discapacidad || false,
+      paciente_es_menor: body.paciente_es_menor || false,
+      
+      // Datos del acudiente
+      acudiente_nombre_completo: body.acudiente_nombre_completo || null,
+      acudiente_documento: body.acudiente_documento || null,
+      acudiente_parentesco: body.acudiente_parentesco || null,
+      acudiente_telefono: body.acudiente_telefono || null,
+      acudiente_firma: body.acudiente_firma || null,
       
       // Datos del consentimiento
       tipo_procedimiento: body.tipo_procedimiento || "",

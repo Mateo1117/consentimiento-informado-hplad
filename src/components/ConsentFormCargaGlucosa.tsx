@@ -309,6 +309,10 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
       isMinor={isMinor}
       guardianSignature={guardianSignature}
       getGuardianSignature={() => guardianSignatureRef.current?.getSignatureData() || null}
+      guardianName={guardianName}
+      guardianDocument={guardianDocument}
+      guardianRelationship={guardianRelationship}
+      guardianPhone={guardianPhone}
     >
     <div id="consent-form-content" className="space-y-6">
       {/* Header */}

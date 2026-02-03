@@ -17,6 +17,14 @@ export interface AppConsentData {
   pdfContent?: string; // HTML content for PDF generation
   patientSignature?: string; // base64 de la firma del paciente
   patientPhotoUrl?: string; // URL de la foto del paciente
+  // Datos para casos de discapacidad/menor de edad
+  hasDisability?: boolean;
+  isMinor?: boolean;
+  guardianName?: string;
+  guardianDocument?: string;
+  guardianRelationship?: string;
+  guardianPhone?: string;
+  guardianSignature?: string; // base64 de la firma del acudiente
 }
 
 export interface SavedConsentResult {
@@ -168,7 +176,15 @@ class AppConsentService {
           professionalSignature: professionalSignature?.signature_data,
           pdfUrl: pdfUrl,
           payload: data.payload,
-          signedAt: consent.signed_at
+          signedAt: consent.signed_at,
+          // Datos del acudiente
+          hasDisability: data.hasDisability,
+          isMinor: data.isMinor,
+          guardianName: data.guardianName,
+          guardianDocument: data.guardianDocument,
+          guardianRelationship: data.guardianRelationship,
+          guardianPhone: data.guardianPhone,
+          guardianSignature: data.guardianSignature
         });
         logger.info('Webhook de consentimiento enviado exitosamente');
       } catch (webhookError) {
@@ -342,6 +358,14 @@ class AppConsentService {
     pdfUrl?: string;
     payload?: any;
     signedAt?: string;
+    // Datos del acudiente
+    hasDisability?: boolean;
+    isMinor?: boolean;
+    guardianName?: string;
+    guardianDocument?: string;
+    guardianRelationship?: string;
+    guardianPhone?: string;
+    guardianSignature?: string;
   }): Promise<void> {
     try {
       logger.info('Enviando consentimiento al webhook externo', {
@@ -364,6 +388,14 @@ class AppConsentService {
           paciente_telefono: data.patientPhone || null,
           paciente_firma: data.patientSignature || null,
           paciente_foto: data.patientPhotoUrl || null,
+          paciente_tiene_discapacidad: data.hasDisability || false,
+          paciente_es_menor: data.isMinor || false,
+          // Datos del acudiente
+          acudiente_nombre_completo: data.guardianName || null,
+          acudiente_documento: data.guardianDocument || null,
+          acudiente_parentesco: data.guardianRelationship || null,
+          acudiente_telefono: data.guardianPhone || null,
+          acudiente_firma: data.guardianSignature || null,
           // El webhook requiere el nombre completo del procedimiento
           tipo_procedimiento: procedimientoMedico,
           procedimiento_medico: procedimientoMedico,
