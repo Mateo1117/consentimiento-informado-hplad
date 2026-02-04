@@ -6,6 +6,16 @@ export function isMobileUserAgent(ua: string = navigator.userAgent): boolean {
 }
 
 /**
+ * Base URL pública para compartir enlaces.
+ * En preview, window.location.origin puede requerir autenticación, por eso se debe configurar.
+ */
+export function getPublicBaseUrl(): string {
+  const envUrl = (import.meta.env.VITE_PUBLIC_APP_URL || "").trim();
+  const sanitized = envUrl.replace(/\/+$/, "");
+  return sanitized || window.location.origin;
+}
+
+/**
  * Normaliza a formato E.164 sin "+" para WhatsApp (solo dígitos), con heurística Colombia.
  */
 export function normalizePhoneForWhatsApp(phone?: string): string {
@@ -61,9 +71,11 @@ export function generateWhatsAppUrl(
   const isMobile = isMobileUserAgent();
 
   if (isMobile) {
+    // Intentar abrir la app primero (evita bloqueos de WhatsApp Web en algunos navegadores/redes)
+    // Nota: si el esquema no está soportado, el usuario puede usar el botón "Copiar mensaje".
     return phoneDigits
-      ? `https://wa.me/${phoneDigits}?text=${text}`
-      : `https://wa.me/?text=${text}`;
+      ? `whatsapp://send?phone=${phoneDigits}&text=${text}`
+      : `whatsapp://send?text=${text}`;
   }
 
   // Escritorio

@@ -2,6 +2,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
   buildConsentWhatsAppMessage,
+  getPublicBaseUrl,
   generateWhatsAppUrl,
   normalizePhoneForSms,
 } from "@/services/shareLinks";
@@ -70,7 +71,7 @@ class ConsentService {
         return null;
       }
 
-      const shareUrl = `${window.location.origin}/firmar/${consent.share_token}`;
+       const shareUrl = `${getPublicBaseUrl()}/firmar/${consent.share_token}`;
       
       return {
         id: consent.id,
