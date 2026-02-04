@@ -51,6 +51,12 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
   };
 
   const openExternalLink = (url: string) => {
+    // Para esquemas nativos (whatsapp://, sms:, mailto:) es más confiable usar location.
+    if (/^(whatsapp:\/\/|sms:|mailto:)/i.test(url)) {
+      window.location.href = url;
+      return;
+    }
+
     const w = window.open(url, '_blank', 'noopener,noreferrer');
     if (!w) {
       // Fallback si el navegador bloquea popups
