@@ -12,6 +12,7 @@ import { consentService } from "@/services/consentService";
 import { PhotoService } from "@/services/photoService";
 import { toast } from "sonner";
 import { CheckCircle, FileText, User, Calendar, AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 export const PublicConsentSigning: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -64,6 +65,96 @@ export const PublicConsentSigning: React.FC = () => {
     }
   };
 
+  // Helper function to get consent display name for webhook
+  const getConsentDisplayName = (consentType: string): string => {
+    const key = consentType.toLowerCase().replace(/[\s-]/g, '_');
+    const displayNames: Record<string, string> = {
+      hiv: 'VIH',
+      vih: 'VIH',
+      venopuncion: 'VENOPUNCION', 
+      carga_glucosa: 'GLUCOSA',
+      frotis_vaginal: 'FROTIS VAGINAL',
+      hemocomponentes: 'HEMOCOMPONENTES'
+    };
+    return displayNames[key] || key.toUpperCase().replace(/_/g, ' ');
+  };
+
+  // Helper function to get procedure name for webhook
+  const getProcedureName = (consentType: string): string => {
+    const key = consentType.toLowerCase().replace(/[\s-]/g, '_');
+    const procedureNames: Record<string, string> = {
+      venopuncion: 'Toma de Muestra por Venopunción',
+      hiv: 'Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)',
+      vih: 'Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)',
+      hemocomponentes: 'Transfusión de Hemocomponentes Sanguíneos',
+      carga_glucosa: 'Administración oral de carga de glucosa (Dextrosa Anhidra)',
+      frotis_vaginal: 'Toma de Muestra para Frotis Vaginal - Cultivo Recto-Vaginal'
+    };
+    return procedureNames[key] || consentType;
+  };
+
+  // Send signed consent data to webhook
+  const sendToWebhook = async (
+    consentData: any,
+    patientSignatureUrl: string,
+    patientPhotoUrl: string,
+    signedByName: string
+  ) => {
+    try {
+      console.log('📤 Enviando consentimiento firmado al webhook...');
+      
+      const procedureName = consentData.payload?.procedureName || 
+                           getProcedureName(consentData.consent_type);
+      
+      const webhookData = {
+        consent_id: consentData.id,
+        paciente_nombre_completo: consentData.patient_name,
+        paciente_tipo_documento: consentData.patient_document_type || 'CC',
+        paciente_numero_documento: consentData.patient_document_number || '',
+        paciente_email: consentData.patient_email || null,
+        paciente_telefono: consentData.patient_phone || null,
+        paciente_firma: patientSignatureUrl,
+        paciente_foto: patientPhotoUrl,
+        paciente_tiene_discapacidad: false,
+        paciente_es_menor: false,
+        // Datos del acudiente (no aplica para firma remota por ahora)
+        acudiente_nombre_completo: null,
+        acudiente_documento: null,
+        acudiente_parentesco: null,
+        acudiente_telefono: null,
+        acudiente_firma: null,
+        // Datos del consentimiento
+        tipo_procedimiento: procedureName,
+        procedimiento_medico: procedureName,
+        diagnostico: procedureName,
+        nombre_consentimiento: getConsentDisplayName(consentData.consent_type),
+        aceptacion_procedimiento: 'Aceptado',
+        fecha_firma: new Date().toISOString(),
+        fecha_documento: new Date().toISOString().split('T')[0],
+        // Datos del profesional
+        profesional_nombre_completo: consentData.professional_name || '',
+        profesional_documento: consentData.professional_document || null,
+        profesional_firma: consentData.professional_signature_data || null,
+        // PDF y metadatos
+        pdf_url: null, // El PDF se genera después
+        payload_adicional: consentData.payload || {}
+      };
+
+      const { data, error } = await supabase.functions.invoke('enviar-consentimiento', {
+        body: webhookData
+      });
+
+      if (error) {
+        console.error('❌ Error enviando al webhook:', error);
+      } else {
+        console.log('✅ Webhook enviado exitosamente:', data);
+      }
+    } catch (error) {
+      console.error('❌ Error en sendToWebhook:', error);
+      // No fallar si el webhook falla
+    }
+  };
+
   const handleSign = async () => {
     console.log('🖊️ Iniciando proceso de firma desde móvil');
     console.log('Validando datos de entrada...');
@@ -104,6 +195,11 @@ export const PublicConsentSigning: React.FC = () => {
         toast.error('Error al subir la foto del paciente');
         return;
       }
+
+      // Subir la firma del paciente para enviar URL al webhook
+      console.log('🖊️ Subiendo firma del paciente...');
+      const signatureResult = await PhotoService.uploadPhoto(signatureData, 'firma_paciente');
+      const signatureUrl = signatureResult?.url || signatureData;
       
       const result = await consentService.signConsentByToken(
         token!,
@@ -116,6 +212,10 @@ export const PublicConsentSigning: React.FC = () => {
 
       if (result) {
         console.log('✅ Firma exitosa desde móvil');
+        
+        // Enviar al webhook con todos los datos
+        await sendToWebhook(consent, signatureUrl, photoResult.url, signedByName.trim());
+        
         setConsent(prev => ({ 
           ...prev, 
           status: 'signed', 
