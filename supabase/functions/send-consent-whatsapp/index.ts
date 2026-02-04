@@ -53,7 +53,7 @@ serve(async (req) => {
 
     // Build the message using the approved template "consentimiento_firma"
     // Template parameters: {{1}} = patient name, {{2}} = signature URL
-    // Using es_ES as the language code (Spanish - Spain) which is common for approved templates
+    // Using es_CO as the language code (Spanish - Colombia) as configured in Meta Business Suite
     const messageBody = {
       messaging_product: "whatsapp",
       recipient_type: "individual",
@@ -62,7 +62,7 @@ serve(async (req) => {
       template: {
         name: "consentimiento_firma",
         language: {
-          code: "es_ES"
+          code: "es_CO"
         },
         components: [
           {
