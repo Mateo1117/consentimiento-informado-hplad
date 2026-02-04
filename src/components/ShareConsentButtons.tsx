@@ -47,11 +47,15 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    toast.success('Enlace copiado al portapapeles');
+    toast.success('Copiado al portapapeles');
   };
 
   const openExternalLink = (url: string) => {
-    window.open(url, '_blank');
+    const w = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!w) {
+      // Fallback si el navegador bloquea popups
+      window.location.href = url;
+    }
   };
 
   if (!shareableConsent) {
@@ -152,6 +156,17 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
         >
           <MessageCircle className="w-4 h-4 mr-1" />
           WhatsApp
+        </Button>
+
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => copyToClipboard(
+            consentService.buildWhatsAppMessage(consentData.patientName, shareableConsent.shareUrl)
+          )}
+        >
+          <Copy className="w-4 h-4 mr-1" />
+          Copiar mensaje
         </Button>
 
         {patientPhone && (

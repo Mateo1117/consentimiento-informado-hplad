@@ -1,5 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  buildConsentWhatsAppMessage,
+  generateWhatsAppUrl,
+  normalizePhoneForSms,
+} from "@/services/shareLinks";
 
 export interface ConsentData {
   id?: string;
@@ -144,48 +149,17 @@ class ConsentService {
   }
 
   generateWhatsAppLink(shareUrl: string, patientName: string, phone?: string): string {
-    const message = encodeURIComponent(
-      `Hola ${patientName}, necesitas firmar un consentimiento informado. Por favor ingresa al siguiente enlace: ${shareUrl}`
-    );
-    
-    // Clean phone number - remove all non-digits
-    let phoneNumber = phone ? phone.replace(/\D/g, '') : '';
-    
-    // If phone starts with 0, assume it's a local Colombian number and add country code
-    if (phoneNumber.startsWith('0')) {
-      phoneNumber = '57' + phoneNumber.substring(1);
-    }
-    // If phone is 10 digits (Colombian mobile), add country code
-    else if (phoneNumber.length === 10 && phoneNumber.startsWith('3')) {
-      phoneNumber = '57' + phoneNumber;
-    }
-    
-    // Use web.whatsapp.com/send for better compatibility
-    if (phoneNumber) {
-      return `https://web.whatsapp.com/send?phone=${phoneNumber}&text=${message}`;
-    }
-    // Without phone number, open WhatsApp Web to share (user can choose contact)
-    return `https://web.whatsapp.com/send?text=${message}`;
+    // Nota: algunos entornos (red corporativa/políticas) pueden bloquear WhatsApp Web.
+    // Por eso evitamos web.whatsapp.com y usamos wa.me (móvil) / api.whatsapp.com (escritorio).
+    return generateWhatsAppUrl(patientName, shareUrl, phone);
   }
 
   generateSMSLink(phone: string, shareUrl: string, patientName: string): string {
     const message = encodeURIComponent(
-      `Hola ${patientName}, necesitas firmar un consentimiento informado: ${shareUrl}`
+      `Hola ${patientName}, necesitas firmar un consentimiento informado: ${shareUrl}`,
     );
-    
-    // Clean phone number
-    let phoneNumber = phone.replace(/\D/g, '');
-    
-    // Add country code if needed for Colombian numbers
-    if (phoneNumber.startsWith('0')) {
-      phoneNumber = '+57' + phoneNumber.substring(1);
-    } else if (phoneNumber.length === 10 && phoneNumber.startsWith('3')) {
-      phoneNumber = '+57' + phoneNumber;
-    } else if (!phoneNumber.startsWith('+')) {
-      phoneNumber = '+' + phoneNumber;
-    }
-    
-    // Use sms: protocol - works on mobile devices
+
+    const phoneNumber = normalizePhoneForSms(phone);
     return `sms:${phoneNumber}?body=${message}`;
   }
 
@@ -195,6 +169,11 @@ class ConsentService {
       `Estimado/a ${patientName},\n\nSe requiere su firma para un consentimiento informado. Por favor acceda al siguiente enlace para completar el proceso:\n\n${shareUrl}\n\nGracias.`
     );
     return `mailto:${email}?subject=${subject}&body=${body}`;
+  }
+
+  /** Utilidad para UI: permite copiar/mostrar el texto exacto del mensaje de WhatsApp. */
+  buildWhatsAppMessage(patientName: string, shareUrl: string): string {
+    return buildConsentWhatsAppMessage(patientName, shareUrl);
   }
 }
 
