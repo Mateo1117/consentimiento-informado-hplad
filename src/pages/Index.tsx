@@ -25,6 +25,7 @@ interface PatientData {
   eps: string;
   telefono: string;
   direccion: string;
+  email?: string;
   centroSalud: string;
   hasDisability?: boolean;
 }

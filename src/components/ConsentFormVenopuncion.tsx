@@ -28,6 +28,7 @@ interface PatientData {
   eps: string;
   telefono: string;
   direccion: string;
+  email?: string;
   centroSalud: string;
   hasDisability?: boolean;
 }
@@ -223,7 +224,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         tipoDocumento: patientData.tipoDocumento,
         numeroDocumento: patientData.numeroDocumento,
         telefono: patientData.telefono,
-        email: patientData.centroSalud // Using centroSalud as email fallback since no email field
+        email: patientData.email
       }}
       onGeneratePDF={generatePDF}
       onGetHTMLContent={getHTMLContent}
