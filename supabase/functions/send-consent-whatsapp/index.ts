@@ -51,16 +51,33 @@ serve(async (req) => {
 
     console.log('📱 WhatsApp Request to Meta API:', { phoneNumber, patientName });
 
-    // Build the message using a template or text message
-    // Using text message format (for testing, templates require approval)
+    // Build the message using the approved template "consentimiento_firma"
+    // Template parameters: {{1}} = patient name, {{2}} = signature URL
     const messageBody = {
       messaging_product: "whatsapp",
       recipient_type: "individual",
       to: phoneNumber,
-      type: "text",
-      text: {
-        preview_url: true,
-        body: `*E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa*\n\nSr(a) ${patientName},\n\nSe requiere su firma para el consentimiento informado${consentType ? ` de *${consentType}*` : ''}.\n\nPor favor ingrese al siguiente enlace para firmar:\n${shareUrl}\n\n_Este mensaje fue enviado automáticamente. No responda a este mensaje._`
+      type: "template",
+      template: {
+        name: "consentimiento_firma",
+        language: {
+          code: "es"
+        },
+        components: [
+          {
+            type: "body",
+            parameters: [
+              {
+                type: "text",
+                text: patientName
+              },
+              {
+                type: "text",
+                text: shareUrl
+              }
+            ]
+          }
+        ]
       }
     };
 
