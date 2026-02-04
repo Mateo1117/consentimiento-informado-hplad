@@ -200,7 +200,14 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       decision: consentDecision,
       consentDecision: consentDecision,
       // Información del procedimiento para mostrar al paciente
-      ...procedureInfo
+      ...procedureInfo,
+      // Flags + datos de acudiente para firma remota (cuando aplique)
+      hasDisability,
+      isMinor,
+      guardianName: guardianName || undefined,
+      guardianDocument: guardianDocument || undefined,
+      guardianRelationship: guardianRelationship || undefined,
+      guardianPhone: guardianPhone || undefined,
     }
   };
 

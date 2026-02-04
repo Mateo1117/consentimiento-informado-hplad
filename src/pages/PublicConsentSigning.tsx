@@ -93,117 +93,6 @@ export const PublicConsentSigning: React.FC = () => {
     return procedureNames[key] || consentType;
   };
 
-  // Send signed consent data to webhook
-  const sendToWebhook = async (
-    consentData: any,
-    patientSignatureUrl: string,
-    patientPhotoUrl: string,
-    signedByName: string
-  ) => {
-    try {
-      console.log('📤 Enviando consentimiento firmado al webhook...');
-
-      const hasDisability = !!consentData?.payload?.hasDisability;
-      const isMinor = !!consentData?.payload?.isMinor;
-      const requiresGuardian = hasDisability || isMinor;
-
-      const decisionRaw = consentData?.payload?.decision || consentData?.payload?.consentDecision;
-      const aceptacion = decisionRaw === 'disentir' ? 'Rechazado' : 'Aceptado';
-
-      // Intentar normalizar datos de acudiente desde payload (si existen)
-      const guardianName =
-        consentData?.payload?.guardianName ||
-        consentData?.payload?.guardian_name ||
-        consentData?.payload?.acudiente_nombre_completo ||
-        null;
-      const guardianDocument =
-        consentData?.payload?.guardianDocument ||
-        consentData?.payload?.guardian_document ||
-        consentData?.payload?.acudiente_documento ||
-        null;
-      const guardianRelationship =
-        consentData?.payload?.guardianRelationship ||
-        consentData?.payload?.guardian_relationship ||
-        consentData?.payload?.acudiente_parentesco ||
-        null;
-      const guardianPhone =
-        consentData?.payload?.guardianPhone ||
-        consentData?.payload?.guardian_phone ||
-        consentData?.payload?.acudiente_telefono ||
-        null;
-
-      // Firma profesional: si viene en base64, intentamos subirla para enviar URL pública
-      let professionalSignatureUrl: string | null = consentData?.professional_signature_data || null;
-      if (professionalSignatureUrl && professionalSignatureUrl.startsWith('data:image')) {
-        const profUpload = await PhotoService.uploadPhoto(professionalSignatureUrl, 'firma_profesional');
-        if (profUpload?.url) professionalSignatureUrl = profUpload.url;
-      }
-      
-      const procedureName = consentData.payload?.procedureName || 
-                           getProcedureName(consentData.consent_type);
-      
-      const webhookData = {
-        consent_id: consentData.id,
-        paciente_nombre_completo: consentData.patient_name,
-        paciente_tipo_documento: consentData.patient_document_type || 'CC',
-        paciente_numero_documento: consentData.patient_document_number || '',
-        paciente_email: consentData.patient_email || null,
-        paciente_telefono: consentData.patient_phone || null,
-        // Si el consentimiento requiere acudiente (menor/discapacidad), la firma capturada se reporta como firma del acudiente.
-        paciente_firma: requiresGuardian ? null : patientSignatureUrl,
-        paciente_foto: patientPhotoUrl,
-        paciente_tiene_discapacidad: hasDisability,
-        paciente_es_menor: isMinor,
-        // Datos del acudiente (cuando aplica)
-        acudiente_nombre_completo: requiresGuardian ? (guardianName || signedByName) : null,
-        acudiente_documento: requiresGuardian ? guardianDocument : null,
-        acudiente_parentesco: requiresGuardian ? guardianRelationship : null,
-        acudiente_telefono: requiresGuardian ? guardianPhone : null,
-        acudiente_firma: requiresGuardian ? patientSignatureUrl : null,
-        // Datos del consentimiento
-        tipo_procedimiento: procedureName,
-        procedimiento_medico: procedureName,
-        diagnostico: procedureName,
-        nombre_consentimiento: getConsentDisplayName(consentData.consent_type),
-        aceptacion_procedimiento: aceptacion,
-        fecha_firma: new Date().toISOString(),
-        fecha_documento: new Date().toISOString().split('T')[0],
-        // Datos del profesional
-        profesional_nombre_completo: consentData.professional_name || '',
-        profesional_documento: consentData.professional_document || null,
-        profesional_firma: professionalSignatureUrl,
-        // PDF y metadatos
-        // Nota: get_consent_by_token_secure no retorna pdf_url hoy; si existe en payload lo incluimos.
-        pdf_url:
-          consentData?.pdf_url ||
-          consentData?.payload?.pdf_url ||
-          consentData?.payload?.pdfUrl ||
-          null,
-        payload_adicional: {
-          ...(consentData.payload || {}),
-          signed_by_name: signedByName,
-        }
-      };
-
-      const { data, error } = await supabase.functions.invoke('enviar-consentimiento', {
-        body: webhookData
-      });
-
-      if (error) {
-        console.error('❌ Error enviando al webhook:', error);
-        toast.error('No se pudo enviar la información al webhook', {
-          description: error.message,
-          duration: 6000,
-        });
-      } else {
-        console.log('✅ Webhook enviado exitosamente:', data);
-      }
-    } catch (error) {
-      console.error('❌ Error en sendToWebhook:', error);
-      // No fallar si el webhook falla
-    }
-  };
-
   const handleSign = async () => {
     console.log('🖊️ Iniciando proceso de firma desde móvil');
     console.log('Validando datos de entrada...');
@@ -234,49 +123,38 @@ export const PublicConsentSigning: React.FC = () => {
 
     setSigning(true);
     try {
-      console.log('📡 Enviando datos al servidor...');
-      console.log('Token usado:', token);
-      
-      // Subir la foto del paciente
-      console.log('📸 Subiendo foto del paciente...');
-      const photoResult = await PhotoService.uploadPhoto(capturedPhoto, 'patient');
-      if (!photoResult) {
-        toast.error('Error al subir la foto del paciente');
+      console.log('📡 Firmando (server-side) y enviando al webhook...');
+
+      const { data, error } = await supabase.functions.invoke('public-sign-consent', {
+        body: {
+          token: token!,
+          signedByName: signedByName.trim(),
+          signatureData,
+          patientPhoto: capturedPhoto,
+        }
+      });
+
+      if (error) {
+        console.error('❌ Error en public-sign-consent:', error);
+        toast.error('No se pudo completar la firma', { description: error.message });
         return;
       }
 
-      // Subir la firma del paciente para enviar URL al webhook
-      console.log('🖊️ Subiendo firma del paciente...');
-      const signatureResult = await PhotoService.uploadPhoto(signatureData, 'firma_paciente');
-      const signatureUrl = signatureResult?.url || signatureData;
-      
-      const result = await consentService.signConsentByToken(
-        token!,
-        signatureData,
-        signedByName.trim(),
-        photoResult.url
-      );
-
-      console.log('📥 Respuesta del servidor:', result);
-
-      if (result) {
-        console.log('✅ Firma exitosa desde móvil');
-        
-        // Enviar al webhook con todos los datos
-        await sendToWebhook(consent, signatureUrl, photoResult.url, signedByName.trim());
-        
-        setConsent(prev => ({ 
-          ...prev, 
-          status: 'signed', 
-          signed_at: new Date().toISOString(),
-          signed_by_name: signedByName.trim(),
-          patient_photo_url: photoResult.url
-        }));
-        toast.success('¡Consentimiento firmado exitosamente!');
-      } else {
-        console.error('❌ No se recibió respuesta de la firma');
-        toast.error('Error: No se pudo completar la firma. Intente nuevamente.');
+      if (!data?.success) {
+        console.error('❌ public-sign-consent respondió success=false:', data);
+        toast.error('No se pudo completar la firma', { description: data?.error || 'Error desconocido' });
+        return;
       }
+
+      console.log('✅ Firma + webhook OK:', data);
+      setConsent(prev => ({
+        ...prev,
+        status: 'signed',
+        signed_at: new Date().toISOString(),
+        signed_by_name: signedByName.trim(),
+        patient_photo_url: data?.patientPhotoUrl || prev?.patient_photo_url,
+      }));
+      toast.success('¡Consentimiento firmado exitosamente!');
     } catch (error: any) {
       console.error('❌ Error crítico en proceso de firma:', error);
       const errorMessage = error?.message || 'Error desconocido';
