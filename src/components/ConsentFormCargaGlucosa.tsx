@@ -11,7 +11,6 @@ import { CameraCapture, CameraCaptureRef } from "./CameraCapture";
 import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, Shield, Download, TestTube2, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
-import { ShareConsentButtons } from './ShareConsentButtons';
 import { ConsentFormWrapper } from './ConsentFormWrapper';
 import { GuardianSignatureSection, GuardianSignatureRef } from './GuardianSignatureSection';
 import { toast } from "sonner";
