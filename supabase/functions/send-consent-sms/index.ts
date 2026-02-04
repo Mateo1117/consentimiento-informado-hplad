@@ -49,7 +49,7 @@ serve(async (req) => {
     console.log('📱 SMS Request to Hablame.co:', { phoneNumber, patientName });
 
     // Build SMS message
-    const message = `Sr(a) ${patientName}. Se requiere su firma para el consentimiento informado${consentType ? ` de ${consentType}` : ''}. Por favor ingrese al siguiente enlace para firmar: ${shareUrl} - Hospital Santa Matilde`;
+    const message = `Sr(a) ${patientName}. Se requiere su firma para el consentimiento informado${consentType ? ` de ${consentType}` : ''}. Por favor ingrese al siguiente enlace para firmar: ${shareUrl} - E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa`;
 
     // Build request body with Hablame.co v5 format
     const requestBody = {
@@ -57,7 +57,7 @@ serve(async (req) => {
       campaignName: "Consentimiento_Informado",
       certificate: false,
       flash: false,
-      from: "Hospital SM",
+      from: "Hosp PLAD Mesa",
       sendDate: "Now",
       messages: [
         {
