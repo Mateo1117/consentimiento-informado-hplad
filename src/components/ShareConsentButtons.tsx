@@ -1,11 +1,12 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Share2, MessageCircle, Mail, Smartphone, Copy, ExternalLink } from "lucide-react";
+import { Share2, MessageCircle, Mail, Smartphone, Copy, ExternalLink, QrCode, Download } from "lucide-react";
 import { toast } from "sonner";
 import { consentService, type ConsentData } from "@/services/consentService";
+import { QRCodeCanvas } from 'qrcode.react';
 
 interface ShareConsentButtonsProps {
   consentData: ConsentData;
@@ -21,6 +22,8 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
   const [shareableConsent, setShareableConsent] = useState<any>(null);
   const [patientEmail, setPatientEmail] = useState(consentData.patientEmail || '');
   const [patientPhone, setPatientPhone] = useState(consentData.patientPhone || '');
+  const [showQR, setShowQR] = useState(false);
+  const qrRef = useRef<HTMLDivElement>(null);
 
   const handleCreateShareableConsent = async () => {
     setIsCreating(true);
@@ -62,6 +65,19 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
       // Fallback si el navegador bloquea popups
       window.location.href = url;
     }
+  };
+
+  const downloadQR = () => {
+    if (!qrRef.current) return;
+    const canvas = qrRef.current.querySelector('canvas');
+    if (!canvas) return;
+    
+    const url = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.download = `consent-qr-${consentData.patientName.replace(/\s+/g, '-')}.png`;
+    link.href = url;
+    link.click();
+    toast.success('QR descargado');
   };
 
   if (!shareableConsent) {
@@ -133,10 +149,31 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
         </div>
       </div>
       
+      {/* QR Code Section */}
+      {showQR && (
+        <div className="flex flex-col items-center gap-3 p-4 bg-white rounded-lg border">
+          <div ref={qrRef}>
+            <QRCodeCanvas 
+              value={shareableConsent.shareUrl} 
+              size={180}
+              level="H"
+              includeMargin
+            />
+          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            El paciente escanea este código con la cámara del celular
+          </p>
+          <Button size="sm" variant="outline" onClick={downloadQR}>
+            <Download className="w-4 h-4 mr-1" />
+            Descargar QR
+          </Button>
+        </div>
+      )}
+
       <div className="space-y-2">
         <Label className="text-sm text-muted-foreground">Enlace de firma:</Label>
         <div className="flex items-center space-x-2">
-          <Input 
+          <Input
             value={shareableConsent.shareUrl} 
             readOnly 
             className="text-xs"
@@ -152,6 +189,16 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
       </div>
 
       <div className="grid grid-cols-2 gap-2">
+        {/* QR Button - BEST OPTION */}
+        <Button
+          size="sm"
+          variant="default"
+          onClick={() => setShowQR(!showQR)}
+          className="bg-primary text-primary-foreground col-span-2"
+        >
+          <QrCode className="w-4 h-4 mr-1" />
+          {showQR ? 'Ocultar QR' : 'Mostrar Código QR'}
+        </Button>
         <Button
           size="sm"
           variant="outline"
