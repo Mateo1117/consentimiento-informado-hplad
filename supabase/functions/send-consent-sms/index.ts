@@ -31,23 +31,41 @@ serve(async (req) => {
       throw new Error('Faltan campos requeridos: to, patientName, shareUrl');
     }
 
-    // Normalize phone number - remove spaces and ensure it starts with country code
+    // Normalize phone number - ensure it has + prefix and country code
     let phoneNumber = to.replace(/\s+/g, '').replace(/[^\d+]/g, '');
     
-    // If starts with +, remove it for Hablame.co
-    if (phoneNumber.startsWith('+')) {
-      phoneNumber = phoneNumber.substring(1);
-    }
-    
-    // If Colombian number without country code, add 57
-    if (phoneNumber.length === 10 && phoneNumber.startsWith('3')) {
-      phoneNumber = '57' + phoneNumber;
+    // If doesn't start with +, add it
+    if (!phoneNumber.startsWith('+')) {
+      // If Colombian number without country code, add +57
+      if (phoneNumber.length === 10 && phoneNumber.startsWith('3')) {
+        phoneNumber = '+57' + phoneNumber;
+      } else if (phoneNumber.startsWith('57')) {
+        phoneNumber = '+' + phoneNumber;
+      } else {
+        phoneNumber = '+' + phoneNumber;
+      }
     }
 
     console.log('📱 SMS Request to Hablame.co:', { phoneNumber, patientName });
 
-    // Build SMS message (keep it short - SMS has 160 char limit)
-    const message = `Hospital Santa Matilde: ${patientName}, firme su consentimiento${consentType ? ` (${consentType})` : ''} aquí: ${shareUrl}`;
+    // Build SMS message
+    const message = `Sr(a) ${patientName}. Se requiere su firma para el consentimiento informado${consentType ? ` de ${consentType}` : ''}. Por favor ingrese al siguiente enlace para firmar: ${shareUrl} - Hospital Santa Matilde`;
+
+    // Build request body with Hablame.co v5 format
+    const requestBody = {
+      priority: false,
+      campaignName: "Consentimiento_Informado",
+      certificate: false,
+      flash: false,
+      from: "Hospital SM",
+      sendDate: "Now",
+      messages: [
+        {
+          to: phoneNumber,
+          text: message
+        }
+      ]
+    };
 
     // Call Hablame.co API v5
     const response = await fetch('https://www.hablame.co/api/sms/v5/send', {
@@ -56,10 +74,7 @@ serve(async (req) => {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${HABLAME_API_KEY}`,
       },
-      body: JSON.stringify({
-        toNumber: phoneNumber,
-        sms: message,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     const responseData = await response.json();
@@ -70,7 +85,7 @@ serve(async (req) => {
     }
 
     // Check for Hablame.co specific error responses
-    if (responseData.status === 'error' || responseData.resultado !== undefined && responseData.resultado < 0) {
+    if (responseData.status === 'error' || (responseData.resultado !== undefined && responseData.resultado < 0)) {
       throw new Error(`Error de Hablame.co: ${responseData.mensaje || responseData.message || 'Error desconocido'}`);
     }
 
