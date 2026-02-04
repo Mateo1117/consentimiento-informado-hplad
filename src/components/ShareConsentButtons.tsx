@@ -28,6 +28,7 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
   const [showQR, setShowQR] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isSendingSms, setIsSendingSms] = useState(false);
+  const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -103,6 +104,40 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
       await logDelivery('sms', patientPhone, 'failed', error.message);
     } finally {
       setIsSendingSms(false);
+    }
+  };
+
+  const handleSendWhatsApp = async () => {
+    if (!patientPhone) {
+      toast.error('Teléfono del paciente requerido');
+      return;
+    }
+    
+    setIsSendingWhatsApp(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-consent-whatsapp', {
+        body: {
+          to: patientPhone,
+          patientName: consentData.patientName,
+          shareUrl: shareableConsent.shareUrl,
+          consentType: consentData.consentType,
+        }
+      });
+
+      if (error) throw error;
+      
+      if (data?.success) {
+        toast.success(`WhatsApp enviado exitosamente a ${patientPhone}`);
+        await logDelivery('whatsapp', patientPhone, 'sent');
+      } else {
+        throw new Error(data?.error || 'Error desconocido');
+      }
+    } catch (error: any) {
+      console.error('Error sending WhatsApp:', error);
+      toast.error(`Error al enviar WhatsApp: ${error.message}`);
+      await logDelivery('whatsapp', patientPhone, 'failed', error.message);
+    } finally {
+      setIsSendingWhatsApp(false);
     }
   };
 
@@ -324,20 +359,36 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
         </Button>
 
         {patientPhone && (
-          <Button
-            size="sm"
-            variant="default"
-            onClick={handleSendSms}
-            disabled={isSendingSms}
-            className="bg-blue-600 hover:bg-blue-700 text-white"
-          >
-            {isSendingSms ? (
-              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4 mr-1" />
-            )}
-            {isSendingSms ? 'Enviando...' : 'Enviar SMS'}
-          </Button>
+          <>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={handleSendWhatsApp}
+              disabled={isSendingWhatsApp}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {isSendingWhatsApp ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <MessageCircle className="w-4 h-4 mr-1" />
+              )}
+              {isSendingWhatsApp ? 'Enviando...' : 'Enviar WhatsApp'}
+            </Button>
+            <Button
+              size="sm"
+              variant="default"
+              onClick={handleSendSms}
+              disabled={isSendingSms}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isSendingSms ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-1" />
+              )}
+              {isSendingSms ? 'Enviando...' : 'Enviar SMS'}
+            </Button>
+          </>
         )}
 
         {patientEmail && (
