@@ -3,10 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Share2, MessageCircle, Mail, Smartphone, Copy, ExternalLink, QrCode, Download } from "lucide-react";
+import { Share2, MessageCircle, Mail, Smartphone, Copy, ExternalLink, QrCode, Download, Send, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { consentService, type ConsentData } from "@/services/consentService";
 import { QRCodeCanvas } from 'qrcode.react';
+import { supabase } from "@/integrations/supabase/client";
 
 interface ShareConsentButtonsProps {
   consentData: ConsentData;
@@ -23,7 +24,40 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
   const [patientEmail, setPatientEmail] = useState(consentData.patientEmail || '');
   const [patientPhone, setPatientPhone] = useState(consentData.patientPhone || '');
   const [showQR, setShowQR] = useState(false);
+  const [isSendingEmail, setIsSendingEmail] = useState(false);
   const qrRef = useRef<HTMLDivElement>(null);
+
+  const handleSendEmail = async () => {
+    if (!patientEmail) {
+      toast.error('Email del paciente requerido');
+      return;
+    }
+    
+    setIsSendingEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-consent-email', {
+        body: {
+          to: patientEmail,
+          patientName: consentData.patientName,
+          shareUrl: shareableConsent.shareUrl,
+          consentType: consentData.consentType,
+        }
+      });
+
+      if (error) throw error;
+      
+      if (data?.success) {
+        toast.success(`Email enviado exitosamente a ${patientEmail}`);
+      } else {
+        throw new Error(data?.error || 'Error desconocido');
+      }
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      toast.error(`Error al enviar email: ${error.message}`);
+    } finally {
+      setIsSendingEmail(false);
+    }
+  };
 
   const handleCreateShareableConsent = async () => {
     setIsCreating(true);
@@ -252,17 +286,35 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
         )}
 
         {patientEmail && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => openExternalLink(
-              consentService.generateEmailLink(patientEmail, shareableConsent.shareUrl, consentData.patientName)
-            )}
-            className="text-red-600 hover:text-red-700"
-          >
-            <Mail className="w-4 h-4 mr-1" />
-            Email
-          </Button>
+          <>
+            {/* Envío directo via Edge Function */}
+            <Button
+              size="sm"
+              variant="default"
+              onClick={handleSendEmail}
+              disabled={isSendingEmail}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {isSendingEmail ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-1" />
+              )}
+              {isSendingEmail ? 'Enviando...' : 'Enviar Email'}
+            </Button>
+            {/* Fallback: Abrir cliente de correo local */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => openExternalLink(
+                consentService.generateEmailLink(patientEmail, shareableConsent.shareUrl, consentData.patientName)
+              )}
+              className="text-red-600 hover:text-red-700"
+            >
+              <Mail className="w-4 h-4 mr-1" />
+              Cliente Email
+            </Button>
+          </>
         )}
 
         <Button
