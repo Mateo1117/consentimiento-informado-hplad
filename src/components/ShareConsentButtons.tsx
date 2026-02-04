@@ -8,6 +8,8 @@ import { toast } from "sonner";
 import { consentService, type ConsentData } from "@/services/consentService";
 import { QRCodeCanvas } from 'qrcode.react';
 import { supabase } from "@/integrations/supabase/client";
+import { deliveryLogService, type DeliveryMethod } from "@/services/deliveryLogService";
+import { DeliveryHistoryPanel } from "@/components/DeliveryHistoryPanel";
 
 interface ShareConsentButtonsProps {
   consentData: ConsentData;
@@ -25,7 +27,15 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
   const [patientPhone, setPatientPhone] = useState(consentData.patientPhone || '');
   const [showQR, setShowQR] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [historyRefresh, setHistoryRefresh] = useState(0);
   const qrRef = useRef<HTMLDivElement>(null);
+
+  const logDelivery = async (method: DeliveryMethod, recipient?: string, status: 'sent' | 'failed' = 'sent', error?: string) => {
+    if (shareableConsent?.id) {
+      await deliveryLogService.logDelivery(shareableConsent.id, method, recipient, status, error);
+      setHistoryRefresh(prev => prev + 1);
+    }
+  };
 
   const handleSendEmail = async () => {
     if (!patientEmail) {
@@ -48,12 +58,14 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
       
       if (data?.success) {
         toast.success(`Email enviado exitosamente a ${patientEmail}`);
+        await logDelivery('email', patientEmail, 'sent');
       } else {
         throw new Error(data?.error || 'Error desconocido');
       }
     } catch (error: any) {
       console.error('Error sending email:', error);
       toast.error(`Error al enviar email: ${error.message}`);
+      await logDelivery('email', patientEmail, 'failed', error.message);
     } finally {
       setIsSendingEmail(false);
     }
@@ -82,9 +94,12 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
     }
   };
 
-  const copyToClipboard = (text: string) => {
+  const copyToClipboard = async (text: string, isLink: boolean = false) => {
     navigator.clipboard.writeText(text);
     toast.success('Copiado al portapapeles');
+    if (isLink) {
+      await logDelivery('link_copied');
+    }
   };
 
   const openExternalLink = (url: string) => {
@@ -101,7 +116,7 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
     }
   };
 
-  const downloadQR = () => {
+  const downloadQR = async () => {
     if (!qrRef.current) return;
     const canvas = qrRef.current.querySelector('canvas');
     if (!canvas) return;
@@ -112,6 +127,7 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
     link.href = url;
     link.click();
     toast.success('QR descargado');
+    await logDelivery('qr');
   };
 
   if (!shareableConsent) {
@@ -215,7 +231,7 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => copyToClipboard(shareableConsent.shareUrl)}
+            onClick={() => copyToClipboard(shareableConsent.shareUrl, true)}
           >
             <Copy className="w-4 h-4" />
           </Button>
@@ -236,7 +252,7 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
         <Button
           size="sm"
           variant="outline"
-          onClick={() => {
+          onClick={async () => {
             // Primero copiamos el mensaje (si la red bloquea WhatsApp web, igual el usuario puede pegarlo manualmente)
             const msg = consentService.buildWhatsAppMessage(
               consentData.patientName,
@@ -253,6 +269,7 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
                 patientPhone,
               ),
             );
+            await logDelivery('whatsapp', patientPhone);
           }}
           className="text-green-600 hover:text-green-700"
         >
@@ -275,9 +292,12 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
           <Button
             size="sm"
             variant="outline"
-            onClick={() => openExternalLink(
-              consentService.generateSMSLink(patientPhone, shareableConsent.shareUrl, consentData.patientName)
-            )}
+            onClick={async () => {
+              openExternalLink(
+                consentService.generateSMSLink(patientPhone, shareableConsent.shareUrl, consentData.patientName)
+              );
+              await logDelivery('sms_client', patientPhone);
+            }}
             className="text-blue-600 hover:text-blue-700"
           >
             <Smartphone className="w-4 h-4 mr-1" />
@@ -306,9 +326,12 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
             <Button
               size="sm"
               variant="outline"
-              onClick={() => openExternalLink(
-                consentService.generateEmailLink(patientEmail, shareableConsent.shareUrl, consentData.patientName)
-              )}
+              onClick={async () => {
+                openExternalLink(
+                  consentService.generateEmailLink(patientEmail, shareableConsent.shareUrl, consentData.patientName)
+                );
+                await logDelivery('email_client', patientEmail);
+              }}
               className="text-red-600 hover:text-red-700"
             >
               <Mail className="w-4 h-4 mr-1" />
@@ -332,6 +355,14 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
           Expira: {new Date(shareableConsent.expiresAt).toLocaleDateString()}
         </p>
       )}
+
+      {/* Delivery History */}
+      <div className="border-t pt-3 mt-3">
+        <DeliveryHistoryPanel 
+          consentId={shareableConsent.id} 
+          refreshTrigger={historyRefresh}
+        />
+      </div>
     </div>
   );
 };

@@ -58,6 +58,50 @@ export type Database = {
           },
         ]
       }
+      consent_delivery_logs: {
+        Row: {
+          consent_id: string
+          created_at: string
+          created_by: string | null
+          delivery_method: string
+          error_message: string | null
+          id: string
+          metadata: Json | null
+          recipient: string | null
+          status: string
+        }
+        Insert: {
+          consent_id: string
+          created_at?: string
+          created_by?: string | null
+          delivery_method: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          recipient?: string | null
+          status?: string
+        }
+        Update: {
+          consent_id?: string
+          created_at?: string
+          created_by?: string | null
+          delivery_method?: string
+          error_message?: string | null
+          id?: string
+          metadata?: Json | null
+          recipient?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_delivery_logs_consent_id_fkey"
+            columns: ["consent_id"]
+            isOneToOne: false
+            referencedRelation: "consents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       consent_signature_logs: {
         Row: {
           consent_id: string | null
