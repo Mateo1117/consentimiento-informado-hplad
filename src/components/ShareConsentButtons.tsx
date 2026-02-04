@@ -27,6 +27,7 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
   const [patientPhone, setPatientPhone] = useState(consentData.patientPhone || '');
   const [showQR, setShowQR] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
+  const [isSendingSms, setIsSendingSms] = useState(false);
   const [historyRefresh, setHistoryRefresh] = useState(0);
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -68,6 +69,40 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
       await logDelivery('email', patientEmail, 'failed', error.message);
     } finally {
       setIsSendingEmail(false);
+    }
+  };
+
+  const handleSendSms = async () => {
+    if (!patientPhone) {
+      toast.error('Teléfono del paciente requerido');
+      return;
+    }
+    
+    setIsSendingSms(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('send-consent-sms', {
+        body: {
+          to: patientPhone,
+          patientName: consentData.patientName,
+          shareUrl: shareableConsent.shareUrl,
+          consentType: consentData.consentType,
+        }
+      });
+
+      if (error) throw error;
+      
+      if (data?.success) {
+        toast.success(`SMS enviado exitosamente a ${patientPhone}`);
+        await logDelivery('sms', patientPhone, 'sent');
+      } else {
+        throw new Error(data?.error || 'Error desconocido');
+      }
+    } catch (error: any) {
+      console.error('Error sending SMS:', error);
+      toast.error(`Error al enviar SMS: ${error.message}`);
+      await logDelivery('sms', patientPhone, 'failed', error.message);
+    } finally {
+      setIsSendingSms(false);
     }
   };
 
@@ -289,20 +324,38 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
         </Button>
 
         {patientPhone && (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={async () => {
-              openExternalLink(
-                consentService.generateSMSLink(patientPhone, shareableConsent.shareUrl, consentData.patientName)
-              );
-              await logDelivery('sms_client', patientPhone);
-            }}
-            className="text-blue-600 hover:text-blue-700"
-          >
-            <Smartphone className="w-4 h-4 mr-1" />
-            SMS
-          </Button>
+          <>
+            {/* Envío directo via Edge Function */}
+            <Button
+              size="sm"
+              variant="default"
+              onClick={handleSendSms}
+              disabled={isSendingSms}
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+            >
+              {isSendingSms ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-1" />
+              )}
+              {isSendingSms ? 'Enviando...' : 'Enviar SMS'}
+            </Button>
+            {/* Fallback: Abrir app SMS local */}
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={async () => {
+                openExternalLink(
+                  consentService.generateSMSLink(patientPhone, shareableConsent.shareUrl, consentData.patientName)
+                );
+                await logDelivery('sms_client', patientPhone);
+              }}
+              className="text-blue-600 hover:text-blue-700"
+            >
+              <Smartphone className="w-4 h-4 mr-1" />
+              App SMS
+            </Button>
+          </>
         )}
 
         {patientEmail && (
