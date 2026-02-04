@@ -68,18 +68,14 @@ export function generateWhatsAppUrl(
 ): string {
   const text = encodeURIComponent(buildConsentWhatsAppMessage(patientName, shareUrl));
   const phoneDigits = normalizePhoneForWhatsApp(phone);
-  const isMobile = isMobileUserAgent();
 
-  if (isMobile) {
-    // Intentar abrir la app primero (evita bloqueos de WhatsApp Web en algunos navegadores/redes)
-    // Nota: si el esquema no está soportado, el usuario puede usar el botón "Copiar mensaje".
-    return phoneDigits
-      ? `whatsapp://send?phone=${phoneDigits}&text=${text}`
-      : `whatsapp://send?text=${text}`;
-  }
-
-  // Escritorio
+  // IMPORTANTE:
+  // En muchas redes (hospital/empresa) bloquean dominios de WhatsApp (web.whatsapp.com, api.whatsapp.com, wa.me)
+  // causando ERR_BLOCKED_BY_RESPONSE. La forma más robusta es usar el deep-link del sistema:
+  // - En móvil abre la app
+  // - En escritorio abre WhatsApp Desktop si está instalado
+  // Si no hay app instalada, el usuario puede usar "Copiar mensaje".
   return phoneDigits
-    ? `https://api.whatsapp.com/send?phone=${phoneDigits}&text=${text}`
-    : `https://api.whatsapp.com/send?text=${text}`;
+    ? `whatsapp://send?phone=${phoneDigits}&text=${text}`
+    : `whatsapp://send?text=${text}`;
 }
