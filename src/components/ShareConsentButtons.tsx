@@ -155,9 +155,24 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
         <Button
           size="sm"
           variant="outline"
-          onClick={() => openExternalLink(
-            consentService.generateWhatsAppLink(shareableConsent.shareUrl, consentData.patientName, patientPhone)
-          )}
+          onClick={() => {
+            // Primero copiamos el mensaje (si la red bloquea WhatsApp web, igual el usuario puede pegarlo manualmente)
+            const msg = consentService.buildWhatsAppMessage(
+              consentData.patientName,
+              shareableConsent.shareUrl,
+            );
+            navigator.clipboard.writeText(msg);
+            toast.success('Mensaje copiado. Si no abre WhatsApp, péguelo manualmente.');
+
+            // Luego intentamos abrir la app (sin usar dominios web que suelen bloquearse)
+            openExternalLink(
+              consentService.generateWhatsAppLink(
+                shareableConsent.shareUrl,
+                consentData.patientName,
+                patientPhone,
+              ),
+            );
+          }}
           className="text-green-600 hover:text-green-700"
         >
           <MessageCircle className="w-4 h-4 mr-1" />
