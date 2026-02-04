@@ -324,73 +324,37 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
         </Button>
 
         {patientPhone && (
-          <>
-            {/* Envío directo via Edge Function */}
-            <Button
-              size="sm"
-              variant="default"
-              onClick={handleSendSms}
-              disabled={isSendingSms}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {isSendingSms ? (
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4 mr-1" />
-              )}
-              {isSendingSms ? 'Enviando...' : 'Enviar SMS'}
-            </Button>
-            {/* Fallback: Abrir app SMS local */}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={async () => {
-                openExternalLink(
-                  consentService.generateSMSLink(patientPhone, shareableConsent.shareUrl, consentData.patientName)
-                );
-                await logDelivery('sms_client', patientPhone);
-              }}
-              className="text-blue-600 hover:text-blue-700"
-            >
-              <Smartphone className="w-4 h-4 mr-1" />
-              App SMS
-            </Button>
-          </>
+          <Button
+            size="sm"
+            variant="default"
+            onClick={handleSendSms}
+            disabled={isSendingSms}
+            className="bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            {isSendingSms ? (
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4 mr-1" />
+            )}
+            {isSendingSms ? 'Enviando...' : 'Enviar SMS'}
+          </Button>
         )}
 
         {patientEmail && (
-          <>
-            {/* Envío directo via Edge Function */}
-            <Button
-              size="sm"
-              variant="default"
-              onClick={handleSendEmail}
-              disabled={isSendingEmail}
-              className="bg-green-600 hover:bg-green-700 text-white"
-            >
-              {isSendingEmail ? (
-                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-              ) : (
-                <Send className="w-4 h-4 mr-1" />
-              )}
-              {isSendingEmail ? 'Enviando...' : 'Enviar Email'}
-            </Button>
-            {/* Fallback: Abrir cliente de correo local */}
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={async () => {
-                openExternalLink(
-                  consentService.generateEmailLink(patientEmail, shareableConsent.shareUrl, consentData.patientName)
-                );
-                await logDelivery('email_client', patientEmail);
-              }}
-              className="text-red-600 hover:text-red-700"
-            >
-              <Mail className="w-4 h-4 mr-1" />
-              Cliente Email
-            </Button>
-          </>
+          <Button
+            size="sm"
+            variant="default"
+            onClick={handleSendEmail}
+            disabled={isSendingEmail}
+            className="bg-green-600 hover:bg-green-700 text-white"
+          >
+            {isSendingEmail ? (
+              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+            ) : (
+              <Send className="w-4 h-4 mr-1" />
+            )}
+            {isSendingEmail ? 'Enviando...' : 'Enviar Email'}
+          </Button>
         )}
 
         <Button
