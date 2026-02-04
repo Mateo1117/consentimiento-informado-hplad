@@ -28,6 +28,7 @@ interface PatientData {
   eps: string;
   telefono: string;
   direccion: string;
+  email?: string;
   centroSalud: string;
   hasDisability?: boolean;
 }
@@ -297,7 +298,7 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         tipoDocumento: patientData.tipoDocumento,
         numeroDocumento: patientData.numeroDocumento,
         telefono: patientData.telefono,
-        email: patientData.centroSalud
+        email: patientData.email
       }}
       onGeneratePDF={generatePDF}
       onGetHTMLContent={getHTMLContent}
