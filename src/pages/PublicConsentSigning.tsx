@@ -102,6 +102,42 @@ export const PublicConsentSigning: React.FC = () => {
   ) => {
     try {
       console.log('📤 Enviando consentimiento firmado al webhook...');
+
+      const hasDisability = !!consentData?.payload?.hasDisability;
+      const isMinor = !!consentData?.payload?.isMinor;
+      const requiresGuardian = hasDisability || isMinor;
+
+      const decisionRaw = consentData?.payload?.decision || consentData?.payload?.consentDecision;
+      const aceptacion = decisionRaw === 'disentir' ? 'Rechazado' : 'Aceptado';
+
+      // Intentar normalizar datos de acudiente desde payload (si existen)
+      const guardianName =
+        consentData?.payload?.guardianName ||
+        consentData?.payload?.guardian_name ||
+        consentData?.payload?.acudiente_nombre_completo ||
+        null;
+      const guardianDocument =
+        consentData?.payload?.guardianDocument ||
+        consentData?.payload?.guardian_document ||
+        consentData?.payload?.acudiente_documento ||
+        null;
+      const guardianRelationship =
+        consentData?.payload?.guardianRelationship ||
+        consentData?.payload?.guardian_relationship ||
+        consentData?.payload?.acudiente_parentesco ||
+        null;
+      const guardianPhone =
+        consentData?.payload?.guardianPhone ||
+        consentData?.payload?.guardian_phone ||
+        consentData?.payload?.acudiente_telefono ||
+        null;
+
+      // Firma profesional: si viene en base64, intentamos subirla para enviar URL pública
+      let professionalSignatureUrl: string | null = consentData?.professional_signature_data || null;
+      if (professionalSignatureUrl && professionalSignatureUrl.startsWith('data:image')) {
+        const profUpload = await PhotoService.uploadPhoto(professionalSignatureUrl, 'firma_profesional');
+        if (profUpload?.url) professionalSignatureUrl = profUpload.url;
+      }
       
       const procedureName = consentData.payload?.procedureName || 
                            getProcedureName(consentData.consent_type);
@@ -113,31 +149,40 @@ export const PublicConsentSigning: React.FC = () => {
         paciente_numero_documento: consentData.patient_document_number || '',
         paciente_email: consentData.patient_email || null,
         paciente_telefono: consentData.patient_phone || null,
-        paciente_firma: patientSignatureUrl,
+        // Si el consentimiento requiere acudiente (menor/discapacidad), la firma capturada se reporta como firma del acudiente.
+        paciente_firma: requiresGuardian ? null : patientSignatureUrl,
         paciente_foto: patientPhotoUrl,
-        paciente_tiene_discapacidad: false,
-        paciente_es_menor: false,
-        // Datos del acudiente (no aplica para firma remota por ahora)
-        acudiente_nombre_completo: null,
-        acudiente_documento: null,
-        acudiente_parentesco: null,
-        acudiente_telefono: null,
-        acudiente_firma: null,
+        paciente_tiene_discapacidad: hasDisability,
+        paciente_es_menor: isMinor,
+        // Datos del acudiente (cuando aplica)
+        acudiente_nombre_completo: requiresGuardian ? (guardianName || signedByName) : null,
+        acudiente_documento: requiresGuardian ? guardianDocument : null,
+        acudiente_parentesco: requiresGuardian ? guardianRelationship : null,
+        acudiente_telefono: requiresGuardian ? guardianPhone : null,
+        acudiente_firma: requiresGuardian ? patientSignatureUrl : null,
         // Datos del consentimiento
         tipo_procedimiento: procedureName,
         procedimiento_medico: procedureName,
         diagnostico: procedureName,
         nombre_consentimiento: getConsentDisplayName(consentData.consent_type),
-        aceptacion_procedimiento: 'Aceptado',
+        aceptacion_procedimiento: aceptacion,
         fecha_firma: new Date().toISOString(),
         fecha_documento: new Date().toISOString().split('T')[0],
         // Datos del profesional
         profesional_nombre_completo: consentData.professional_name || '',
         profesional_documento: consentData.professional_document || null,
-        profesional_firma: consentData.professional_signature_data || null,
+        profesional_firma: professionalSignatureUrl,
         // PDF y metadatos
-        pdf_url: null, // El PDF se genera después
-        payload_adicional: consentData.payload || {}
+        // Nota: get_consent_by_token_secure no retorna pdf_url hoy; si existe en payload lo incluimos.
+        pdf_url:
+          consentData?.pdf_url ||
+          consentData?.payload?.pdf_url ||
+          consentData?.payload?.pdfUrl ||
+          null,
+        payload_adicional: {
+          ...(consentData.payload || {}),
+          signed_by_name: signedByName,
+        }
       };
 
       const { data, error } = await supabase.functions.invoke('enviar-consentimiento', {
@@ -146,6 +191,10 @@ export const PublicConsentSigning: React.FC = () => {
 
       if (error) {
         console.error('❌ Error enviando al webhook:', error);
+        toast.error('No se pudo enviar la información al webhook', {
+          description: error.message,
+          duration: 6000,
+        });
       } else {
         console.log('✅ Webhook enviado exitosamente:', data);
       }
