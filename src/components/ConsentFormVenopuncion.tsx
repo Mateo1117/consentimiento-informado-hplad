@@ -305,22 +305,6 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         </CardContent>
       </Card>
 
-      {/* Sección de Acudiente - Menor de edad o discapacidad */}
-      <GuardianSignatureSection
-        ref={guardianSignatureRef}
-        isMinor={isMinor}
-        hasDisability={hasDisability}
-        guardianName={guardianName}
-        onGuardianNameChange={setGuardianName}
-        guardianDocument={guardianDocument}
-        onGuardianDocumentChange={setGuardianDocument}
-        guardianRelationship={guardianRelationship}
-        onGuardianRelationshipChange={setGuardianRelationship}
-        guardianPhone={guardianPhone}
-        onGuardianPhoneChange={setGuardianPhone}
-        guardianSignature={guardianSignature}
-        onGuardianSignatureChange={setGuardianSignature}
-      />
 
       {/* Procedure Information - Expandable */}
       <Card className="medical-card">
@@ -484,7 +468,10 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
             
             <div className="bg-medical-blue-light/20 border border-medical-blue/20 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <input type="checkbox" className="mt-1 w-4 h-4 text-medical-blue border-medical-blue/30 rounded" defaultChecked />
+                <Checkbox 
+                  checked={true}
+                  className="mt-1 w-4 h-4 text-medical-blue border-medical-blue/30 rounded data-[state=checked]:bg-medical-blue data-[state=checked]:border-medical-blue" 
+                />
                 <span className="text-medical-gray text-sm leading-relaxed">
                   <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
                 </span>
@@ -494,8 +481,25 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         </CardContent>
       </Card>
 
+      {/* Sección de Acudiente - igual que VIH y Frotis */}
+      <GuardianSignatureSection
+        ref={guardianSignatureRef}
+        isMinor={isMinor}
+        hasDisability={hasDisability}
+        guardianName={guardianName}
+        onGuardianNameChange={setGuardianName}
+        guardianDocument={guardianDocument}
+        onGuardianDocumentChange={setGuardianDocument}
+        guardianRelationship={guardianRelationship}
+        onGuardianRelationshipChange={setGuardianRelationship}
+        guardianPhone={guardianPhone}
+        onGuardianPhoneChange={setGuardianPhone}
+        guardianSignature={guardianSignature}
+        onGuardianSignatureChange={setGuardianSignature}
+      />
 
-      {/* Firmas Digitales */}
+
+      {/* Firmas Digitales - solo mostrar firma del paciente si no requiere acudiente */}
       <Card className="border-medical-blue/20">
         <CardHeader>
           <CardTitle className="text-medical-blue flex items-center gap-2">
@@ -504,14 +508,14 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Firma del Paciente - solo si no requiere acudiente */}
+            {!requiresGuardian && (
             <div>
-              <Label className="text-medical-blue font-medium">
-                Firma del {isMinor ? "Acudiente" : "Paciente"} *
-              </Label>
+              <Label className="text-medical-blue font-medium">Firma del Paciente *</Label>
               <div className="border rounded-lg p-4 bg-gray-50">
                 <SignaturePad 
-                  ref={patientSignatureRef} 
-                  title="Firma del Paciente"
+                  ref={patientSignatureRef}
+                  title="Firma del Paciente" 
                   onSignatureChange={handlePatientSignatureChange}
                 />
                 <div className="mt-3 text-xs text-medical-gray space-y-1">
@@ -520,56 +524,19 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
                   <div>• Use "Limpiar" para reiniciar la firma</div>
                   <div>• Use "Guardar" para confirmar la firma</div>
                 </div>
-                
-                {/* Foto del Paciente */}
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <Label className="text-medical-blue font-medium">Foto del Paciente</Label>
-                  <div className="mt-2">
-                    <CameraCapture
-                      ref={cameraCaptureRef}
-                      title="Foto del Paciente"
-                      required={false}
-                    />
-                    <div className="mt-2 flex gap-2">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={async () => {
-                          try {
-                            const photo = await cameraCaptureRef.current?.capturePhoto();
-                            handlePhotoCapture(photo);
-                          } catch (error) {
-                            console.error("Error capturing photo:", error);
-                            toast.error("Error al capturar la foto");
-                          }
-                        }}
-                        className="flex items-center gap-2"
-                      >
-                        <Camera className="h-4 w-4" />
-                        Capturar Foto
-                      </Button>
-                      {patientPhoto && (
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={() => {
-                            setPatientPhoto(null);
-                            cameraCaptureRef.current?.stopCamera();
-                          }}
-                          className="flex items-center gap-2"
-                        >
-                          <RotateCcw className="h-4 w-4" />
-                          Tomar Otra
-                        </Button>
-                      )}
-                    </div>
-                    {patientPhoto && (
-                      <div className="mt-2 text-sm text-green-600">
-                        ✓ Foto capturada exitosamente
-                      </div>
-                    )}
-                  </div>
-                </div>
+              </div>
+            </div>
+            )}
+
+            {/* Foto del Paciente - siempre visible */}
+            <div>
+              <Label className="text-medical-blue font-medium">Foto del Paciente</Label>
+              <div className="border rounded-lg p-4 bg-gray-50">
+                <CameraCapture
+                  ref={cameraCaptureRef}
+                  title="Foto del Paciente"
+                  required
+                />
               </div>
             </div>
 
@@ -583,7 +550,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
                 
                 {/* Professional Selector */}
                 <div className="mb-4">
-                  <ProfessionalSelector
+                  <ProfessionalSelector 
                     onProfessionalSelect={handleProfessionalSelect}
                     onNewProfessional={handleNewProfessional}
                     selectedDocument={professionalDocument}
@@ -607,21 +574,27 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
                   </div>
                 )}
                 
-                {/* Signature Area */}
                 <div className="border rounded-lg p-4 bg-gray-50">
                   <SignaturePad 
-                    ref={professionalSignatureRef} 
-                    title="Firma del Profesional"
+                    ref={professionalSignatureRef}
+                    title="Firma del Profesional" 
                     onSignatureChange={handleProfessionalSignatureChange}
                     isProfessional={true}
-                    professionalDocument={professionalDocument}
                     professionalName={professionalName}
+                    professionalDocument={professionalDocument}
                   />
+                  <div className="mt-3 text-xs text-medical-gray space-y-1">
+                    <div>• Use su dedo o stylus</div>
+                    <div>• No levante su dedo o stylus</div>
+                    <div>• Mantenga velocidad constante para firma</div>
+                    <div>• Use "Limpiar" para reiniciar la firma</div>
+                    <div>• Use "Guardar Firma" para almacenar la firma automáticamente</div>
+                    <div>• Use "Cargar Firma" para usar una firma previamente guardada</div>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-
         </CardContent>
       </Card>
 
