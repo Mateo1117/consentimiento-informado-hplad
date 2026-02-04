@@ -67,13 +67,13 @@ serve(async (req) => {
       ]
     };
 
-    // Call Hablame.co API v5 - using Authorization Bearer header format
+    // Call Hablame.co API v5 - using X-Hablame-Key header
     const response = await fetch('https://www.hablame.co/api/sms/v5/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'Authorization': `Bearer ${HABLAME_API_KEY}`,
+        'X-Hablame-Key': HABLAME_API_KEY,
       },
       body: JSON.stringify(requestBody),
     });
