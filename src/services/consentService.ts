@@ -147,16 +147,46 @@ class ConsentService {
     const message = encodeURIComponent(
       `Hola ${patientName}, necesitas firmar un consentimiento informado. Por favor ingresa al siguiente enlace: ${shareUrl}`
     );
-    // Use wa.me for better compatibility - if phone provided, send to specific number
-    const phoneNumber = phone ? phone.replace(/\D/g, '') : '';
-    return phoneNumber ? `https://wa.me/${phoneNumber}?text=${message}` : `https://wa.me/?text=${message}`;
+    
+    // Clean phone number - remove all non-digits
+    let phoneNumber = phone ? phone.replace(/\D/g, '') : '';
+    
+    // If phone starts with 0, assume it's a local Colombian number and add country code
+    if (phoneNumber.startsWith('0')) {
+      phoneNumber = '57' + phoneNumber.substring(1);
+    }
+    // If phone is 10 digits (Colombian mobile), add country code
+    else if (phoneNumber.length === 10 && phoneNumber.startsWith('3')) {
+      phoneNumber = '57' + phoneNumber;
+    }
+    
+    // Use web.whatsapp.com/send for better compatibility
+    if (phoneNumber) {
+      return `https://web.whatsapp.com/send?phone=${phoneNumber}&text=${message}`;
+    }
+    // Without phone number, open WhatsApp Web to share (user can choose contact)
+    return `https://web.whatsapp.com/send?text=${message}`;
   }
 
   generateSMSLink(phone: string, shareUrl: string, patientName: string): string {
     const message = encodeURIComponent(
       `Hola ${patientName}, necesitas firmar un consentimiento informado: ${shareUrl}`
     );
-    return `sms:${phone}?body=${message}`;
+    
+    // Clean phone number
+    let phoneNumber = phone.replace(/\D/g, '');
+    
+    // Add country code if needed for Colombian numbers
+    if (phoneNumber.startsWith('0')) {
+      phoneNumber = '+57' + phoneNumber.substring(1);
+    } else if (phoneNumber.length === 10 && phoneNumber.startsWith('3')) {
+      phoneNumber = '+57' + phoneNumber;
+    } else if (!phoneNumber.startsWith('+')) {
+      phoneNumber = '+' + phoneNumber;
+    }
+    
+    // Use sms: protocol - works on mobile devices
+    return `sms:${phoneNumber}?body=${message}`;
   }
 
   generateEmailLink(email: string, shareUrl: string, patientName: string): string {
