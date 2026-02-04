@@ -12,7 +12,6 @@ import { SignaturePad, SignatureRef } from './SignaturePad';
 import { CameraCapture, CameraCaptureRef } from './CameraCapture';
 import { ProfessionalSelector } from './ProfessionalSelector';
 import { generateHIVPDF } from '@/utils/pdfGeneratorHIV';
-import { ShareConsentButtons } from './ShareConsentButtons';
 import { ConsentFormWrapper } from './ConsentFormWrapper';
 import { GuardianSignatureSection, GuardianSignatureRef } from './GuardianSignatureSection';
 
