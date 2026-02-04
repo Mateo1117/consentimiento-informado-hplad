@@ -234,41 +234,51 @@ export const PublicConsentSigning: React.FC = () => {
               
               {consent.payload && (
                 <div className="space-y-6">
-                  {consent.payload.procedures && (
+                  {/* Descripción del Procedimiento */}
+                  {(consent.payload.procedureDescription || consent.payload.procedurePurpose) && (
                     <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
                       <h4 className="font-semibold mb-3 text-blue-800 flex items-center">
+                        <FileText className="w-4 h-4 mr-2" />
+                        {consent.payload.procedureName || consent.consent_type}
+                      </h4>
+                      {consent.payload.procedureDescription && (
+                        <p className="text-sm text-blue-900 mb-3">
+                          {consent.payload.procedureDescription}
+                        </p>
+                      )}
+                      {consent.payload.procedurePurpose && (
+                        <div className="bg-blue-100 p-3 rounded">
+                          <p className="text-sm font-medium text-blue-800">
+                            <strong>Propósito:</strong> {consent.payload.procedurePurpose}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {consent.payload.procedures && consent.payload.procedures.length > 0 && (
+                    <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                      <h4 className="font-semibold mb-3 text-indigo-800 flex items-center">
                         <FileText className="w-4 h-4 mr-2" />
                         Procedimientos a Realizar:
                       </h4>
                       <ul className="space-y-2">
                         {consent.payload.procedures.map((proc: any, index: number) => (
                           <li key={index} className="flex items-start">
-                            <CheckCircle className="w-4 h-4 mr-2 text-blue-600 mt-0.5 flex-shrink-0" />
-                            <span className="text-sm text-blue-900">{proc.name || proc}</span>
+                            <CheckCircle className="w-4 h-4 mr-2 text-indigo-600 mt-0.5 flex-shrink-0" />
+                            <div>
+                              <span className="text-sm font-medium text-indigo-900">{proc.name || proc}</span>
+                              {proc.description && (
+                                <p className="text-xs text-indigo-700 mt-1">{proc.description}</p>
+                              )}
+                            </div>
                           </li>
                         ))}
                       </ul>
                     </div>
                   )}
 
-                  {consent.payload.risks && (
-                    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                      <h4 className="font-semibold mb-3 text-yellow-800 flex items-center">
-                        <AlertCircle className="w-4 h-4 mr-2" />
-                        Riesgos Asociados:
-                      </h4>
-                      <ul className="space-y-2">
-                        {consent.payload.risks.map((risk: string, index: number) => (
-                          <li key={index} className="flex items-start">
-                            <span className="w-2 h-2 bg-yellow-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                            <span className="text-sm text-yellow-900">{risk}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {consent.payload.benefits && (
+                  {consent.payload.benefits && consent.payload.benefits.length > 0 && (
                     <div className="bg-green-50 p-4 rounded-lg border border-green-200">
                       <h4 className="font-semibold mb-3 text-green-800 flex items-center">
                         <CheckCircle className="w-4 h-4 mr-2" />
@@ -285,7 +295,24 @@ export const PublicConsentSigning: React.FC = () => {
                     </div>
                   )}
 
-                  {consent.payload.alternatives && (
+                  {consent.payload.risks && consent.payload.risks.length > 0 && (
+                    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
+                      <h4 className="font-semibold mb-3 text-yellow-800 flex items-center">
+                        <AlertCircle className="w-4 h-4 mr-2" />
+                        Riesgos Asociados:
+                      </h4>
+                      <ul className="space-y-2">
+                        {consent.payload.risks.map((risk: string, index: number) => (
+                          <li key={index} className="flex items-start">
+                            <span className="w-2 h-2 bg-yellow-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
+                            <span className="text-sm text-yellow-900">{risk}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {consent.payload.alternatives && consent.payload.alternatives.length > 0 && (
                     <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
                       <h4 className="font-semibold mb-3 text-purple-800">
                         Alternativas de Tratamiento:

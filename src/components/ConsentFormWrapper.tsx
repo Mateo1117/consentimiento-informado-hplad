@@ -6,7 +6,7 @@ import { useAppConsent } from '@/hooks/useAppConsent';
 import { toast } from 'sonner';
 import { ShareConsentButtons } from './ShareConsentButtons';
 import { consentService, type ConsentData } from '@/services/consentService';
-
+import { formatProcedureInfoForPayload } from '@/data/procedureInfo';
 interface ConsentFormWrapperProps {
   children: React.ReactNode;
   /** Etiqueta visible / nombre del consentimiento (para UI/archivo). */
@@ -184,6 +184,9 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
   };
 
   // Preparar datos para ShareConsentButtons
+  // Incluir información del procedimiento para que se muestre en la página de firma pública
+  const procedureInfo = formatProcedureInfoForPayload(consentTypeCode || consentType);
+  
   const shareConsentData: ConsentData = {
     patientName: `${patientData.nombre} ${patientData.apellidos}`,
     patientDocumentType: patientData.tipoDocumento,
@@ -196,6 +199,8 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       professionalData,
       decision: consentDecision,
       consentDecision: consentDecision,
+      // Información del procedimiento para mostrar al paciente
+      ...procedureInfo
     }
   };
 
