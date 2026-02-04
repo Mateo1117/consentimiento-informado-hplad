@@ -100,7 +100,7 @@ serve(async (req) => {
     `;
 
     const { data, error } = await resend.emails.send({
-      from: 'Hospital Santa Matilde <onboarding@resend.dev>',
+      from: 'E.S.E. Hospital PLAD <noreply@mcmasociados.com>',
       to: [to],
       subject: `Consentimiento Informado - Firma Requerida${consentType ? ` (${consentType})` : ''}`,
       html: emailHtml,
