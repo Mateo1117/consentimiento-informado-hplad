@@ -1,15 +1,13 @@
 import { useState } from "react";
 import { 
-  LayoutDashboard, 
-  FileText, 
+  LayoutGrid, 
   FilePlus, 
-  BarChart3, 
+  Layers,
   Send,
   Menu,
   ChevronLeft,
   Settings,
-  UserPlus,
-  Database
+  UserPlus
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -30,19 +28,18 @@ const NavItem = ({ icon: Icon, label, to, isCollapsed, isActive }: NavItemProps)
     <NavLink
       to={to}
       className={cn(
-        "flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200",
-        "hover:bg-primary/10 group",
+        "flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200",
         isActive 
-          ? "bg-primary text-primary-foreground shadow-md" 
-          : "text-foreground/70 hover:text-foreground"
+          ? "bg-primary text-primary-foreground shadow-md font-medium" 
+          : "text-primary hover:bg-primary/10"
       )}
     >
       <Icon className={cn(
-        "h-5 w-5 shrink-0 transition-colors",
-        isActive ? "text-primary-foreground" : "text-primary group-hover:text-primary"
+        "h-5 w-5 shrink-0",
+        isActive ? "text-primary-foreground" : "text-primary"
       )} />
       {!isCollapsed && (
-        <span className="font-medium text-sm truncate">{label}</span>
+        <span className="text-sm truncate">{label}</span>
       )}
     </NavLink>
   );
@@ -56,7 +53,7 @@ export function AppSidebar() {
   
   const navItems = [
     { icon: FilePlus, label: "Crear Consentimiento", to: "/" },
-    { icon: Database, label: "Gestionar Consentimientos", to: "/consent-management" },
+    { icon: Layers, label: "Consentimientos Creados", to: "/consent-management" },
   ];
 
   const adminItems = [
@@ -67,53 +64,62 @@ export function AppSidebar() {
   return (
     <aside 
       className={cn(
-        "h-screen bg-card border-r border-border flex flex-col transition-all duration-300 shrink-0",
-        isCollapsed ? "w-[72px]" : "w-[260px]"
+        "h-screen bg-background flex flex-col transition-all duration-300 shrink-0 p-4",
+        isCollapsed ? "w-[80px]" : "w-[300px]"
       )}
     >
-      {/* Header with Logo */}
-      <div className="p-4 border-b border-border">
-        <div 
-          className={cn(
-            "flex items-center cursor-pointer",
-            isCollapsed ? "justify-center" : "gap-3"
-          )}
-          onClick={() => navigate("/")}
-        >
-          <div className="w-12 h-12 rounded-xl bg-primary/5 flex items-center justify-center shrink-0 border border-primary/10">
+      {/* Logo Card */}
+      <div 
+        className="bg-card rounded-2xl shadow-sm border border-border p-6 mb-6 cursor-pointer"
+        onClick={() => navigate("/")}
+      >
+        {!isCollapsed ? (
+          <div className="flex flex-col items-center">
+            <div className="w-full aspect-[4/3] flex items-center justify-center mb-4">
+              <img 
+                src={logoHospital} 
+                alt="Logo Hospital" 
+                className="max-h-32 w-auto object-contain"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="flex justify-center">
             <img 
               src={logoHospital} 
               alt="Logo Hospital" 
               className="h-10 w-auto object-contain"
             />
           </div>
-          {!isCollapsed && (
-            <div className="flex flex-col min-w-0">
-              <span className="text-primary font-bold text-sm leading-tight truncate">
-                Sistema de Consentimientos
-              </span>
-              <span className="text-primary font-semibold text-base leading-tight truncate">
-                Informados
-              </span>
-              <span className="text-xs text-muted-foreground truncate">
-                E.S.E. Hospital Pedro León Álvarez Díaz
-              </span>
-            </div>
-          )}
-        </div>
+        )}
       </div>
+
+      {/* Title Section */}
+      {!isCollapsed && (
+        <div className="mb-6 px-2">
+          <h1 className="text-primary font-bold text-xl leading-tight">
+            Sistema de Consentimientos Informados
+          </h1>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="w-2 h-2 rounded-full bg-primary"></div>
+            <span className="text-sm text-muted-foreground">
+              E.S.E. Hospital Pedro León Álvarez Díaz
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Navigation Label */}
       {!isCollapsed && (
-        <div className="px-4 pt-6 pb-2">
-          <span className="text-xs font-semibold text-primary uppercase tracking-wider">
+        <div className="bg-primary/10 rounded-xl px-4 py-2 mb-4">
+          <span className="text-sm font-semibold text-primary uppercase tracking-wider">
             Navegación Principal
           </span>
         </div>
       )}
 
       {/* Navigation Items */}
-      <nav className="flex-1 px-3 py-2 space-y-1 overflow-y-auto">
+      <nav className="flex-1 space-y-2 overflow-y-auto">
         {navItems.map((item) => (
           <NavItem
             key={item.to}
@@ -129,7 +135,7 @@ export function AppSidebar() {
         {isAdmin && (
           <>
             {!isCollapsed && (
-              <div className="pt-4 pb-2 px-1">
+              <div className="bg-muted/50 rounded-xl px-4 py-2 mt-6 mb-2">
                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                   Administración
                 </span>
@@ -150,13 +156,13 @@ export function AppSidebar() {
       </nav>
 
       {/* Collapse Toggle */}
-      <div className="p-3 border-t border-border">
+      <div className="pt-4">
         <Button
           variant="ghost"
           size="sm"
           onClick={() => setIsCollapsed(!isCollapsed)}
           className={cn(
-            "w-full justify-center gap-2 text-muted-foreground hover:text-foreground",
+            "w-full justify-center gap-2 text-muted-foreground hover:text-foreground rounded-xl",
             isCollapsed && "px-0"
           )}
         >
