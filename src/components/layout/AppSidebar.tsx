@@ -13,7 +13,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import logoHospital from "@/assets/logo_hospital_transparent.png";
+import logoHospital from "@/assets/logo_hospital.png";
 
 interface NavItemProps {
   icon: React.ElementType;
