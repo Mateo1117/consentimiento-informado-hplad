@@ -70,18 +70,16 @@ export function AppSidebar() {
     >
       {/* Logo Card */}
       <div 
-        className="bg-card rounded-2xl shadow-sm border border-border p-6 mb-6 cursor-pointer"
+        className="bg-card rounded-3xl shadow-sm border border-border p-8 mb-6 cursor-pointer"
         onClick={() => navigate("/")}
       >
         {!isCollapsed ? (
-          <div className="flex flex-col items-center">
-            <div className="w-full aspect-[4/3] flex items-center justify-center mb-4">
-              <img 
-                src={logoHospital} 
-                alt="Logo Hospital" 
-                className="max-h-32 w-auto object-contain"
-              />
-            </div>
+          <div className="flex flex-col items-center justify-center min-h-[180px]">
+            <img 
+              src={logoHospital} 
+              alt="Logo Hospital" 
+              className="max-h-36 w-auto object-contain"
+            />
           </div>
         ) : (
           <div className="flex justify-center">
@@ -96,14 +94,17 @@ export function AppSidebar() {
 
       {/* Title Section */}
       {!isCollapsed && (
-        <div className="mb-6 px-2">
+        <div className="mb-6 text-center">
           <h1 className="text-primary font-bold text-xl leading-tight">
-            Sistema de Consentimientos Informados
+            Sistema de Consentimientos
           </h1>
-          <div className="flex items-center gap-2 mt-2">
-            <div className="w-2 h-2 rounded-full bg-primary"></div>
-            <span className="text-sm text-muted-foreground">
-              E.S.E. Hospital Pedro León Álvarez Díaz
+          <h1 className="text-primary font-bold text-xl leading-tight mb-3">
+            Informados
+          </h1>
+          <div className="flex items-start gap-2 text-left">
+            <div className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0"></div>
+            <span className="text-sm text-muted-foreground leading-tight">
+              E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa
             </span>
           </div>
         </div>
