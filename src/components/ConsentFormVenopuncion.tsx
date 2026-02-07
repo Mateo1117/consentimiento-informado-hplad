@@ -12,6 +12,7 @@ import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, Shield, Download, TestTube, CheckCircle, ChevronDown, ChevronUp, Camera, RotateCcw } from "lucide-react";
 import { ConsentFormWrapper } from './ConsentFormWrapper';
+import { DataProtectionConsent } from './DataProtectionConsent';
 import { GuardianSignatureSection, GuardianSignatureRef } from './GuardianSignatureSection';
 import { toast } from "sonner";
 import { generateVenopuncionPDF } from "@/utils/pdfGeneratorVenopuncion";
@@ -48,6 +49,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
   const [professionalDocument, setProfessionalDocument] = useState("");
   const [showProfessionalForm, setShowProfessionalForm] = useState(false);
   const [agreedToConsent, setAgreedToConsent] = useState(false);
+  const [dataProtectionAccepted, setDataProtectionAccepted] = useState(false);
   const [consentDecision, setConsentDecision] = useState<"aprobar" | "disentir">("aprobar");
   const [guardianName, setGuardianName] = useState("");
   const [guardianDocument, setGuardianDocument] = useState("");
@@ -473,10 +475,19 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
                   className="mt-1 w-4 h-4 text-medical-blue border-medical-blue/30 rounded data-[state=checked]:bg-medical-blue data-[state=checked]:border-medical-blue" 
                 />
                 <span className="text-medical-gray text-sm leading-relaxed">
-                  <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
+                  <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. 
+                  He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección. 
+                  Asimismo, autorizo a la E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa para el tratamiento de mis datos personales conforme a la Ley 1581 de 2012.
                 </span>
               </div>
             </div>
+            
+            {/* Autorización de Tratamiento de Datos Personales */}
+            <DataProtectionConsent
+              accepted={dataProtectionAccepted}
+              onAcceptedChange={setDataProtectionAccepted}
+              required
+            />
           </div>
         </CardContent>
       </Card>

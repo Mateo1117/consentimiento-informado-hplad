@@ -9,6 +9,7 @@ import { CameraCapture, CameraCaptureRef } from "./CameraCapture";
 import { ProfessionalSelector } from "./ProfessionalSelector";
 import { FileText, AlertCircle, Shield, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { ConsentFormWrapper } from './ConsentFormWrapper';
+import { DataProtectionConsent } from './DataProtectionConsent';
 import { GuardianSignatureSection, GuardianSignatureRef } from './GuardianSignatureSection';
 import { toast } from "sonner";
 
@@ -44,6 +45,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
   const [consentDecision, setConsentDecision] = useState<"aprobar" | "disentir">("aprobar");
   const [agreedToConsent, setAgreedToConsent] = useState(false);
   const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
+  const [dataProtectionAccepted, setDataProtectionAccepted] = useState(false);
   
   // Estados para el profesional
   const [professionalData, setProfessionalData] = useState({
@@ -463,10 +465,19 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
                     className="mt-1 w-4 h-4 text-medical-blue border-medical-blue/30 rounded data-[state=checked]:bg-medical-blue data-[state=checked]:border-medical-blue" 
                   />
                   <span className="text-medical-gray text-sm leading-relaxed">
-                    <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
+                    <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. 
+                    He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
+                    Asimismo, autorizo a la E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa para el tratamiento de mis datos personales conforme a la Ley 1581 de 2012.
                   </span>
                 </div>
               </div>
+              
+              {/* Autorización de Tratamiento de Datos Personales */}
+              <DataProtectionConsent
+                accepted={dataProtectionAccepted}
+                onAcceptedChange={setDataProtectionAccepted}
+                required
+              />
             </div>
           </CardContent>
         </Card>

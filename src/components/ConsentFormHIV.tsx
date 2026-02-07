@@ -13,6 +13,7 @@ import { CameraCapture, CameraCaptureRef } from './CameraCapture';
 import { ProfessionalSelector } from './ProfessionalSelector';
 import { generateHIVPDF } from '@/utils/pdfGeneratorHIV';
 import { ConsentFormWrapper } from './ConsentFormWrapper';
+import { DataProtectionConsent } from './DataProtectionConsent';
 import { GuardianSignatureSection, GuardianSignatureRef } from './GuardianSignatureSection';
 
 interface PatientData {
@@ -65,6 +66,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
     document: ''
   });
   const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
+  const [dataProtectionAccepted, setDataProtectionAccepted] = useState(false);
   
   // Refs para SignaturePads, CameraCapture y GuardianSignature
   const signatureRef = useRef<SignatureRef>(null);
@@ -425,10 +427,19 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
               <div className="flex items-start gap-3">
                 <input type="checkbox" className="mt-1 w-4 h-4 text-medical-blue border-medical-blue/30 rounded" defaultChecked />
                 <span className="text-medical-gray text-sm leading-relaxed">
-                  <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
+                  <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. 
+                  He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
+                  Asimismo, autorizo a la E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa para el tratamiento de mis datos personales conforme a la Ley 1581 de 2012.
                 </span>
               </div>
             </div>
+            
+            {/* Autorización de Tratamiento de Datos Personales */}
+            <DataProtectionConsent
+              accepted={dataProtectionAccepted}
+              onAcceptedChange={setDataProtectionAccepted}
+              required
+            />
           </div>
         </CardContent>
       </Card>
