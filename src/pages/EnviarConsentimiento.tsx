@@ -5,6 +5,13 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
   Send, 
   Search, 
   FileCheck, 
@@ -16,8 +23,9 @@ import {
   ExternalLink,
   Loader2,
   Clock,
-  CheckCircle,
-  User
+  User,
+  ArrowLeft,
+  ArrowRight
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -25,6 +33,8 @@ import { toast } from "sonner";
 import { QRCodeCanvas } from 'qrcode.react';
 import { deliveryLogService, type DeliveryMethod } from "@/services/deliveryLogService";
 import { DeliveryHistoryPanel } from "@/components/DeliveryHistoryPanel";
+import { patientApiService, type PatientData } from "@/services/patientApi";
+import { StepIndicator } from "@/components/consent/StepIndicator";
 
 interface Consent {
   id: string;
@@ -39,11 +49,46 @@ interface Consent {
   patient_document_number?: string;
 }
 
+const steps = [
+  { id: 'search', label: 'Búsqueda' },
+  { id: 'select', label: 'Selección' },
+  { id: 'send', label: 'Envío' },
+];
+
+const documentTypes = [
+  { value: "NI", label: "NI - Ninguno" },
+  { value: "CC", label: "CC - Cédula de Ciudadanía" },
+  { value: "CE", label: "CE - Cédula de Extranjería" },
+  { value: "TI", label: "TI - Tarjeta de Identidad" },
+  { value: "RC", label: "RC - Registro Civil" },
+  { value: "PA", label: "PA - Pasaporte" },
+  { value: "AS", label: "AS - Adulto sin Identificar" },
+  { value: "MS", label: "MS - Menor sin Identificar" },
+  { value: "SC", label: "SC - Salvoconducto" },
+  { value: "CN", label: "CN - Certificado Nacido Vivo" },
+  { value: "CD", label: "CD - Carné Diplomático" },
+  { value: "PE", label: "PE - Permiso Especial" },
+  { value: "PT", label: "PT - Permiso por Protección Temporal" },
+  { value: "DE", label: "DE - Documento Extranjero" },
+  { value: "SI", label: "SI - Sin Identificación" }
+];
+
 const EnviarConsentimiento = () => {
+  // Step management
+  const [currentStep, setCurrentStep] = useState<'search' | 'select' | 'send'>('search');
+  
+  // Patient search state
+  const [documentType, setDocumentType] = useState<string>("");
+  const [searchDocument, setSearchDocument] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [patientData, setPatientData] = useState<PatientData | null>(null);
+  
+  // Consent selection state
   const [consents, setConsents] = useState<Consent[]>([]);
   const [selectedConsent, setSelectedConsent] = useState<Consent | null>(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingConsents, setIsLoadingConsents] = useState(false);
+  
+  // Send state
   const [showQR, setShowQR] = useState(false);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isSendingSms, setIsSendingSms] = useState(false);
@@ -59,41 +104,96 @@ const EnviarConsentimiento = () => {
     return `${baseUrl}/firmar/${shareToken}`;
   };
 
-  useEffect(() => {
-    fetchPendingConsents();
-  }, []);
+  const getCompletedSteps = () => {
+    if (currentStep === 'send') return ['search', 'select'];
+    if (currentStep === 'select') return ['search'];
+    return [];
+  };
 
-  useEffect(() => {
-    if (selectedConsent) {
-      setPatientEmail(selectedConsent.patient_email || "");
-      setPatientPhone(selectedConsent.patient_phone || "");
-      setShowQR(false);
+  // Search patient
+  const handleSearchPatient = async () => {
+    if (!documentType) {
+      toast.error("Por favor seleccione el tipo de documento");
+      return;
     }
-  }, [selectedConsent]);
+    
+    if (!searchDocument) {
+      toast.error("Por favor ingrese un número de documento");
+      return;
+    }
 
-  const fetchPendingConsents = async () => {
+    setIsSearching(true);
+    try {
+      const result = await patientApiService.searchByDocument(searchDocument);
+      
+      if (result.data) {
+        setPatientData({
+          ...result.data,
+          tipoDocumento: documentType
+        });
+        toast.success("Paciente encontrado");
+        // Fetch pending consents for this patient
+        await fetchPatientConsents(searchDocument, documentType);
+      } else {
+        toast.error(result.error || "No se encontró paciente con este documento");
+        setPatientData(null);
+      }
+    } catch (error) {
+      toast.error("Error al buscar paciente");
+      setPatientData(null);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  // Fetch consents for a specific patient
+  const fetchPatientConsents = async (documentNumber: string, docType: string) => {
+    setIsLoadingConsents(true);
     try {
       const { data, error } = await supabase
         .from('consents')
         .select('id, patient_name, consent_type, status, created_at, share_token, patient_email, patient_phone, patient_document_type, patient_document_number')
+        .eq('patient_document_number', documentNumber)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setConsents(data || []);
+      
+      if (data && data.length > 0) {
+        setConsents(data);
+        setCurrentStep('select');
+      } else {
+        toast.info("Este paciente no tiene consentimientos pendientes de firma");
+        setConsents([]);
+      }
     } catch (error) {
       console.error('Error fetching consents:', error);
       toast.error('Error al cargar consentimientos');
     } finally {
-      setIsLoading(false);
+      setIsLoadingConsents(false);
     }
   };
 
-  const filteredConsents = consents.filter(consent =>
-    consent.patient_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    consent.consent_type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    consent.patient_document_number?.includes(searchTerm)
-  );
+  const handleSelectConsent = (consent: Consent) => {
+    setSelectedConsent(consent);
+    setPatientEmail(consent.patient_email || patientData?.email || "");
+    setPatientPhone(consent.patient_phone || patientData?.telefono || "");
+    setCurrentStep('send');
+    setShowQR(false);
+  };
+
+  const handleBackToSearch = () => {
+    setCurrentStep('search');
+    setPatientData(null);
+    setConsents([]);
+    setSelectedConsent(null);
+  };
+
+  const handleBackToSelect = () => {
+    setCurrentStep('select');
+    setSelectedConsent(null);
+    setShowQR(false);
+  };
 
   const logDelivery = async (method: DeliveryMethod, recipient?: string, status: 'sent' | 'failed' = 'sent', error?: string) => {
     if (selectedConsent?.id) {
@@ -247,6 +347,13 @@ const EnviarConsentimiento = () => {
 
   return (
     <MainLayout>
+      {/* Step Indicator */}
+      <StepIndicator 
+        steps={steps} 
+        currentStep={currentStep}
+        completedSteps={getCompletedSteps()}
+      />
+
       <div className="p-6">
         {/* Header */}
         <div className="max-w-4xl mx-auto mb-6">
@@ -258,135 +365,235 @@ const EnviarConsentimiento = () => {
               <div>
                 <h2 className="text-xl font-bold text-primary">Enviar Consentimiento</h2>
                 <p className="text-sm text-muted-foreground">
-                  Envíe consentimientos pendientes de firma por Email, SMS o WhatsApp
+                  Busque un paciente y envíe sus consentimientos pendientes por Email, SMS o WhatsApp
                 </p>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Content */}
-        <div className="max-w-4xl mx-auto grid gap-6">
-          {/* Consent Selection Card */}
-          <Card className="border-border shadow-sm overflow-hidden">
-            <CardHeader className="bg-primary text-primary-foreground pb-4 pt-4">
-              <div className="flex items-center gap-3">
-                <FileCheck className="h-6 w-6" />
-                <CardTitle className="text-lg">
-                  Seleccionar Consentimiento Pendiente
-                </CardTitle>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="space-y-4 pt-6">
-              {/* Search */}
-              <div className="space-y-2">
-                <Label className="text-sm font-medium flex items-center gap-2">
-                  <Search className="h-4 w-4 text-muted-foreground" />
-                  Buscar consentimiento
-                </Label>
-                <Input
-                  placeholder="Buscar por nombre, documento o tipo de consentimiento..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-
-              {/* Consent List */}
-              <div className="border border-border rounded-lg max-h-60 overflow-y-auto">
-                {isLoading ? (
-                  <div className="p-8 text-center text-muted-foreground flex flex-col items-center gap-2">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                    <span>Cargando consentimientos...</span>
-                  </div>
-                ) : filteredConsents.length === 0 ? (
-                  <div className="p-8 text-center text-muted-foreground flex flex-col items-center gap-2">
-                    <Clock className="h-8 w-8 opacity-50" />
-                    <span>No hay consentimientos pendientes</span>
-                  </div>
-                ) : (
-                  filteredConsents.map((consent) => (
-                    <div
-                      key={consent.id}
-                      onClick={() => setSelectedConsent(consent)}
-                      className={`p-4 border-b border-border last:border-b-0 cursor-pointer hover:bg-muted/50 transition-colors ${
-                        selectedConsent?.id === consent.id ? 'bg-primary/10 border-l-4 border-l-primary' : ''
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-lg bg-muted flex items-center justify-center">
-                            <User className="h-5 w-5 text-muted-foreground" />
-                          </div>
-                          <div>
-                            <p className="font-medium text-foreground">{consent.patient_name}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {consent.patient_document_type} {consent.patient_document_number}
-                            </p>
-                          </div>
-                        </div>
-                        <div className="text-right">
-                          <Badge variant="outline" className="mb-1">
-                            {getConsentTypeLabel(consent.consent_type)}
-                          </Badge>
-                          <p className="text-xs text-muted-foreground">
-                            {new Date(consent.created_at).toLocaleDateString('es-CO')}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Share Options Card - Only show when consent is selected */}
-          {selectedConsent && (
+        {/* Step 1: Patient Search */}
+        {currentStep === 'search' && (
+          <div className="max-w-4xl mx-auto">
             <Card className="border-border shadow-sm overflow-hidden">
               <CardHeader className="bg-primary text-primary-foreground pb-4 pt-4">
                 <div className="flex items-center gap-3">
-                  <Share2Icon className="h-6 w-6" />
+                  <User className="h-6 w-6" />
                   <CardTitle className="text-lg">
-                    Compartir Consentimiento
+                    Búsqueda de Paciente
                   </CardTitle>
                 </div>
               </CardHeader>
               
               <CardContent className="space-y-6 pt-6">
-                {/* Patient Information */}
-                <div className="space-y-3 p-4 bg-muted/50 border border-border rounded-lg">
-                  <h4 className="font-medium text-sm text-foreground flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    Información del Paciente
-                  </h4>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <span className="text-muted-foreground">Nombre:</span>
-                      <p className="font-medium">{selectedConsent.patient_name}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Documento:</span>
-                      <p className="font-medium">
-                        {selectedConsent.patient_document_type} {selectedConsent.patient_document_number}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Tipo de Consentimiento:</span>
-                      <p className="font-medium">{getConsentTypeLabel(selectedConsent.consent_type)}</p>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground">Estado:</span>
-                      <Badge variant="secondary" className="mt-1">
-                        <Clock className="h-3 w-3 mr-1" />
-                        Pendiente de firma
-                      </Badge>
-                    </div>
+                {/* Document Type */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Tipo de Documento *</Label>
+                  <Select value={documentType} onValueChange={setDocumentType}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccione el tipo de documento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {documentTypes.map((type) => (
+                        <SelectItem key={type.value} value={type.value}>
+                          {type.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Document Number */}
+                <div className="space-y-2">
+                  <Label className="text-sm font-medium">Número de Documento *</Label>
+                  <div className="flex gap-3">
+                    <Input
+                      placeholder="Ingrese número de documento..."
+                      value={searchDocument}
+                      onChange={(e) => setSearchDocument(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && handleSearchPatient()}
+                      className="flex-1"
+                    />
+                    <Button 
+                      onClick={handleSearchPatient}
+                      disabled={isSearching || !documentType}
+                    >
+                      {isSearching ? (
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      ) : (
+                        <Search className="h-4 w-4 mr-2" />
+                      )}
+                      {isSearching ? "Buscando..." : "Buscar"}
+                    </Button>
                   </div>
                 </div>
 
+                {/* Patient Found Info */}
+                {patientData && (
+                  <div className="p-4 bg-muted/50 border border-border rounded-lg space-y-3">
+                    <h4 className="font-medium text-foreground flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      Paciente Encontrado
+                    </h4>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Nombre:</span>
+                        <p className="font-medium">{patientData.nombre} {patientData.apellidos}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Documento:</span>
+                        <p className="font-medium">{patientData.tipoDocumento} {patientData.numeroDocumento}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">EPS:</span>
+                        <p className="font-medium">{patientData.eps || 'No disponible'}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Teléfono:</span>
+                        <p className="font-medium">{patientData.telefono || 'No disponible'}</p>
+                      </div>
+                    </div>
+                    
+                    {isLoadingConsents && (
+                      <div className="flex items-center justify-center py-4">
+                        <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                        <span className="text-sm text-muted-foreground">Buscando consentimientos pendientes...</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Step 2: Consent Selection */}
+        {currentStep === 'select' && patientData && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* Patient Summary */}
+            <Card className="border-border shadow-sm">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <User className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {patientData.nombre} {patientData.apellidos}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {patientData.tipoDocumento} {patientData.numeroDocumento}
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleBackToSearch}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Cambiar paciente
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Consent List */}
+            <Card className="border-border shadow-sm overflow-hidden">
+              <CardHeader className="bg-primary text-primary-foreground pb-4 pt-4">
+                <div className="flex items-center gap-3">
+                  <FileCheck className="h-6 w-6" />
+                  <CardTitle className="text-lg">
+                    Consentimientos Pendientes de Firma
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="p-0">
+                {consents.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground flex flex-col items-center gap-2">
+                    <Clock className="h-8 w-8 opacity-50" />
+                    <span>No hay consentimientos pendientes para este paciente</span>
+                    <Button variant="outline" onClick={handleBackToSearch} className="mt-4">
+                      Buscar otro paciente
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="divide-y divide-border">
+                    {consents.map((consent) => (
+                      <div
+                        key={consent.id}
+                        onClick={() => handleSelectConsent(consent)}
+                        className="p-4 cursor-pointer hover:bg-muted/50 transition-colors flex items-center justify-between"
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                            <FileCheck className="h-5 w-5 text-primary" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">
+                              {getConsentTypeLabel(consent.consent_type)}
+                            </p>
+                            <p className="text-sm text-muted-foreground">
+                              Creado: {new Date(consent.created_at).toLocaleDateString('es-CO')}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <Badge variant="secondary">
+                            <Clock className="h-3 w-3 mr-1" />
+                            Pendiente
+                          </Badge>
+                          <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Step 3: Send Options */}
+        {currentStep === 'send' && selectedConsent && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* Consent Summary */}
+            <Card className="border-border shadow-sm">
+              <CardContent className="py-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                      <FileCheck className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground">
+                        {selectedConsent.patient_name} - {getConsentTypeLabel(selectedConsent.consent_type)}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedConsent.patient_document_type} {selectedConsent.patient_document_number}
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleBackToSelect}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Cambiar consentimiento
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Send Options Card */}
+            <Card className="border-border shadow-sm overflow-hidden">
+              <CardHeader className="bg-primary text-primary-foreground pb-4 pt-4">
+                <div className="flex items-center gap-3">
+                  <Send className="h-6 w-6" />
+                  <CardTitle className="text-lg">
+                    Opciones de Envío
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-6 pt-6">
                 {/* Contact Information */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label htmlFor="patient-email">Email del Paciente</Label>
                     <Input
@@ -516,8 +723,8 @@ const EnviarConsentimiento = () => {
                 </div>
               </CardContent>
             </Card>
-          )}
-        </div>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
@@ -532,27 +739,5 @@ const EnviarConsentimiento = () => {
     </MainLayout>
   );
 };
-
-// Simple Share2 icon component
-const Share2Icon = ({ className }: { className?: string }) => (
-  <svg 
-    xmlns="http://www.w3.org/2000/svg" 
-    width="24" 
-    height="24" 
-    viewBox="0 0 24 24" 
-    fill="none" 
-    stroke="currentColor" 
-    strokeWidth="2" 
-    strokeLinecap="round" 
-    strokeLinejoin="round" 
-    className={className}
-  >
-    <circle cx="18" cy="5" r="3"/>
-    <circle cx="6" cy="12" r="3"/>
-    <circle cx="18" cy="19" r="3"/>
-    <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-    <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-  </svg>
-);
 
 export default EnviarConsentimiento;
