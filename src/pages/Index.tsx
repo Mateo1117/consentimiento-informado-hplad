@@ -147,7 +147,7 @@ const Index = () => {
       {/* Main Content */}
       <div className="p-6">
         {/* Header Card - Consentimiento Informado Digital */}
-        <div className="max-w-4xl mx-auto mb-6">
+        <div className="mb-6">
           <Card className="border-border shadow-sm">
             <CardContent className="flex items-center gap-4 py-4">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -165,14 +165,14 @@ const Index = () => {
 
         {/* Step 1: Patient Search */}
         {currentStep === 'search' && (
-          <div className="max-w-4xl mx-auto">
+          <div>
             <PatientForm onPatientSelect={handlePatientSelect} />
           </div>
         )}
 
         {/* Step 2: Consent Type Selection */}
         {currentStep === 'select' && selectedPatient && (
-          <div className="max-w-4xl mx-auto space-y-6">
+          <div className="space-y-6">
             {/* Patient Info Summary */}
             <Card className="border-border shadow-sm">
               <CardHeader className="pb-3">
@@ -264,7 +264,7 @@ const Index = () => {
 
         {/* Step 3: Consent Form */}
         {currentStep === 'consent' && selectedPatient && consentType && (
-          <div className="max-w-7xl mx-auto">
+          <div>
             {renderConsentForm()}
           </div>
         )}
