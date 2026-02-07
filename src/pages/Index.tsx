@@ -8,6 +8,7 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { StepIndicator } from "@/components/consent/StepIndicator";
 import { ConsentTypeCard } from "@/components/consent/ConsentTypeCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
   FileCheck, 
@@ -16,7 +17,9 @@ import {
   Heart, 
   TestTube2, 
   Syringe,
-  FlaskConical
+  FlaskConical,
+  ArrowLeft,
+  User
 } from "lucide-react";
 
 interface PatientData {
@@ -73,23 +76,35 @@ const consentTypes = [
 
 const steps = [
   { id: 'search', label: 'Búsqueda' },
+  { id: 'select', label: 'Selección' },
   { id: 'consent', label: 'Firma' },
 ];
 
 const Index = () => {
-  const [currentStep, setCurrentStep] = useState<'search' | 'consent'>('search');
+  const [currentStep, setCurrentStep] = useState<'search' | 'select' | 'consent'>('search');
   const [selectedPatient, setSelectedPatient] = useState<PatientData | null>(null);
-  const [consentType, setConsentType] = useState<'hiv' | 'frotis_vaginal' | 'carga_glucosa' | 'venopuncion'>('hiv');
+  const [consentType, setConsentType] = useState<'hiv' | 'frotis_vaginal' | 'carga_glucosa' | 'venopuncion' | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
 
   const handlePatientSelect = (patient: PatientData) => {
     setSelectedPatient(patient);
+    setCurrentStep('select');
+  };
+
+  const handleConsentTypeSelect = (type: typeof consentType) => {
+    setConsentType(type);
     setCurrentStep('consent');
   };
 
-  const handleBack = () => {
+  const handleBackToSearch = () => {
     setCurrentStep('search');
     setSelectedPatient(null);
+    setConsentType(null);
+  };
+
+  const handleBackToSelect = () => {
+    setCurrentStep('select');
+    setConsentType(null);
   };
 
   const filteredConsentTypes = consentTypes.filter(type => 
@@ -98,18 +113,26 @@ const Index = () => {
   );
 
   const renderConsentForm = () => {
+    if (!selectedPatient || !consentType) return null;
+    
     switch (consentType) {
       case 'hiv':
-        return <ConsentFormHIV patientData={selectedPatient!} onBack={handleBack} />;
+        return <ConsentFormHIV patientData={selectedPatient} onBack={handleBackToSelect} />;
       case 'frotis_vaginal':
-        return <ConsentFormFrotisVaginal patientData={selectedPatient!} onBack={handleBack} />;
+        return <ConsentFormFrotisVaginal patientData={selectedPatient} onBack={handleBackToSelect} />;
       case 'carga_glucosa':
-        return <ConsentFormCargaGlucosa patientData={selectedPatient!} onBack={handleBack} />;
+        return <ConsentFormCargaGlucosa patientData={selectedPatient} onBack={handleBackToSelect} />;
       case 'venopuncion':
-        return <ConsentFormVenopuncion patientData={selectedPatient!} onBack={handleBack} />;
+        return <ConsentFormVenopuncion patientData={selectedPatient} onBack={handleBackToSelect} />;
       default:
         return null;
     }
+  };
+
+  const getCompletedSteps = () => {
+    if (currentStep === 'consent') return ['search', 'select'];
+    if (currentStep === 'select') return ['search'];
+    return [];
   };
 
   return (
@@ -118,13 +141,46 @@ const Index = () => {
       <StepIndicator 
         steps={steps} 
         currentStep={currentStep}
-        completedSteps={currentStep === 'consent' ? ['search'] : []}
+        completedSteps={getCompletedSteps()}
       />
 
       {/* Main Content */}
       <div className="p-6">
+        {/* Step 1: Patient Search */}
         {currentStep === 'search' && (
-          <div className="max-w-6xl mx-auto space-y-6">
+          <div className="max-w-4xl mx-auto">
+            <PatientForm onPatientSelect={handlePatientSelect} />
+          </div>
+        )}
+
+        {/* Step 2: Consent Type Selection */}
+        {currentStep === 'select' && selectedPatient && (
+          <div className="max-w-4xl mx-auto space-y-6">
+            {/* Patient Info Summary */}
+            <Card className="border-border shadow-sm">
+              <CardHeader className="pb-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-accent/10 flex items-center justify-center">
+                      <User className="h-5 w-5 text-accent" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-lg text-foreground">
+                        {selectedPatient.nombre} {selectedPatient.apellidos}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {selectedPatient.tipoDocumento} {selectedPatient.numeroDocumento} • {selectedPatient.edad} años
+                      </p>
+                    </div>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={handleBackToSearch}>
+                    <ArrowLeft className="h-4 w-4 mr-2" />
+                    Cambiar paciente
+                  </Button>
+                </div>
+              </CardHeader>
+            </Card>
+
             {/* Consent Type Selection */}
             <Card className="border-border shadow-sm">
               <CardHeader className="pb-4">
@@ -137,7 +193,7 @@ const Index = () => {
                       Seleccionar Tipo de Consentimiento
                     </CardTitle>
                     <p className="text-sm text-muted-foreground">
-                      Seleccione el área y el tipo de consentimiento que desea generar
+                      Seleccione el tipo de consentimiento que desea generar para este paciente
                     </p>
                   </div>
                 </div>
@@ -170,7 +226,7 @@ const Index = () => {
                 </div>
 
                 {/* Consent Types Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {filteredConsentTypes.map((type) => (
                     <ConsentTypeCard
                       key={type.id}
@@ -178,7 +234,7 @@ const Index = () => {
                       title={type.title}
                       code={type.code}
                       isActive={consentType === type.id}
-                      onClick={() => setConsentType(type.id as typeof consentType)}
+                      onClick={() => handleConsentTypeSelect(type.id as typeof consentType)}
                       iconBgColor={type.iconBgColor}
                       iconColor={type.iconColor}
                     />
@@ -186,13 +242,11 @@ const Index = () => {
                 </div>
               </CardContent>
             </Card>
-
-            {/* Patient Search Form */}
-            <PatientForm onPatientSelect={handlePatientSelect} />
           </div>
         )}
 
-        {currentStep === 'consent' && selectedPatient && (
+        {/* Step 3: Consent Form */}
+        {currentStep === 'consent' && selectedPatient && consentType && (
           <div className="max-w-7xl mx-auto">
             {renderConsentForm()}
           </div>
