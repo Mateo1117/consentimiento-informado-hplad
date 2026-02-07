@@ -68,6 +68,47 @@ export function AppSidebar() {
         isCollapsed ? "w-[80px]" : "w-[300px]"
       )}
     >
+      {/* Logo */}
+      <div 
+        className="p-4 mb-2 cursor-pointer"
+        onClick={() => navigate("/")}
+      >
+        {!isCollapsed ? (
+          <div className="flex flex-col items-center justify-center">
+            <img 
+              src={logoHospital} 
+              alt="Logo Hospital" 
+              className="max-h-36 w-auto object-contain"
+            />
+          </div>
+        ) : (
+          <div className="flex justify-center">
+            <img 
+              src={logoHospital} 
+              alt="Logo Hospital" 
+              className="h-10 w-auto object-contain"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Title Section */}
+      {!isCollapsed && (
+        <div className="mb-6 text-center">
+          <h1 className="text-primary font-bold text-base leading-tight">
+            Sistema de Consentimientos
+          </h1>
+          <h1 className="text-primary font-bold text-base leading-tight mb-3">
+            Informados
+          </h1>
+          <div className="flex items-start gap-2 text-left">
+            <div className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0"></div>
+            <span className="text-sm text-muted-foreground leading-tight">
+              E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* Navigation Label */}
       {!isCollapsed && (
