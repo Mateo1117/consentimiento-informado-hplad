@@ -146,6 +146,23 @@ const Index = () => {
 
       {/* Main Content */}
       <div className="p-6">
+        {/* Header Card - Consentimiento Informado Digital */}
+        <div className="max-w-4xl mx-auto mb-6">
+          <Card className="border-border shadow-sm">
+            <CardContent className="flex items-center gap-4 py-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <FileCheck className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-primary">Consentimiento Informado Digital</h2>
+                <p className="text-sm text-muted-foreground">
+                  Sistema seguro para la gestión de consentimientos informados para procedimientos médicos
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Step 1: Patient Search */}
         {currentStep === 'search' && (
           <div className="max-w-4xl mx-auto">

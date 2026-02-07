@@ -52,8 +52,10 @@ export function AppSidebar() {
   const { isAdmin } = useAuth();
   
   const navItems = [
+    { icon: LayoutGrid, label: "Dashboard", to: "/dashboard" },
     { icon: FilePlus, label: "Crear Consentimiento", to: "/" },
     { icon: Layers, label: "Consentimientos Creados", to: "/consent-management" },
+    { icon: Send, label: "Enviar Consentimiento", to: "/enviar-consentimiento" },
   ];
 
   const adminItems = [

@@ -202,24 +202,17 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
   };
 
   return (
-    <Card className="w-full border-border shadow-sm">
-      <CardHeader className="pb-4">
+    <Card className="w-full border-border shadow-sm overflow-hidden">
+      <CardHeader className="bg-primary text-primary-foreground pb-4 pt-4">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-            <User className="h-5 w-5 text-primary" />
-          </div>
-          <div>
-            <CardTitle className="text-lg text-primary">
-              Búsqueda de Paciente
-            </CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Ingrese los datos del paciente para buscar en el sistema
-            </p>
-          </div>
+          <User className="h-6 w-6" />
+          <CardTitle className="text-lg">
+            Búsqueda de Paciente
+          </CardTitle>
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-6">
+      <CardContent className="space-y-6 pt-6">
         {/* Selección de sede */}
         <div className="space-y-3">
           <Label className="text-sm font-medium text-foreground flex items-center gap-2">
