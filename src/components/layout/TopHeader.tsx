@@ -85,12 +85,28 @@ export function TopHeader({ onMenuClick }: TopHeaderProps) {
               <span className="font-medium">{getUserDisplayName()}</span>
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
+          <DropdownMenuContent align="end" className="w-56">
             <DropdownMenuLabel>
-              <p className="text-sm font-medium">
-                {user?.user_metadata?.full_name || 'Usuario'}
-              </p>
+              <div className="flex flex-col space-y-2">
+                <p className="text-sm font-medium">
+                  {user?.user_metadata?.full_name || 'Usuario'}
+                </p>
+                {getRoleBadge()}
+              </div>
             </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {isAdmin && (
+              <>
+                <DropdownMenuItem onClick={() => navigate("/admin")}>
+                  <Shield className="h-4 w-4 mr-2" />
+                  Panel de Administración
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/doctor-registration")}>
+                  <UserPlus className="h-4 w-4 mr-2" />
+                  Registrar Médico
+                </DropdownMenuItem>
+              </>
+            )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={signOut} className="text-destructive">
               <LogOut className="h-4 w-4 mr-2" />
