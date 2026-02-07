@@ -5,14 +5,11 @@ import {
   Layers,
   Send,
   Menu,
-  ChevronLeft,
-  Settings,
-  UserPlus
+  ChevronLeft
 } from "lucide-react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/hooks/useAuth";
 import logoHospital from "@/assets/logo_hospital.png";
 
 interface NavItemProps {
@@ -49,18 +46,12 @@ export function AppSidebar() {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
   
   const navItems = [
     { icon: LayoutGrid, label: "Dashboard", to: "/dashboard" },
     { icon: FilePlus, label: "Crear Consentimiento", to: "/" },
     { icon: Layers, label: "Consentimientos Creados", to: "/consent-management" },
     { icon: Send, label: "Enviar Consentimiento", to: "/enviar-consentimiento" },
-  ];
-
-  const adminItems = [
-    { icon: UserPlus, label: "Registrar Médico", to: "/doctor-registration" },
-    { icon: Settings, label: "Panel Admin", to: "/admin" },
   ];
 
   return (
@@ -134,28 +125,6 @@ export function AppSidebar() {
           />
         ))}
         
-        {/* Admin Section */}
-        {isAdmin && (
-          <>
-            {!isCollapsed && (
-              <div className="bg-muted/50 rounded-xl px-4 py-2 mt-6 mb-2">
-                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                  Administración
-                </span>
-              </div>
-            )}
-            {adminItems.map((item) => (
-              <NavItem
-                key={item.to}
-                icon={item.icon}
-                label={item.label}
-                to={item.to}
-                isCollapsed={isCollapsed}
-                isActive={location.pathname === item.to}
-              />
-            ))}
-          </>
-        )}
       </nav>
 
       {/* Collapse Toggle */}
