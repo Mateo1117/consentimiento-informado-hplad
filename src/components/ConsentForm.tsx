@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { FileText, AlertCircle, Shield, Download, CheckCircle } from "lucide-react";
 import { ShareConsentButtons } from './ShareConsentButtons';
+import { DataProtectionConsent } from './DataProtectionConsent';
 import { toast } from "sonner";
 import html2canvas from "html2canvas";
 import { consentService, type ConsentFormData } from "@/services/legacy-consent";
@@ -111,6 +112,9 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
   const [enfoquePosicionSocial, setEnfoquePosicionSocial] = useState(false);
   const [enfoqueDiscapacidad, setEnfoqueDiscapacidad] = useState(false);
   const [enfoqueCondicionVida, setEnfoqueCondicionVida] = useState(false);
+  
+  // Estado para autorización de tratamiento de datos personales
+  const [dataProtectionAccepted, setDataProtectionAccepted] = useState(false);
 
   const patientSignatureRef = useRef<SignatureRef>(null);
   const professionalSignatureRef = useRef<SignatureRef>(null);
@@ -172,6 +176,11 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
 
     if (!agreedToConsent) {
       toast.error("Debe aceptar el consentimiento informado");
+      return false;
+    }
+
+    if (!dataProtectionAccepted) {
+      toast.error("Debe autorizar el tratamiento de datos personales");
       return false;
     }
 
@@ -650,6 +659,13 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
                 sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
               </Label>
             </div>
+            
+            {/* Autorización de Tratamiento de Datos Personales */}
+            <DataProtectionConsent
+              accepted={dataProtectionAccepted}
+              onAcceptedChange={setDataProtectionAccepted}
+              required
+            />
           </CardContent>
         </Card>
       </div>
