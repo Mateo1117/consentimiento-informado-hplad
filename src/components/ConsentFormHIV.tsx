@@ -13,7 +13,6 @@ import { CameraCapture, CameraCaptureRef } from './CameraCapture';
 import { ProfessionalSelector } from './ProfessionalSelector';
 import { generateHIVPDF } from '@/utils/pdfGeneratorHIV';
 import { ConsentFormWrapper } from './ConsentFormWrapper';
-import { DataProtectionConsent } from './DataProtectionConsent';
 import { GuardianSignatureSection, GuardianSignatureRef } from './GuardianSignatureSection';
 
 interface PatientData {
@@ -66,7 +65,6 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
     document: ''
   });
   const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
-  const [dataProtectionAccepted, setDataProtectionAccepted] = useState(false);
   
   // Refs para SignaturePads, CameraCapture y GuardianSignature
   const signatureRef = useRef<SignatureRef>(null);
@@ -425,21 +423,21 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
             
             <div className="bg-medical-blue-light/20 border border-medical-blue/20 rounded-lg p-4">
               <div className="flex items-start gap-3">
-                <input type="checkbox" className="mt-1 w-4 h-4 text-medical-blue border-medical-blue/30 rounded" defaultChecked />
+                <Checkbox 
+                  checked={true}
+                  className="mt-1 w-4 h-4 text-medical-blue border-medical-blue/30 rounded data-[state=checked]:bg-medical-blue data-[state=checked]:border-medical-blue" 
+                />
                 <span className="text-medical-gray text-sm leading-relaxed">
                   <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. 
-                  He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
-                  Asimismo, autorizo a la E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa para el tratamiento de mis datos personales conforme a la Ley 1581 de 2012.
+                  He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección. 
+                  En cumplimiento de la Ley 1581 de 2012 y el Decreto 1377 de 2013 sobre protección de datos personales, 
+                  <strong> AUTORIZO</strong> de manera libre, expresa e informada a la E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa 
+                  para la recolección, almacenamiento, uso y tratamiento de mis datos personales y datos sensibles de salud, 
+                  los cuales serán utilizados para gestionar mi historia clínica, cumplir con obligaciones legales del sector salud, 
+                  realizar seguimiento a procedimientos médicos y enviar notificaciones relacionadas con mi atención.
                 </span>
               </div>
             </div>
-            
-            {/* Autorización de Tratamiento de Datos Personales */}
-            <DataProtectionConsent
-              accepted={dataProtectionAccepted}
-              onAcceptedChange={setDataProtectionAccepted}
-              required
-            />
           </div>
         </CardContent>
       </Card>
