@@ -203,25 +203,25 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
 
   return (
     <Card className="w-full border-border shadow-sm overflow-hidden">
-      <CardHeader className="bg-primary text-primary-foreground pb-4 pt-4">
+      <CardHeader className="bg-primary text-primary-foreground py-3 px-6">
         <div className="flex items-center gap-3">
-          <User className="h-6 w-6" />
-          <CardTitle className="text-lg">
+          <User className="h-5 w-5" />
+          <CardTitle className="text-base font-semibold">
             Búsqueda de Paciente
           </CardTitle>
         </div>
       </CardHeader>
       
-      <CardContent className="space-y-6 pt-6">
+      <CardContent className="space-y-5 pt-5 pb-5">
         {/* Selección de sede */}
-        <div className="space-y-3">
-          <Label className="text-sm font-medium text-foreground flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-muted-foreground" />
+        <div className="space-y-2">
+          <Label className="text-sm text-muted-foreground flex items-center gap-2">
+            <MapPin className="h-4 w-4" />
             Sede de Atención
           </Label>
           
           <Select value={selectedSede} onValueChange={setSelectedSede}>
-            <SelectTrigger className="border-input focus:border-primary">
+            <SelectTrigger className="h-11 border-input focus:border-primary bg-background">
               <SelectValue placeholder="Seleccione la sede donde será atendido el paciente" />
             </SelectTrigger>
             <SelectContent>
@@ -238,16 +238,16 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
 
         {/* Búsqueda por documento */}
         <div className="space-y-4">
-          <Label className="text-sm font-medium text-foreground flex items-center gap-2">
-            <Search className="h-4 w-4 text-muted-foreground" />
+          <Label className="text-sm text-muted-foreground flex items-center gap-2">
+            <Search className="h-4 w-4" />
             Buscar por número de documento
           </Label>
           
           {/* Selector de tipo de documento */}
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Tipo de Documento *</Label>
+          <div className="space-y-1.5">
+            <Label className="text-sm text-muted-foreground">Tipo de Documento *</Label>
             <Select value={documentType} onValueChange={setDocumentType}>
-              <SelectTrigger className="border-input focus:border-primary">
+              <SelectTrigger className="h-11 border-primary focus:border-primary bg-background">
                 <SelectValue placeholder="Seleccione el tipo de documento" />
               </SelectTrigger>
               <SelectContent>
@@ -261,8 +261,8 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
           </div>
           
           
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground">Número de Documento *</Label>
+          <div className="space-y-1.5">
+            <Label className="text-sm text-muted-foreground">Número de Documento *</Label>
             <div className="flex gap-3">
               <div className="flex-1">
                 <Input
@@ -270,12 +270,13 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                   value={searchDocument}
                   onChange={(e) => setSearchDocument(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch(false)}
-                  className="border-input focus:border-primary"
+                  className="h-11 border-input focus:border-primary bg-background"
                 />
               </div>
               <Button 
                 onClick={() => handleSearch(false)}
                 disabled={isLoading || !selectedSede || !documentType}
+                className="h-11 px-6"
               >
                 {isLoading ? "Buscando..." : "Buscar"}
               </Button>
@@ -283,23 +284,24 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
           </div>
 
           {/* Casilla de discapacidad - siempre visible */}
-          <div className="flex items-start space-x-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
-            <Checkbox
-              id="hasDisability"
-              checked={hasDisability}
-              onCheckedChange={(checked) => setHasDisability(checked as boolean)}
-              className="mt-1 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
-            />
-            <div className="flex-1">
+          <div className="p-4 bg-medical-amber-light border border-medical-amber/30 rounded-lg">
+            <div className="flex items-center gap-2 text-medical-amber font-medium mb-2">
+              <AlertCircle className="h-4 w-4" />
+              <span>Estado del Paciente</span>
+            </div>
+            <div className="flex items-start space-x-3">
+              <Checkbox
+                id="hasDisability"
+                checked={hasDisability}
+                onCheckedChange={(checked) => setHasDisability(checked as boolean)}
+                className="mt-0.5 border-medical-amber data-[state=checked]:bg-medical-amber data-[state=checked]:border-medical-amber"
+              />
               <Label 
                 htmlFor="hasDisability" 
-                className="cursor-pointer text-orange-800 font-medium"
+                className="cursor-pointer text-sm text-foreground"
               >
-                El paciente tiene algún tipo de discapacidad que le impide firmar
+                El paciente tiene alguna discapacidad que le impide firmar por sí mismo
               </Label>
-              <p className="text-sm text-orange-700 mt-1">
-                Marque esta casilla si el paciente presenta alguna condición que le impida firmar el consentimiento. Un acudiente deberá firmar en su nombre.
-              </p>
             </div>
           </div>
         </div>
@@ -443,6 +445,11 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
             </div>
           </>
         )}
+
+        {/* Webhook status message */}
+        <p className="text-xs text-muted-foreground pt-2">
+          Conectado al webhook local para consulta de pacientes
+        </p>
       </CardContent>
     </Card>
   );

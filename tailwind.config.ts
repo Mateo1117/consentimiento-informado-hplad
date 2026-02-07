@@ -39,6 +39,8 @@ export default {
 				'medical-orange-light': 'hsl(var(--medical-orange-light))',
 				'medical-gray': 'hsl(var(--medical-gray))',
 				'medical-gray-light': 'hsl(var(--medical-gray-light))',
+				'medical-amber': 'hsl(var(--medical-amber))',
+				'medical-amber-light': 'hsl(var(--medical-amber-light))',
 				'signature-area': 'hsl(var(--signature-area))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
