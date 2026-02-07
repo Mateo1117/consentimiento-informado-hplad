@@ -2,8 +2,7 @@ import { useRef, forwardRef, useImperativeHandle, useState, useEffect } from "re
 import SignatureCanvas from "react-signature-canvas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { RotateCcw, PenTool, Save, Upload } from "lucide-react";
+import { RotateCcw, PenTool, Save, Upload, Check } from "lucide-react";
 import { toast } from "sonner";
 import { ProfessionalSignatureService, type ProfessionalSignature } from "@/services/professionalSignatureService";
 
@@ -21,7 +20,7 @@ interface SignaturePadProps {
   isProfessional?: boolean;
   professionalDocument?: string;
   professionalName?: string;
-  onSignatureChange?: (signature: string | null) => void; // Nueva prop para captura automática
+  onSignatureChange?: (signature: string | null) => void;
 }
 
 export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(
@@ -49,7 +48,7 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(
             console.log('❌ Firma inválida o vacía');
             onSignatureChange(null);
           }
-        }, 300); // Reduced from 500ms to 300ms for better responsiveness
+        }, 300);
       }
     };
 
@@ -171,118 +170,124 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(
     };
 
     return (
-      <Card className="w-full border-medical-blue/20">
+      <Card className="w-full border-border shadow-sm">
         <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg text-medical-blue">
+          <CardTitle className="flex items-center gap-2 text-lg text-primary">
             <PenTool className="h-5 w-5" />
             {title}
             {required && <span className="text-destructive">*</span>}
           </CardTitle>
-          {subtitle && (
-            <p className="text-sm text-medical-gray">{subtitle}</p>
-          )}
+          <p className="text-sm text-muted-foreground">
+            {subtitle || "Área de firma digital - Use su dedo o stylus para firmar"}
+          </p>
         </CardHeader>
         
         <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <div className="border-2 border-dashed border-medical-blue/30 rounded-lg bg-signature-area p-1">
-              <SignatureCanvas
-                ref={sigCanvas}
-                onEnd={handleSignatureEnd} // Captura automática cuando termina de firmar
-                canvasProps={{
-                  className: "w-full h-48 rounded cursor-crosshair",
-                  style: { 
-                    background: 'white',
-                    touchAction: 'none',
-                    msTouchAction: 'none',
-                    WebkitUserSelect: 'none',
-                    MozUserSelect: 'none',
-                    msUserSelect: 'none',
-                    userSelect: 'none'
-                  }
-                }}
-                backgroundColor="white"
-                penColor="#1e40af"
-                minWidth={2}
-                maxWidth={4}
-                velocityFilterWeight={0.7}
-                dotSize={2}
-                throttle={10}
-                clearOnResize={false}
-              />
-            </div>
+          {/* Signature Canvas Area */}
+          <div className="border-2 border-dashed border-primary/30 rounded-xl bg-muted/30 p-1">
+            <SignatureCanvas
+              ref={sigCanvas}
+              onEnd={handleSignatureEnd}
+              canvasProps={{
+                className: "w-full h-48 rounded-lg cursor-crosshair",
+                style: { 
+                  background: 'white',
+                  touchAction: 'none',
+                  msTouchAction: 'none',
+                  WebkitUserSelect: 'none',
+                  MozUserSelect: 'none',
+                  msUserSelect: 'none',
+                  userSelect: 'none'
+                }
+              }}
+              backgroundColor="white"
+              penColor="#1e40af"
+              minWidth={2}
+              maxWidth={4}
+              velocityFilterWeight={0.7}
+              dotSize={2}
+              throttle={10}
+              clearOnResize={false}
+            />
           </div>
 
-          <div className="flex gap-2 justify-between flex-wrap">
-            <div className="flex gap-2 flex-wrap">
-              {isProfessional && professionalDocument && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLoadExistingSignature}
-                  className="border-medical-green/30 text-medical-green hover:bg-medical-green/5"
-                >
-                  <Upload className="h-4 w-4 mr-2" />
-                  Cargar Firma
-                </Button>
-              )}
-              
-              {!isProfessional && (
-                <>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={handleSaveTempSignature}
-                    className="border-orange-500/30 text-orange-600 hover:bg-orange-50"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
-                    Guardar Temp.
-                  </Button>
-                  
-                  {tempSignature && (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handleLoadTempSignature}
-                      className="border-orange-500/30 text-orange-600 hover:bg-orange-50"
-                    >
-                      <Upload className="h-4 w-4 mr-2" />
-                      Cargar Temp.
-                    </Button>
-                  )}
-                </>
-              )}
-            </div>
-            
-            <div className="flex gap-2">
+          {/* Action Buttons */}
+          <div className="flex gap-3 justify-start flex-wrap">
+            {isProfessional && professionalDocument && (
               <Button
                 variant="outline"
                 size="sm"
-                onClick={handleClear}
-                className="border-medical-blue/30 text-medical-blue hover:bg-medical-blue/5"
+                onClick={handleLoadExistingSignature}
+                className="border-accent text-accent hover:bg-accent/10"
               >
-                <RotateCcw className="h-4 w-4 mr-2" />
-                Limpiar
+                <Upload className="h-4 w-4 mr-2" />
+                Cargar Firma
               </Button>
-              
-              {isProfessional && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleSaveSignature}
-                  disabled={isLoading}
-                  className="border-medical-green/30 text-medical-green hover:bg-medical-green/5"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {isLoading ? "Guardando..." : "Guardar Firma"}
-                </Button>
-              )}
-            </div>
+            )}
+            
+            {!isProfessional && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSaveTempSignature}
+                className="border-orange-500 text-orange-600 hover:bg-orange-50"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                Guardar Temp.
+              </Button>
+            )}
+            
+            {!isProfessional && tempSignature && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleLoadTempSignature}
+                className="border-orange-500 text-orange-600 hover:bg-orange-50"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                Cargar Temp.
+              </Button>
+            )}
+            
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleClear}
+              className="border-primary text-primary hover:bg-primary/10"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Limpiar
+            </Button>
+            
+            {isProfessional && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSaveSignature}
+                disabled={isLoading}
+                className="border-accent text-accent hover:bg-accent/10"
+              >
+                <Save className="h-4 w-4 mr-2" />
+                {isLoading ? "Guardando..." : "Guardar Firma"}
+              </Button>
+            )}
           </div>
           
-          <p className="text-xs text-muted-foreground text-center">
-            Use su dedo, stylus o mouse para firmar • Presione "Limpiar" para reiniciar
-          </p>
+          {/* Instructions */}
+          <div className="bg-muted/50 rounded-lg p-3">
+            <div className="flex items-start gap-2">
+              <Check className="h-4 w-4 text-accent mt-0.5 shrink-0" />
+              <div className="text-sm text-muted-foreground">
+                <p className="font-medium text-foreground mb-1">Instrucciones:</p>
+                <ul className="space-y-0.5 text-xs">
+                  <li>• En tablet: Use su dedo o stylus</li>
+                  <li>• En computador: Use el mouse</li>
+                  <li>• Mantenga presionado mientras firma</li>
+                  <li>• Use "Limpiar" para volver a firmar</li>
+                </ul>
+              </div>
+            </div>
+          </div>
         </CardContent>
       </Card>
     );
