@@ -96,7 +96,7 @@ class PatientApiService {
       if (!mapped) {
         return {
           data: null,
-          error: "Paciente no encontrado. Verifique que el número de documento sea correcto.",
+          error: "No se encontraron datos del paciente. Por favor, valide la creación del mismo en el sistema para continuar.",
           errorType: "not_found",
         };
       }
