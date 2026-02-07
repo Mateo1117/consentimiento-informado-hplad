@@ -28,7 +28,7 @@ export function StepIndicator({ steps, currentStep, completedSteps = [] }: StepI
               <div className="flex items-center gap-2">
                 <div
                   className={cn(
-                    "w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold transition-all",
+                    "w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold transition-all",
                     isCompleted 
                       ? "bg-accent text-accent-foreground" 
                       : isCurrent 
@@ -48,7 +48,7 @@ export function StepIndicator({ steps, currentStep, completedSteps = [] }: StepI
                     isCompleted 
                       ? "text-accent" 
                       : isCurrent 
-                        ? "text-primary"
+                        ? "text-foreground"
                         : "text-muted-foreground"
                   )}
                 >
@@ -60,8 +60,8 @@ export function StepIndicator({ steps, currentStep, completedSteps = [] }: StepI
               {index < steps.length - 1 && (
                 <div 
                   className={cn(
-                    "w-16 h-1 mx-3 rounded-full transition-colors",
-                    isCompleted ? "bg-accent" : "bg-muted"
+                    "w-20 h-0.5 mx-4 transition-colors",
+                    isCompleted ? "bg-accent" : "bg-border"
                   )}
                 />
               )}
