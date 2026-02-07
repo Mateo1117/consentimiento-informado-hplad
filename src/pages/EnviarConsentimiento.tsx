@@ -247,7 +247,7 @@ const EnviarConsentimiento = () => {
           patient_phone: patientData.telefono || null,
           consent_type: typeId,
           status: 'pending',
-          source: 'remote_signing',
+          source: 'web',
           created_by: user?.id,
           payload: JSON.parse(JSON.stringify({
             patientData: patientData,
