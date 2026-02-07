@@ -202,24 +202,33 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
   };
 
   return (
-    <Card className="w-full bg-gradient-to-br from-card to-medical-blue-light border-medical-blue/20">
-      <CardHeader className="bg-gradient-to-r from-medical-blue to-medical-blue/90 text-white rounded-t-lg">
-        <CardTitle className="flex items-center gap-3 text-xl">
-          <User className="h-6 w-6" />
-          Búsqueda de Paciente
-        </CardTitle>
+    <Card className="w-full border-border shadow-sm">
+      <CardHeader className="pb-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <User className="h-5 w-5 text-primary" />
+          </div>
+          <div>
+            <CardTitle className="text-lg text-primary">
+              Búsqueda de Paciente
+            </CardTitle>
+            <p className="text-sm text-muted-foreground">
+              Ingrese los datos del paciente para buscar en el sistema
+            </p>
+          </div>
+        </div>
       </CardHeader>
       
-      <CardContent className="p-6 space-y-6">
+      <CardContent className="space-y-6">
         {/* Selección de sede */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-2 text-medical-gray">
-            <MapPin className="h-4 w-4" />
-            <Label className="text-sm font-medium">Sede de Atención</Label>
-          </div>
+        <div className="space-y-3">
+          <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+            <MapPin className="h-4 w-4 text-muted-foreground" />
+            Sede de Atención
+          </Label>
           
           <Select value={selectedSede} onValueChange={setSelectedSede}>
-            <SelectTrigger className="border-medical-blue/30 focus:border-medical-blue">
+            <SelectTrigger className="border-input focus:border-primary">
               <SelectValue placeholder="Seleccione la sede donde será atendido el paciente" />
             </SelectTrigger>
             <SelectContent>
@@ -232,25 +241,25 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
           </Select>
         </div>
 
-        <Separator className="bg-medical-blue/20" />
+        <Separator className="bg-border" />
 
         {/* Búsqueda por documento */}
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-medical-gray">
-            <Search className="h-4 w-4" />
-            <Label className="text-sm font-medium">Buscar por número de documento</Label>
-          </div>
+          <Label className="text-sm font-medium text-foreground flex items-center gap-2">
+            <Search className="h-4 w-4 text-muted-foreground" />
+            Buscar por número de documento
+          </Label>
           
           {/* Selector de tipo de documento */}
           <div className="space-y-2">
-            <Label className="text-xs text-medical-gray">Tipo de Documento *</Label>
+            <Label className="text-xs text-muted-foreground">Tipo de Documento *</Label>
             <Select value={documentType} onValueChange={setDocumentType}>
-              <SelectTrigger className="border-medical-blue/30 focus:border-medical-blue bg-white">
+              <SelectTrigger className="border-input focus:border-primary">
                 <SelectValue placeholder="Seleccione el tipo de documento" />
               </SelectTrigger>
-              <SelectContent className="bg-white border border-gray-200 shadow-lg z-50">
+              <SelectContent>
                 {documentTypes.map((type) => (
-                  <SelectItem key={type.value} value={type.value} className="hover:bg-gray-100">
+                  <SelectItem key={type.value} value={type.value}>
                     {type.label}
                   </SelectItem>
                 ))}
@@ -260,7 +269,7 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
           
           
           <div className="space-y-2">
-            <Label className="text-xs text-medical-gray">Número de Documento *</Label>
+            <Label className="text-xs text-muted-foreground">Número de Documento *</Label>
             <div className="flex gap-3">
               <div className="flex-1">
                 <Input
@@ -268,13 +277,12 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                   value={searchDocument}
                   onChange={(e) => setSearchDocument(e.target.value)}
                   onKeyPress={(e) => e.key === 'Enter' && handleSearch(false)}
-                  className="border-medical-blue/30 focus:border-medical-blue"
+                  className="border-input focus:border-primary"
                 />
               </div>
               <Button 
                 onClick={() => handleSearch(false)}
                 disabled={isLoading || !selectedSede || !documentType}
-                className="bg-medical-blue hover:bg-medical-blue/90 text-white px-6 disabled:bg-gray-400"
               >
                 {isLoading ? "Buscando..." : "Buscar"}
               </Button>
@@ -282,21 +290,21 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
           </div>
 
           {/* Casilla de discapacidad - siempre visible */}
-          <div className="flex items-start space-x-3 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+          <div className="flex items-start space-x-3 p-4 bg-orange-50 border border-orange-200 rounded-lg">
             <Checkbox
               id="hasDisability"
               checked={hasDisability}
               onCheckedChange={(checked) => setHasDisability(checked as boolean)}
-              className="mt-1 data-[state=checked]:bg-amber-600 data-[state=checked]:border-amber-600"
+              className="mt-1 data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
             />
             <div className="flex-1">
               <Label 
                 htmlFor="hasDisability" 
-                className="cursor-pointer text-amber-800 font-medium"
+                className="cursor-pointer text-orange-800 font-medium"
               >
                 El paciente tiene algún tipo de discapacidad que le impide firmar
               </Label>
-              <p className="text-sm text-amber-700 mt-1">
+              <p className="text-sm text-orange-700 mt-1">
                 Marque esta casilla si el paciente presenta alguna condición que le impida firmar el consentimiento. Un acudiente deberá firmar en su nombre.
               </p>
             </div>
@@ -326,35 +334,35 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
         {/* Datos del paciente encontrado */}
         {patientData && (
           <>
-            <Separator className="bg-medical-blue/20" />
+            <Separator className="bg-border" />
             
             <div className="space-y-4">
-              <h3 className="font-semibold text-medical-blue flex items-center gap-2">
+              <h3 className="font-semibold text-primary flex items-center gap-2">
                 <IdCard className="h-4 w-4" />
                 Datos del Paciente
               </h3>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-xs text-medical-gray">Nombre Completo</Label>
-                  <p className="font-medium bg-signature-area p-2 rounded border">
+                  <Label className="text-xs text-muted-foreground">Nombre Completo</Label>
+                  <p className="font-medium bg-muted/50 p-2 rounded border border-border">
                     {patientData.nombre} {patientData.apellidos}
                   </p>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-xs text-medical-gray">Documento</Label>
-                  <p className="font-medium bg-signature-area p-2 rounded border">
+                  <Label className="text-xs text-muted-foreground">Documento</Label>
+                  <p className="font-medium bg-muted/50 p-2 rounded border border-border">
                     {patientData.tipoDocumento} {patientData.numeroDocumento}
                   </p>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-xs text-medical-gray flex items-center gap-1">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
                     <CalendarIcon className="h-3 w-3" />
                     Fecha de Nacimiento
                   </Label>
-                  <p className="font-medium bg-signature-area p-2 rounded border">
+                  <p className="font-medium bg-muted/50 p-2 rounded border border-border">
                     {patientData.fechaNacimiento 
                       ? (() => {
                           const fechaStr = patientData.fechaNacimiento.split(" ")[0];
@@ -366,18 +374,18 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-xs text-medical-gray">Edad</Label>
+                  <Label className="text-xs text-muted-foreground">Edad</Label>
                   <Input
                     type="number"
                     value={editableAge || ""}
                     onChange={(e) => setEditableAge(parseInt(e.target.value) || 0)}
-                    className="font-medium border-medical-blue/30 focus:border-medical-blue"
+                    className="font-medium border-input focus:border-primary"
                     placeholder="Ingrese la edad"
                     min="0"
                     max="120"
                   />
                   {editableAge !== null && (
-                    <p className={`text-xs ${editableAge < 18 || hasDisability ? 'text-amber-600' : 'text-green-600'}`}>
+                    <p className={`text-xs ${editableAge < 18 || hasDisability ? 'text-orange-600' : 'text-accent'}`}>
                       {editableAge < 18 
                         ? '⚠️ Menor de edad - Se solicitarán datos del acudiente' 
                         : hasDisability
@@ -389,42 +397,42 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-xs text-medical-gray">EPS</Label>
-                  <p className="font-medium bg-signature-area p-2 rounded border">
+                  <Label className="text-xs text-muted-foreground">EPS</Label>
+                  <p className="font-medium bg-muted/50 p-2 rounded border border-border">
                     {patientData.eps}
                   </p>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-xs text-medical-gray">Sede Seleccionada</Label>
-                  <p className="font-medium bg-signature-area p-2 rounded border">
+                  <Label className="text-xs text-muted-foreground">Sede Seleccionada</Label>
+                  <p className="font-medium bg-muted/50 p-2 rounded border border-border">
                     {patientData.centroSalud}
                   </p>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-xs text-medical-gray flex items-center gap-1">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
                     <Phone className="h-3 w-3" />
                     Teléfono
                   </Label>
-                  <p className="font-medium bg-signature-area p-2 rounded border">
+                  <p className="font-medium bg-muted/50 p-2 rounded border border-border">
                     {patientData.telefono}
                   </p>
                 </div>
                 
                 <div className="space-y-2">
-                  <Label className="text-xs text-medical-gray">Email</Label>
-                  <p className="font-medium bg-signature-area p-2 rounded border">
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <p className="font-medium bg-muted/50 p-2 rounded border border-border">
                     {patientData.email || "No disponible"}
                   </p>
                 </div>
                 
                 <div className="space-y-2 md:col-span-2">
-                  <Label className="text-xs text-medical-gray flex items-center gap-1">
+                  <Label className="text-xs text-muted-foreground flex items-center gap-1">
                     <MapPin className="h-3 w-3" />
                     Dirección
                   </Label>
-                  <p className="font-medium bg-signature-area p-2 rounded border">
+                  <p className="font-medium bg-muted/50 p-2 rounded border border-border">
                     {patientData.direccion}
                   </p>
                 </div>
@@ -434,7 +442,7 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                 <Button 
                   onClick={handleConfirmPatient}
                   disabled={!editableAge || editableAge <= 0}
-                  className="w-full bg-medical-green hover:bg-medical-green/90 text-white font-medium py-3 disabled:bg-gray-400"
+                  className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-medium py-3"
                 >
                   Continuar con Consentimiento Informado
                 </Button>

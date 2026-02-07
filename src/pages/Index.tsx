@@ -1,17 +1,23 @@
 import { useState } from "react";
 import { PatientForm } from "@/components/PatientForm";
-
 import { ConsentFormHIV } from "@/components/ConsentFormHIV";
-
 import { ConsentFormFrotisVaginal } from "@/components/ConsentFormFrotisVaginal";
 import { ConsentFormCargaGlucosa } from "@/components/ConsentFormCargaGlucosa";
 import { ConsentFormVenopuncion } from "@/components/ConsentFormVenopuncion";
-import { AuthenticatedHeader } from "@/components/AuthenticatedHeader";
+import { MainLayout } from "@/components/layout/MainLayout";
+import { StepIndicator } from "@/components/consent/StepIndicator";
+import { ConsentTypeCard } from "@/components/consent/ConsentTypeCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { FileHeart, CheckCircle, Plus, Search, FileText, BarChart, TestTube, Microscope, Heart, Droplets, TestTube2, Syringe } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Input } from "@/components/ui/input";
+import { 
+  FileCheck, 
+  Search,
+  TestTube, 
+  Heart, 
+  TestTube2, 
+  Syringe,
+  FlaskConical
+} from "lucide-react";
 
 interface PatientData {
   id: string;
@@ -30,11 +36,51 @@ interface PatientData {
   hasDisability?: boolean;
 }
 
+const consentTypes = [
+  { 
+    id: 'hiv', 
+    title: 'VIH', 
+    code: '1200AD01-F03', 
+    icon: TestTube,
+    iconBgColor: 'bg-primary/10',
+    iconColor: 'text-primary'
+  },
+  { 
+    id: 'frotis_vaginal', 
+    title: 'Frotis Vaginal', 
+    code: '1200AD01-F01', 
+    icon: Heart,
+    iconBgColor: 'bg-pink-100',
+    iconColor: 'text-pink-600'
+  },
+  { 
+    id: 'carga_glucosa', 
+    title: 'Carga Glucosa', 
+    code: '1200AD01-F02', 
+    icon: TestTube2,
+    iconBgColor: 'bg-purple-100',
+    iconColor: 'text-purple-600'
+  },
+  { 
+    id: 'venopuncion', 
+    title: 'Venopunción', 
+    code: '1200AD01-F04', 
+    icon: Syringe,
+    iconBgColor: 'bg-orange-100',
+    iconColor: 'text-orange-600'
+  },
+];
+
+const steps = [
+  { id: 'search', label: 'Búsqueda' },
+  { id: 'consent', label: 'Firma' },
+];
+
 const Index = () => {
-  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState<'search' | 'consent'>('search');
   const [selectedPatient, setSelectedPatient] = useState<PatientData | null>(null);
   const [consentType, setConsentType] = useState<'hiv' | 'frotis_vaginal' | 'carga_glucosa' | 'venopuncion'>('hiv');
+  const [searchFilter, setSearchFilter] = useState('');
 
   const handlePatientSelect = (patient: PatientData) => {
     setSelectedPatient(patient);
@@ -46,125 +92,123 @@ const Index = () => {
     setSelectedPatient(null);
   };
 
+  const filteredConsentTypes = consentTypes.filter(type => 
+    type.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
+    type.code?.toLowerCase().includes(searchFilter.toLowerCase())
+  );
+
+  const renderConsentForm = () => {
+    switch (consentType) {
+      case 'hiv':
+        return <ConsentFormHIV patientData={selectedPatient!} onBack={handleBack} />;
+      case 'frotis_vaginal':
+        return <ConsentFormFrotisVaginal patientData={selectedPatient!} onBack={handleBack} />;
+      case 'carga_glucosa':
+        return <ConsentFormCargaGlucosa patientData={selectedPatient!} onBack={handleBack} />;
+      case 'venopuncion':
+        return <ConsentFormVenopuncion patientData={selectedPatient!} onBack={handleBack} />;
+      default:
+        return null;
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-medical-blue-light/20 to-background">
-      {/* Header */}
-      <AuthenticatedHeader />
+    <MainLayout>
+      {/* Step Indicator */}
+      <StepIndicator 
+        steps={steps} 
+        currentStep={currentStep}
+        completedSteps={currentStep === 'consent' ? ['search'] : []}
+      />
 
-      {/* Progress indicator */}
-      <div className="bg-white border-b border-medical-blue/20">
-        <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-center space-x-8">
-            <div className={`flex items-center gap-2 ${currentStep === 'search' ? 'text-medical-blue' : 'text-medical-green'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'search' ? 'bg-medical-blue text-white' : 'bg-medical-green text-white'}`}>
-                {currentStep === 'consent' ? <CheckCircle className="h-4 w-4" /> : '1'}
-              </div>
-              <span className="font-medium">Búsqueda de Paciente</span>
-            </div>
-            
-            <div className={`w-16 h-1 rounded ${currentStep === 'consent' ? 'bg-medical-green' : 'bg-gray-300'}`}></div>
-            
-            <div className={`flex items-center gap-2 ${currentStep === 'consent' ? 'text-medical-blue' : 'text-gray-400'}`}>
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep === 'consent' ? 'bg-medical-blue text-white' : 'bg-gray-300 text-gray-500'}`}>
-                2
-              </div>
-              <span className="font-medium">Consentimiento y Firma</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main content */}
-      <main className="container mx-auto px-4 py-8">
+      {/* Main Content */}
+      <div className="p-6">
         {currentStep === 'search' && (
-          <div className="max-w-4xl mx-auto space-y-6">
-            {/* Welcome card */}
-            <Card className="border-medical-blue/20 bg-gradient-to-r from-white to-medical-blue-light/30">
-              <CardContent className="p-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 bg-medical-blue/10 rounded-full flex items-center justify-center">
-                    <FileHeart className="h-6 w-6 text-medical-blue" />
+          <div className="max-w-6xl mx-auto space-y-6">
+            {/* Consent Type Selection */}
+            <Card className="border-border shadow-sm">
+              <CardHeader className="pb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FileCheck className="h-5 w-5 text-primary" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-medical-blue">Consentimiento Informado Digital</h2>
-                    <p className="text-medical-gray">
-                      Sistema seguro para la gestión de consentimientos informados para procedimientos de laboratorio
+                    <CardTitle className="text-lg text-primary">
+                      Seleccionar Tipo de Consentimiento
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Seleccione el área y el tipo de consentimiento que desea generar
                     </p>
                   </div>
+                </div>
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                {/* Search Input */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar consentimiento por nombre o código..."
+                    value={searchFilter}
+                    onChange={(e) => setSearchFilter(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+
+                {/* Category Header */}
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <FlaskConical className="h-5 w-5 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-foreground">Laboratorio</p>
+                    <p className="text-xs text-muted-foreground">{filteredConsentTypes.length} consentimientos</p>
+                  </div>
+                  <span className="text-sm font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
+                    {filteredConsentTypes.length}
+                  </span>
+                </div>
+
+                {/* Consent Types Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  {filteredConsentTypes.map((type) => (
+                    <ConsentTypeCard
+                      key={type.id}
+                      icon={type.icon}
+                      title={type.title}
+                      code={type.code}
+                      isActive={consentType === type.id}
+                      onClick={() => setConsentType(type.id as typeof consentType)}
+                      iconBgColor={type.iconBgColor}
+                      iconColor={type.iconColor}
+                    />
+                  ))}
                 </div>
               </CardContent>
             </Card>
 
+            {/* Patient Search Form */}
             <PatientForm onPatientSelect={handlePatientSelect} />
           </div>
         )}
 
         {currentStep === 'consent' && selectedPatient && (
           <div className="max-w-7xl mx-auto">
-            <Tabs value={consentType} onValueChange={(value) => setConsentType(value as 'hiv' | 'frotis_vaginal' | 'carga_glucosa' | 'venopuncion')} className="w-full">
-              <TabsList className="grid w-full grid-cols-4">
-                <TabsTrigger value="hiv" className="flex items-center gap-2">
-                  <TestTube className="h-4 w-4" />
-                  VIH
-                </TabsTrigger>
-                <TabsTrigger value="frotis_vaginal" className="flex items-center gap-2">
-                  <Heart className="h-4 w-4" />
-                  Frotis Vaginal
-                </TabsTrigger>
-                <TabsTrigger value="carga_glucosa" className="flex items-center gap-2">
-                  <TestTube2 className="h-4 w-4" />
-                  Carga Glucosa
-                </TabsTrigger>
-                <TabsTrigger value="venopuncion" className="flex items-center gap-2">
-                  <Syringe className="h-4 w-4" />
-                  Venopunción
-                </TabsTrigger>
-              </TabsList>
-              
-              
-              <TabsContent value="hiv" className="mt-6">
-                <ConsentFormHIV 
-                  patientData={selectedPatient} 
-                  onBack={handleBack}
-                />
-              </TabsContent>
-              
-              <TabsContent value="frotis_vaginal" className="mt-6">
-                <ConsentFormFrotisVaginal 
-                  patientData={selectedPatient}
-                  onBack={handleBack}
-                />
-              </TabsContent>
-              
-              
-              <TabsContent value="carga_glucosa" className="mt-6">
-                <ConsentFormCargaGlucosa 
-                  patientData={selectedPatient} 
-                  onBack={handleBack}
-                />
-              </TabsContent>
-              
-              <TabsContent value="venopuncion" className="mt-6">
-                <ConsentFormVenopuncion 
-                  patientData={selectedPatient} 
-                  onBack={handleBack}
-                />
-              </TabsContent>
-            </Tabs>
+            {renderConsentForm()}
           </div>
         )}
-      </main>
+      </div>
 
       {/* Footer */}
-      <footer className="bg-medical-blue/5 border-t border-medical-blue/20 mt-12">
-        <div className="container mx-auto px-4 py-6">
-          <div className="text-center text-sm text-medical-gray">
+      <footer className="border-t border-border bg-card mt-auto">
+        <div className="px-6 py-4">
+          <div className="text-center text-sm text-muted-foreground">
             <p>© 2025 Hospital La Mesa Pedro Leon Alvarez Diaz - Sistema de Consentimientos Informados</p>
             <p className="mt-1">Desarrollado con tecnología segura para la gestión hospitalaria</p>
           </div>
         </div>
       </footer>
-    </div>
+    </MainLayout>
   );
 };
 
