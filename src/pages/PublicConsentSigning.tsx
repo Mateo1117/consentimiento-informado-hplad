@@ -371,6 +371,8 @@ export const PublicConsentSigning: React.FC = () => {
                       He tenido la oportunidad de hacer preguntas y todas han sido respondidas satisfactoriamente. 
                       Entiendo que ningún procedimiento médico garantiza resultados al 100%. 
                       Por lo tanto, doy mi consentimiento libre e informado para la realización del procedimiento descrito.
+                      Asimismo, autorizo a la E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa para el tratamiento 
+                      de mis datos personales y datos sensibles de salud conforme a la Ley 1581 de 2012 y el Decreto 1377 de 2013.
                     </p>
                   </div>
                 </div>
