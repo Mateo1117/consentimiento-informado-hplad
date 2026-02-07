@@ -110,7 +110,7 @@ const EnviarConsentimiento = () => {
     return [];
   };
 
-  // Search patient
+  // Search patient and consents
   const handleSearchPatient = async () => {
     if (!documentType) {
       toast.error("Por favor seleccione el tipo de documento");
@@ -124,30 +124,31 @@ const EnviarConsentimiento = () => {
 
     setIsSearching(true);
     try {
-      const result = await patientApiService.searchByDocument(searchDocument);
-      
-      if (result.data) {
-        setPatientData({
-          ...result.data,
-          tipoDocumento: documentType
-        });
-        toast.success("Paciente encontrado");
-        // Fetch pending consents for this patient
-        await fetchPatientConsents(searchDocument, documentType);
-      } else {
-        toast.error(result.error || "No se encontró paciente con este documento");
-        setPatientData(null);
+      // Try to get patient data from external API (optional - don't block if fails)
+      let foundPatientData: PatientData | null = null;
+      try {
+        const result = await patientApiService.searchByDocument(searchDocument);
+        if (result.data) {
+          foundPatientData = {
+            ...result.data,
+            tipoDocumento: documentType
+          };
+        }
+      } catch (apiError) {
+        console.log('External API unavailable, continuing with Supabase search');
       }
+
+      // Always search for consents in Supabase, regardless of external API result
+      await fetchPatientConsents(searchDocument, documentType, foundPatientData);
     } catch (error) {
-      toast.error("Error al buscar paciente");
-      setPatientData(null);
+      toast.error("Error al buscar consentimientos");
     } finally {
       setIsSearching(false);
     }
   };
 
   // Fetch consents for a specific patient
-  const fetchPatientConsents = async (documentNumber: string, docType: string) => {
+  const fetchPatientConsents = async (documentNumber: string, docType: string, externalPatientData?: PatientData | null) => {
     setIsLoadingConsents(true);
     try {
       const { data, error } = await supabase
@@ -160,10 +161,37 @@ const EnviarConsentimiento = () => {
       if (error) throw error;
       
       if (data && data.length > 0) {
+        // Use external patient data if available, otherwise create from consent data
+        if (externalPatientData) {
+          setPatientData(externalPatientData);
+          toast.success("Paciente encontrado");
+        } else {
+          // Create minimal patient data from consent record
+          const firstConsent = data[0];
+          const nameParts = firstConsent.patient_name.split(' ');
+          setPatientData({
+            id: documentNumber,
+            nombre: nameParts.slice(0, 2).join(' ') || firstConsent.patient_name,
+            apellidos: nameParts.slice(2).join(' ') || '',
+            numeroDocumento: documentNumber,
+            tipoDocumento: docType,
+            fechaNacimiento: '',
+            edad: 0,
+            sexo: '',
+            eps: '',
+            telefono: firstConsent.patient_phone || '',
+            direccion: '',
+            email: firstConsent.patient_email || '',
+            centroSalud: '',
+            sedeAtencion: ''
+          });
+          toast.success("Consentimientos pendientes encontrados");
+        }
         setConsents(data);
         setCurrentStep('select');
       } else {
-        toast.info("Este paciente no tiene consentimientos pendientes de firma");
+        toast.info("No se encontraron consentimientos pendientes para este documento");
+        setPatientData(null);
         setConsents([]);
       }
     } catch (error) {
