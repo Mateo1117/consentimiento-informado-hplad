@@ -12,6 +12,7 @@ import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, Shield, Download, TestTube2, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { ConsentFormWrapper } from './ConsentFormWrapper';
+import { DataProtectionConsent } from './DataProtectionConsent';
 import { GuardianSignatureSection, GuardianSignatureRef } from './GuardianSignatureSection';
 import { toast } from "sonner";
 import { generateCargaGlucosaPDF } from "@/utils/pdfGeneratorCargaGlucosa";
@@ -56,6 +57,7 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
   const [guardianPhone, setGuardianPhone] = useState("");
   const [guardianSignature, setGuardianSignature] = useState<string | null>(null);
   const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
+  const [dataProtectionAccepted, setDataProtectionAccepted] = useState(false);
 
   // Estados para firmas y foto
   const patientSignatureRef = useRef<SignatureRef>(null);
@@ -549,10 +551,19 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
                   className="mt-1 w-4 h-4 text-medical-blue border-medical-blue/30 rounded data-[state=checked]:bg-medical-blue data-[state=checked]:border-medical-blue" 
                 />
                 <span className="text-medical-gray text-sm leading-relaxed">
-                  <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
+                  <strong>Declaro que:</strong> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), sus riesgos, beneficios y alternativas. 
+                  He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
+                  Asimismo, autorizo a la E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa para el tratamiento de mis datos personales conforme a la Ley 1581 de 2012.
                 </span>
               </div>
             </div>
+            
+            {/* Autorización de Tratamiento de Datos Personales */}
+            <DataProtectionConsent
+              accepted={dataProtectionAccepted}
+              onAcceptedChange={setDataProtectionAccepted}
+              required
+            />
           </div>
         </CardContent>
       </Card>
