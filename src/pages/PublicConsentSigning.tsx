@@ -8,7 +8,6 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { SignaturePad } from "@/components/SignaturePad";
 import { CameraCapture, CameraCaptureRef } from "@/components/CameraCapture";
-import { DataProtectionConsent } from "@/components/DataProtectionConsent";
 import { consentService } from "@/services/consentService";
 import { PhotoService } from "@/services/photoService";
 import { toast } from "sonner";
@@ -23,7 +22,6 @@ export const PublicConsentSigning: React.FC = () => {
   const [signedByName, setSignedByName] = useState('');
   const [signatureData, setSignatureData] = useState<string>('');
   const [error, setError] = useState<string>('');
-  const [dataProtectionAccepted, setDataProtectionAccepted] = useState(false);
   const cameraRef = useRef<CameraCaptureRef>(null);
 
   useEffect(() => {
@@ -120,13 +118,6 @@ export const PublicConsentSigning: React.FC = () => {
     if (!capturedPhoto) {
       console.error('❌ Error: Foto del paciente no capturada');
       toast.error('Por favor capture una foto antes de firmar');
-      return;
-    }
-
-    // Verificar autorización de datos personales
-    if (!dataProtectionAccepted) {
-      console.error('❌ Error: Autorización de datos personales no aceptada');
-      toast.error('Debe autorizar el tratamiento de sus datos personales');
       return;
     }
 
@@ -417,17 +408,20 @@ export const PublicConsentSigning: React.FC = () => {
                 </div>
               </div>
 
-              {/* Autorización de Tratamiento de Datos Personales */}
-              <DataProtectionConsent
-                accepted={dataProtectionAccepted}
-                onAcceptedChange={setDataProtectionAccepted}
-                required
-              />
+              <div className="bg-muted/50 p-4 rounded-lg border">
+                <p className="text-sm text-muted-foreground leading-relaxed">
+                  <strong>Al firmar este consentimiento declaro que:</strong> He sido informado(a) sobre el procedimiento, 
+                  sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder. 
+                  En cumplimiento de la Ley 1581 de 2012 y el Decreto 1377 de 2013 sobre protección de datos personales, 
+                  <strong> AUTORIZO</strong> de manera libre, expresa e informada a la E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa 
+                  para la recolección, almacenamiento, uso y tratamiento de mis datos personales y datos sensibles de salud.
+                </p>
+              </div>
 
               <div className="text-center">
                 <Button
                   onClick={handleSign}
-                  disabled={signing || !signedByName.trim() || !signatureData || !dataProtectionAccepted}
+                  disabled={signing || !signedByName.trim() || !signatureData}
                   size="lg"
                   className="w-full sm:w-auto"
                 >
