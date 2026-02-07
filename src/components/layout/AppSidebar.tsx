@@ -95,10 +95,10 @@ export function AppSidebar() {
       {/* Title Section */}
       {!isCollapsed && (
         <div className="mb-6 text-center">
-          <h1 className="text-primary font-bold text-xl leading-tight">
+          <h1 className="text-primary font-bold text-base leading-tight">
             Sistema de Consentimientos
           </h1>
-          <h1 className="text-primary font-bold text-xl leading-tight mb-3">
+          <h1 className="text-primary font-bold text-base leading-tight mb-3">
             Informados
           </h1>
           <div className="flex items-start gap-2 text-left">
