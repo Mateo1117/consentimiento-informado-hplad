@@ -75,6 +75,7 @@ class PatientApiService {
         body: { documento: doc },
       });
 
+      // Error de conexión con la Edge Function
       if (error) {
         console.error("Error en edge function:", error);
         return {
@@ -84,11 +85,23 @@ class PatientApiService {
         };
       }
 
+      // Analizar respuesta de la Edge Function
+      // La Edge Function siempre devuelve 200 con el resultado en el body
       if (data?.error) {
+        const errorType = (data.errorType as PatientErrorType) || "unknown";
+        let errorMessage = data.error;
+        
+        // Personalizar mensaje según el tipo de error
+        if (errorType === "not_found") {
+          // Usar el mensaje del webhook si está disponible
+          errorMessage = data.webhookMessage || data.error || 
+            "No se encontraron datos del paciente. Por favor, valide la creación del mismo en el sistema para continuar.";
+        }
+        
         return {
           data: null,
-          error: data.error,
-          errorType: (data.errorType as PatientErrorType) || "unknown",
+          error: errorMessage,
+          errorType: errorType,
         };
       }
 

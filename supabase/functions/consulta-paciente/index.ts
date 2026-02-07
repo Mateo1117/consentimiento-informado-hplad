@@ -2,7 +2,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -54,32 +54,31 @@ async function fetchWithTimeout(input: RequestInfo | URL, init: RequestInit, tim
   }
 }
 
+// Helper para devolver siempre 200 con el contenido de error/éxito
+function jsonResponse(body: Record<string, unknown>) {
+  return new Response(JSON.stringify(body), {
+    status: 200,
+    headers: { "Content-Type": "application/json", ...corsHeaders },
+  });
+}
+
 serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), {
-      status: 405,
-      headers: { "Content-Type": "application/json", ...corsHeaders },
-    });
+    return jsonResponse({ error: "Method not allowed", errorType: "validation" });
   }
 
   try {
     const { documento } = await req.json();
 
     if (!documento || String(documento).trim() === "") {
-      return new Response(
-        JSON.stringify({
-          error: "El número de documento es requerido",
-          errorType: "validation",
-        }),
-        {
-          status: 400,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        },
-      );
+      return jsonResponse({
+        error: "El número de documento es requerido",
+        errorType: "validation",
+      });
     }
 
     const doc = String(documento).trim();
@@ -136,28 +135,16 @@ serve(async (req: Request) => {
         console.error(`Error de fetch en intento ${attempt.name}:`, fetchError);
 
         if (fetchError?.name === "AbortError") {
-          return new Response(
-            JSON.stringify({
-              error: "La consulta tardó demasiado tiempo. Verifique su conexión.",
-              errorType: "timeout",
-            }),
-            {
-              status: 504,
-              headers: { "Content-Type": "application/json", ...corsHeaders },
-            },
-          );
+          return jsonResponse({
+            error: "La consulta tardó demasiado tiempo. Verifique su conexión.",
+            errorType: "timeout",
+          });
         }
 
-        return new Response(
-          JSON.stringify({
-            error: "No se pudo conectar con el servidor del webhook.",
-            errorType: "network",
-          }),
-          {
-            status: 502,
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          },
-        );
+        return jsonResponse({
+          error: "No se pudo conectar con el servidor del webhook.",
+          errorType: "network",
+        });
       }
 
       lastStatus = response.status;
@@ -170,10 +157,7 @@ serve(async (req: Request) => {
 
       if (!response.ok) {
         const err = httpError(response.status, response.statusText);
-        return new Response(JSON.stringify(err), {
-          status: response.status,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        });
+        return jsonResponse(err);
       }
 
       // Parse JSON
@@ -181,29 +165,17 @@ serve(async (req: Request) => {
       try {
         responseText = await response.text();
       } catch (readErr) {
-        return new Response(
-          JSON.stringify({
-            error: "No fue posible leer la respuesta del webhook.",
-            errorType: "unknown",
-          }),
-          {
-            status: 500,
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          },
-        );
+        return jsonResponse({
+          error: "No fue posible leer la respuesta del webhook.",
+          errorType: "unknown",
+        });
       }
 
       if (!responseText || responseText.trim() === "") {
-        return new Response(
-          JSON.stringify({
-            error: "El servidor respondió pero no envió datos.",
-            errorType: "empty_response",
-          }),
-          {
-            status: 404,
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          },
-        );
+        return jsonResponse({
+          error: "El servidor respondió pero no envió datos.",
+          errorType: "empty_response",
+        });
       }
 
       let data: any;
@@ -212,110 +184,90 @@ serve(async (req: Request) => {
         console.log("Respuesta parseada:", JSON.stringify(data, null, 2));
       } catch (parseError) {
         console.error("JSON inválido:", responseText);
-        return new Response(
-          JSON.stringify({
-            error: "La respuesta del servidor no es válida (JSON inválido).",
-            errorType: "parse_error",
-          }),
-          {
-            status: 500,
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          },
-        );
+        return jsonResponse({
+          error: "La respuesta del servidor no es válida (JSON inválido).",
+          errorType: "parse_error",
+        });
       }
 
       // Verificar si hay un error explícito
       if (data?.error && typeof data.error === "string") {
         console.log("Error en respuesta:", data.error);
-        return new Response(
-          JSON.stringify({
-            error: data.error,
-            errorType: "api_error",
-          }),
-          {
-            status: 400,
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          },
-        );
+        return jsonResponse({
+          error: data.error,
+          errorType: "api_error",
+        });
       }
 
       // Verificar si el webhook indica explícitamente que no encontró el paciente
-      if (data?.success === false || data?.success === "false") {
-        console.log("Webhook indica success=false:", data?.message);
-        return new Response(
-          JSON.stringify({
-            error: data?.message || "No se encontró el paciente",
-            errorType: "not_found",
-          }),
-          {
-            status: 404,
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          },
-        );
+      // Analizar la respuesta del webhook: puede ser un array con success=false
+      let webhookMessage = "";
+      let webhookSuccess: boolean | string | undefined;
+      
+      if (Array.isArray(data) && data.length > 0) {
+        // El webhook devuelve un array con el resultado
+        const firstItem = data[0];
+        webhookSuccess = firstItem?.success;
+        webhookMessage = firstItem?.message || "";
+      } else {
+        webhookSuccess = data?.success;
+        webhookMessage = data?.message || "";
+      }
+      
+      if (webhookSuccess === false || webhookSuccess === "false") {
+        console.log("Webhook indica success=false:", webhookMessage);
+        return jsonResponse({
+          error: webhookMessage || "No se encontraron datos del paciente",
+          errorType: "not_found",
+          webhookMessage: webhookMessage,
+        });
       }
 
       // Verificar que haya datos de paciente válidos
       // El webhook puede devolver campos en mayúsculas o minúsculas
-      const nombrePaciente = data?.NOMBRE_PACIENTE || data?.nombre_paciente;
-      const documentoPaciente = data?.DOCUMENTO_PACIENTE || data?.documento;
-      const hasPatientData = nombrePaciente || documentoPaciente ||
-                            (Array.isArray(data) && data.length > 0 && (data[0]?.NOMBRE_PACIENTE || data[0]?.nombre_paciente));
+      const nombrePaciente = data?.NOMBRE_PACIENTE || data?.nombre_paciente || data?.nombrePaciente;
+      const documentoPaciente = data?.DOCUMENTO_PACIENTE || data?.documento || data?.documentoPaciente;
+      
+      // Verificar si es un array con datos del paciente
+      let hasPatientData = nombrePaciente || documentoPaciente;
+      
+      if (!hasPatientData && Array.isArray(data) && data.length > 0) {
+        const firstItem = data[0];
+        hasPatientData = firstItem?.NOMBRE_PACIENTE || firstItem?.nombre_paciente || firstItem?.nombrePaciente ||
+                        firstItem?.DOCUMENTO_PACIENTE || firstItem?.documento || firstItem?.documentoPaciente;
+      }
       
       // Verificar que el nombre no esté vacío
       if (!hasPatientData || (nombrePaciente && String(nombrePaciente).trim() === "")) {
         console.log("No se encontraron datos de paciente en la respuesta. Campos:", Object.keys(data || {}));
-        return new Response(
-          JSON.stringify({
-            error: "No se encontró el paciente con el documento proporcionado",
-            errorType: "not_found",
-          }),
-          {
-            status: 404,
-            headers: { "Content-Type": "application/json", ...corsHeaders },
-          },
-        );
+        return jsonResponse({
+          error: "No se encontraron datos del paciente. Valide la creación del mismo en el sistema para continuar.",
+          errorType: "not_found",
+        });
       }
 
       console.log("Paciente encontrado exitosamente");
 
-      return new Response(
-        JSON.stringify({
-          success: true,
-          data,
-          attempt: attempt.name,
-        }),
-        {
-          status: 200,
-          headers: { "Content-Type": "application/json", ...corsHeaders },
-        },
-      );
+      return jsonResponse({
+        success: true,
+        data,
+        attempt: attempt.name,
+      });
     }
 
     // Si todos dieron 404/405
     const fallbackErr = httpError(lastStatus ?? 404);
-    return new Response(
-      JSON.stringify({
-        error:
-          "El webhook no respondió al formato esperado (404/405). Confirme si requiere POST (JSON) o parámetros GET.",
-        errorType: fallbackErr.errorType,
-        lastStatus,
-      }),
-      {
-        status: 502,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      },
-    );
+    return jsonResponse({
+      error:
+        "El webhook no respondió al formato esperado. Confirme si el servicio está disponible.",
+      errorType: fallbackErr.errorType,
+      lastStatus,
+    });
   } catch (error: any) {
     console.error("Error general:", error);
-    return new Response(
-      JSON.stringify({
-        error: `Error inesperado: ${error.message}`,
-        errorType: "unknown",
-      }),
-      {
-        status: 500,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      },
-    );
+    return jsonResponse({
+      error: `Error inesperado: ${error.message}`,
+      errorType: "unknown",
+    });
   }
 });

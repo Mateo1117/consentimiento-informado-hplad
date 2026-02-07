@@ -313,6 +313,11 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                 {searchError.message}
               </AlertDescription>
             </div>
+            {searchError.type === 'not_found' && (
+              <p className="text-sm mt-2 opacity-80">
+                Sugerencia: Verifique que el número de documento sea correcto o registre al paciente en el sistema antes de continuar.
+              </p>
+            )}
             {(searchError.type === 'network' || searchError.type === 'timeout') && (
               <p className="text-sm mt-2 opacity-80">
                 Sugerencia: Verifique su conexión a internet o intente nuevamente en unos momentos.
@@ -321,6 +326,21 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
             {searchError.type === 'http' && (
               <p className="text-sm mt-2 opacity-80">
                 Sugerencia: El servidor puede estar experimentando problemas. Intente nuevamente más tarde.
+              </p>
+            )}
+            {searchError.type === 'empty_response' && (
+              <p className="text-sm mt-2 opacity-80">
+                Sugerencia: El servidor no devolvió información. Contacte al administrador del sistema.
+              </p>
+            )}
+            {searchError.type === 'parse_error' && (
+              <p className="text-sm mt-2 opacity-80">
+                Sugerencia: Hubo un problema al procesar la respuesta del servidor. Contacte al soporte técnico.
+              </p>
+            )}
+            {searchError.type === 'validation' && (
+              <p className="text-sm mt-2 opacity-80">
+                Sugerencia: Complete todos los campos requeridos correctamente.
               </p>
             )}
           </Alert>
