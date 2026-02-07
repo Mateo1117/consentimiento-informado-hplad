@@ -68,13 +68,13 @@ export function AppSidebar() {
         isCollapsed ? "w-[80px]" : "w-[300px]"
       )}
     >
-      {/* Logo Card */}
+      {/* Logo */}
       <div 
-        className="bg-card rounded-3xl shadow-sm border border-border p-8 mb-6 cursor-pointer"
+        className="p-4 mb-2 cursor-pointer"
         onClick={() => navigate("/")}
       >
         {!isCollapsed ? (
-          <div className="flex flex-col items-center justify-center min-h-[180px]">
+          <div className="flex flex-col items-center justify-center">
             <img 
               src={logoHospital} 
               alt="Logo Hospital" 
