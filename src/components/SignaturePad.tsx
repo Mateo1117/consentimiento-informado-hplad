@@ -3,7 +3,7 @@ import SignatureCanvas from "react-signature-canvas";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { RotateCcw, Check, PenTool, Save, Upload } from "lucide-react";
+import { RotateCcw, PenTool, Save, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { ProfessionalSignatureService, type ProfessionalSignature } from "@/services/professionalSignatureService";
 
@@ -185,10 +185,6 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(
         
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label className="text-xs text-medical-gray">
-              Área de firma digital - Use su dedo o stylus para firmar
-            </Label>
-            
             <div className="border-2 border-dashed border-medical-blue/30 rounded-lg bg-signature-area p-1">
               <SignatureCanvas
                 ref={sigCanvas}
@@ -284,26 +280,9 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(
             </div>
           </div>
           
-          <div className="text-xs text-medical-gray bg-medical-blue-light/50 p-3 rounded">
-            <div className="flex items-start gap-2">
-              <Check className="h-3 w-3 mt-0.5 text-medical-green" />
-              <div>
-                <p className="font-medium">Instrucciones:</p>
-                <ul className="mt-1 space-y-1 text-xs">
-                  <li>• En tablet: Use su dedo o stylus</li>
-                  <li>• En computador: Use el mouse</li>
-                  <li>• Mantenga presionado mientras firma</li>
-                  <li>• Use "Limpiar" para volver a firmar</li>
-                  {isProfessional && (
-                    <>
-                      <li>• Use "Guardar Firma" para almacenar su firma automáticamente</li>
-                      <li>• Use "Cargar Firma" para usar una firma previamente guardada</li>
-                    </>
-                  )}
-                </ul>
-              </div>
-            </div>
-          </div>
+          <p className="text-xs text-muted-foreground text-center">
+            Use su dedo, stylus o mouse para firmar • Presione "Limpiar" para reiniciar
+          </p>
         </CardContent>
       </Card>
     );
