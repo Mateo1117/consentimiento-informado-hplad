@@ -200,7 +200,7 @@ serve(async (req: Request) => {
             errorType: "empty_response",
           }),
           {
-            status: 204,
+            status: 404,
             headers: { "Content-Type": "application/json", ...corsHeaders },
           },
         );
