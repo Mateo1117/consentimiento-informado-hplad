@@ -227,7 +227,7 @@ export default function ConsentManagement() {
     <MainLayout>
       <div className="p-6">
         {/* Header */}
-        <div className="max-w-4xl mx-auto mb-6">
+        <div className="mb-6">
           <Card className="border-border shadow-sm">
             <CardContent className="flex items-center gap-4 py-4">
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
