@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react"
+import { MainLayout } from "@/components/layout/MainLayout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -9,17 +10,14 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { AuthenticatedHeader } from "@/components/AuthenticatedHeader"
-import { ArrowLeft, Search, FileText, Calendar, User, Eye, Download, Filter, Camera, PenTool, Trash2, Monitor, Smartphone } from "lucide-react"
+import { Search, FileText, Calendar, User, Eye, Download, Filter, Camera, PenTool, Trash2, Monitor, Smartphone, Layers } from "lucide-react"
 import { toast } from "sonner"
 import { consentManagementService as consentService, isSupabaseConfigured, type ConsentManagementData as ConsentForm } from "@/services/consentManagementService";
 import { appConsentService } from "@/services/appConsentService"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { useNavigate } from "react-router-dom"
 
 export default function ConsentManagement() {
-  const navigate = useNavigate()
   const [consents, setConsents] = useState<ConsentForm[]>([])
   const [filteredConsents, setFilteredConsents] = useState<ConsentForm[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -226,31 +224,23 @@ export default function ConsentManagement() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-medical-blue-light to-background">
-      <AuthenticatedHeader />
-      <div className="container mx-auto px-4 py-8">
-        {/* Page Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-4 mb-4">
-            <Button
-              variant="outline"
-              onClick={() => navigate("/")}
-              className="border-medical-blue/30 hover:bg-medical-blue/10"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
-            </Button>
-            
-            <div>
-              <h1 className="text-3xl font-bold text-medical-blue flex items-center gap-3">
-                <FileText className="h-8 w-8" />
-                Gestión de Consentimientos
-              </h1>
-              <p className="text-medical-gray mt-2">
-                Consulta y administra todos los consentimientos informados generados (app y móvil)
-              </p>
-            </div>
-          </div>
+    <MainLayout>
+      <div className="p-6">
+        {/* Header */}
+        <div className="max-w-7xl mx-auto mb-6">
+          <Card className="border-border shadow-sm">
+            <CardContent className="flex items-center gap-4 py-4">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                <Layers className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold text-primary">Consentimientos Creados</h2>
+                <p className="text-sm text-muted-foreground">
+                  Consulta y administra todos los consentimientos informados generados
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         {/* Filtros */}
@@ -513,7 +503,7 @@ export default function ConsentManagement() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </MainLayout>
   )
 }
 
