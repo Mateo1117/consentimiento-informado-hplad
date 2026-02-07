@@ -656,7 +656,9 @@ export const ConsentForm = ({ patientData, onBack }: ConsentFormProps) => {
               />
               <Label htmlFor="consent" className="text-sm cursor-pointer leading-relaxed">
                 <span className="font-medium">Declaro que:</span> He sido informado(a) sobre el(los) procedimiento(s) seleccionado(s), 
-                sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección.
+                sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder según mi elección. 
+                Asimismo, autorizo a la E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa para el tratamiento de mis datos personales 
+                conforme a la Ley 1581 de 2012.
               </Label>
             </div>
             

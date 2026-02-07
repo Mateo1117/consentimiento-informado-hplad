@@ -458,23 +458,24 @@ export class BasePDFGenerator {
     const consentParagraphs = [
       `Yo, Identificado(a) como aparece junto a mi firma/huella, hago constar que he recibido información clara relacionada con: Garantía de confidencialidad de mis datos personales y demás información que Yo entregue, con salvedad de la información que deba ser comunicada a personas, o a las autoridades competentes según mi caso. También me informaron sobre el procedimiento en sí, su propósito(s), los beneficios esperados, los posibles riesgos frecuentes o graves, las posibles consecuencias si decido no aceptar el procedimiento, las posibles molestias, la posibilidad de participación de personal en formación bajo supervisión.`,
       `Fui informado(a) también que: a) Puedo denegar mi consentimiento, sin que ello implique desmejora del trato que recibiré de parte del equipo de salud, y que puedo acceder a otros servicios en salud que requiera en tanto estén disponibles, b) Aunque firme en este momento este documento, aceptando me sea(n) realizada(s) la(s) intervención(es), puedo retirar mi consentimiento de manera parcial o total, en cualquier momento anterior a la realización de la intervención, y sin que para ello precise dar explicaciones o justificar mi decisión, c) Que en caso tal que mi decisión sea anular o cancelar, mi consentimiento, dejaré constancia de ella por escrito y firmada o con mi huella dactilar.`,
+      `AUTORIZACIÓN PARA TRATAMIENTO DE DATOS PERSONALES: En cumplimiento de la Ley 1581 de 2012 y el Decreto 1377 de 2013, autorizo de manera libre, expresa e informada a la E.S.E. HOSPITAL PEDRO LEÓN ÁLVAREZ DÍAZ DE LA MESA, para la recolección, almacenamiento, uso y tratamiento de mis datos personales y datos sensibles de salud, con las siguientes finalidades: gestionar mi historia clínica y atención en salud, cumplir con obligaciones legales y regulatorias del sector salud, realizar seguimiento a procedimientos y tratamientos médicos, enviar notificaciones relacionadas con mi atención médica, y generar estadísticas e informes de salud pública (datos anonimizados). Declaro que conozco mis derechos a conocer, actualizar, rectificar y solicitar la supresión de mis datos, así como a revocar esta autorización.`,
       `Actuando en nombre propio (${data.guardianData ? ' ' : 'X'}) / en calidad de representante legal (${data.guardianData ? 'X' : ' '}) de la/del paciente cuyos nombres e identificación están registrados en el encabezado de este documento, autorizo al personal asistencial de esta institución, para que me/le realice el/los procedimiento(s) enseguida señalado(s) y, en caso de ser necesario, tome las medidas y conductas médicas necesarias para salvaguardar mí integridad física, de acuerdo a como se presenten las situaciones imprevistas en el curso del procedimiento.`
     ];
     
-    this.pdf.setFontSize(5.5);
+    this.pdf.setFontSize(5);
     this.pdf.setFont('helvetica', 'normal');
-    const lineSpacing = 2.5;
+    const lineSpacing = 2.2;
     
     for (const paragraph of consentParagraphs) {
       const lines = this.pdf.splitTextToSize(paragraph, this.contentWidth - 4);
       
       // Dibujar cada línea con espaciado correcto - empezar desde currentY + offset inicial
-      let textY = this.currentY + 2.5; // Offset inicial para no sobreponerse al header
+      let textY = this.currentY + 2; // Offset inicial para no sobreponerse al header
       for (let i = 0; i < lines.length; i++) {
         this.pdf.text(lines[i], this.margin + 2, textY);
         textY += lineSpacing;
       }
-      this.currentY = textY + 1; // Espacio entre párrafos
+      this.currentY = textY + 0.5; // Espacio entre párrafos
     }
     
     // Extract date components
@@ -486,7 +487,7 @@ export class BasePDFGenerator {
     const dateText = `En manifestación de aceptación firmo/pongo mi huella en este documento a los ___${day}___ días del mes de ___${month}___ de ${year}.`;
     const dateLines = this.pdf.splitTextToSize(dateText, this.contentWidth - 4);
     this.pdf.text(dateLines, this.margin + 2, this.currentY);
-    this.currentY += dateLines.length * lineSpacing + 2;
+    this.currentY += dateLines.length * lineSpacing + 1;
   }
 
   protected drawSignatureSection(data: BasePDFData) {
