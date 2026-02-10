@@ -34,6 +34,7 @@ interface CargaGlucosaPDFData {
   consentDecision: "aprobar" | "disentir";
   date: string;
   time: string;
+  clinicalRiskNotes?: string;
 }
 
 // Datos del procedimiento de Carga de Glucosa
@@ -73,6 +74,10 @@ const CARGA_GLUCOSA_PROCEDURE_DATA: BasePDFProcedureItem[] = [
   {
     label: 'POSIBLES CONSECUENCIAS EN CASO QUE DECIDA NO ACEPTAR EL PROCEDIMIENTO',
     value: 'Impide a los médicos tratantes tener información valiosa para determinar, confirmar o ajustar el diagnóstico y tratamiento médico.'
+  },
+  {
+    label: 'RIESGOS EN FUNCIÓN DE LA SITUACIÓN CLÍNICA DEL PACIENTE',
+    value: '[Campo a completar según situación específica del paciente]'
   }
 ];
 
@@ -106,7 +111,11 @@ export class CargaGlucosaPDFGenerator extends BasePDFGenerator {
         telefono: data.guardianData.phone,
         vinculo: data.guardianData.relationship
       } : null,
-      procedureData: CARGA_GLUCOSA_PROCEDURE_DATA,
+      procedureData: CARGA_GLUCOSA_PROCEDURE_DATA.map(item =>
+        item.label === 'RIESGOS EN FUNCIÓN DE LA SITUACIÓN CLÍNICA DEL PACIENTE'
+          ? { ...item, value: data.clinicalRiskNotes?.trim() || '' }
+          : item
+      ),
       professionalData: {
         nombreCompleto: data.professionalName,
         documento: data.professionalDocument,
