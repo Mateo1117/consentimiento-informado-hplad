@@ -502,40 +502,42 @@ export class BasePDFGenerator {
       this.pdf.rect(xPos, this.currentY, colWidth, signatureHeight);
     }
     
-    // Primera columna: Firma del paciente (solo si NO hay guardianData)
-    // Si hay guardianData, la firma del paciente queda vacía
-    if (!data.guardianData && data.patientSignature && 
-        typeof data.patientSignature === 'string' &&
-        data.patientSignature.length > 100 && 
-        data.patientSignature.startsWith('data:image')) {
-      try {
-        this.pdf.addImage(data.patientSignature, 'PNG', this.margin + 2, this.currentY + 1, colWidth - 4, signatureHeight - 4);
-      } catch (error) {
-        console.error('Error adding patient signature:', error);
+    // SOLO colocar firmas si la decisión es APROBAR
+    if (data.consentDecision === 'aprobar') {
+      // Primera columna: Firma del paciente (solo si NO hay guardianData)
+      if (!data.guardianData && data.patientSignature && 
+          typeof data.patientSignature === 'string' &&
+          data.patientSignature.length > 100 && 
+          data.patientSignature.startsWith('data:image')) {
+        try {
+          this.pdf.addImage(data.patientSignature, 'PNG', this.margin + 2, this.currentY + 1, colWidth - 4, signatureHeight - 4);
+        } catch (error) {
+          console.error('Error adding patient signature:', error);
+        }
       }
-    }
-    
-    // Segunda columna: Firma del representante legal (cuando hay guardianData)
-    if (data.guardianData && data.guardianSignature && 
-        typeof data.guardianSignature === 'string' &&
-        data.guardianSignature.length > 100 && 
-        data.guardianSignature.startsWith('data:image')) {
-      try {
-        this.pdf.addImage(data.guardianSignature, 'PNG', this.margin + colWidth + 2, this.currentY + 1, colWidth - 4, signatureHeight - 4);
-      } catch (error) {
-        console.error('Error adding guardian signature:', error);
+      
+      // Segunda columna: Firma del representante legal (cuando hay guardianData)
+      if (data.guardianData && data.guardianSignature && 
+          typeof data.guardianSignature === 'string' &&
+          data.guardianSignature.length > 100 && 
+          data.guardianSignature.startsWith('data:image')) {
+        try {
+          this.pdf.addImage(data.guardianSignature, 'PNG', this.margin + colWidth + 2, this.currentY + 1, colWidth - 4, signatureHeight - 4);
+        } catch (error) {
+          console.error('Error adding guardian signature:', error);
+        }
       }
-    }
-    
-    // Tercera columna: Firma del profesional
-    if (data.professionalData.firma && 
-        typeof data.professionalData.firma === 'string' &&
-        data.professionalData.firma.length > 100 && 
-        data.professionalData.firma.startsWith('data:image')) {
-      try {
-        this.pdf.addImage(data.professionalData.firma, 'PNG', this.margin + 2 * colWidth + 2, this.currentY + 1, colWidth - 4, signatureHeight - 4);
-      } catch (error) {
-        console.error('Error adding professional signature:', error);
+      
+      // Tercera columna: Firma del profesional
+      if (data.professionalData.firma && 
+          typeof data.professionalData.firma === 'string' &&
+          data.professionalData.firma.length > 100 && 
+          data.professionalData.firma.startsWith('data:image')) {
+        try {
+          this.pdf.addImage(data.professionalData.firma, 'PNG', this.margin + 2 * colWidth + 2, this.currentY + 1, colWidth - 4, signatureHeight - 4);
+        } catch (error) {
+          console.error('Error adding professional signature:', error);
+        }
       }
     }
     
@@ -567,15 +569,14 @@ export class BasePDFGenerator {
     
     this.currentY += 14;
     
-    // Add patient photo below patient signature (left column) - compacto
-    if (data.patientPhoto && 
+    // Add patient photo below patient signature (left column) - solo si aprobado
+    if (data.consentDecision === 'aprobar' && data.patientPhoto && 
         typeof data.patientPhoto === 'string' &&
         data.patientPhoto.length > 100) {
       try {
         this.pdf.setFontSize(5);
         this.pdf.text('Foto del paciente:', this.margin + 2, this.currentY + 2);
         this.currentY += 3;
-        // Photo size: 18mm x 14mm - más compacta
         this.pdf.addImage(data.patientPhoto, 'JPEG', this.margin + 2, this.currentY, 18, 14);
         this.currentY += 15;
       } catch (error) {
@@ -615,15 +616,40 @@ export class BasePDFGenerator {
       this.pdf.rect(xPos, this.currentY, colWidth, signatureHeight);
     }
     
-    // Add patient signature for withdrawal
-    if (data.patientSignature && 
+    // Firmas en la sección de desistimiento
+    // Primera columna: Firma del paciente (solo si NO hay guardianData)
+    if (!data.guardianData && data.patientSignature && 
         typeof data.patientSignature === 'string' &&
         data.patientSignature.length > 100 && 
         data.patientSignature.startsWith('data:image')) {
       try {
         this.pdf.addImage(data.patientSignature, 'PNG', this.margin + 2, this.currentY + 1, colWidth - 4, signatureHeight - 6);
       } catch (error) {
-        console.error('Error adding withdrawal signature:', error);
+        console.error('Error adding withdrawal patient signature:', error);
+      }
+    }
+    
+    // Segunda columna: Firma del representante legal
+    if (data.guardianData && data.guardianSignature && 
+        typeof data.guardianSignature === 'string' &&
+        data.guardianSignature.length > 100 && 
+        data.guardianSignature.startsWith('data:image')) {
+      try {
+        this.pdf.addImage(data.guardianSignature, 'PNG', this.margin + colWidth + 2, this.currentY + 1, colWidth - 4, signatureHeight - 6);
+      } catch (error) {
+        console.error('Error adding withdrawal guardian signature:', error);
+      }
+    }
+    
+    // Tercera columna: Firma del profesional
+    if (data.professionalData.firma && 
+        typeof data.professionalData.firma === 'string' &&
+        data.professionalData.firma.length > 100 && 
+        data.professionalData.firma.startsWith('data:image')) {
+      try {
+        this.pdf.addImage(data.professionalData.firma, 'PNG', this.margin + 2 * colWidth + 2, this.currentY + 1, colWidth - 4, signatureHeight - 6);
+      } catch (error) {
+        console.error('Error adding withdrawal professional signature:', error);
       }
     }
     
@@ -635,12 +661,34 @@ export class BasePDFGenerator {
     this.pdf.text(`Documento: ${data.patientData.numeroDocumento}`, this.margin + 2, this.currentY + 6);
     
     this.pdf.text('Firma Representante legal:', this.margin + colWidth + 2, this.currentY + 3);
-    this.pdf.text('Documento:', this.margin + colWidth + 2, this.currentY + 6);
+    if (data.guardianData) {
+      this.pdf.text(`Documento: ${data.guardianData.documento}`, this.margin + colWidth + 2, this.currentY + 6);
+    } else {
+      this.pdf.text('Documento:', this.margin + colWidth + 2, this.currentY + 6);
+    }
     
     this.pdf.text('Nombre y documento de quien toma el', this.margin + 2 * colWidth + 2, this.currentY + 3);
     this.pdf.text('desistimiento:', this.margin + 2 * colWidth + 2, this.currentY + 6);
+    this.pdf.setFontSize(5);
+    this.pdf.text(data.professionalData.nombreCompleto, this.margin + 2 * colWidth + 2, this.currentY + 9);
+    this.pdf.text(`Doc: ${data.professionalData.documento}`, this.margin + 2 * colWidth + 2, this.currentY + 12);
     
-    this.currentY += 12;
+    this.currentY += 14;
+    
+    // Foto del paciente en desistimiento
+    if (data.patientPhoto && 
+        typeof data.patientPhoto === 'string' &&
+        data.patientPhoto.length > 100) {
+      try {
+        this.pdf.setFontSize(5);
+        this.pdf.text('Foto del paciente:', this.margin + 2, this.currentY + 2);
+        this.currentY += 3;
+        this.pdf.addImage(data.patientPhoto, 'JPEG', this.margin + 2, this.currentY, 18, 14);
+        this.currentY += 15;
+      } catch (error) {
+        console.error('Error adding patient photo in withdrawal:', error);
+      }
+    }
   }
 
   protected drawSectionHeader(title: string) {
