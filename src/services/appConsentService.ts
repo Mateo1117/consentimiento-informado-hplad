@@ -421,6 +421,7 @@ class AppConsentService {
           profesional_documento: data.professionalDocument || null,
           profesional_firma: data.professionalSignature || null,
           pdf_url: data.pdfUrl || null,
+          riesgos_situacion_clinica: data.payload?.clinicalRiskNotes || null,
           payload_adicional: data.payload || {}
         }
       });

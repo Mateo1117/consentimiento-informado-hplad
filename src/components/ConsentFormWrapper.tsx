@@ -45,6 +45,7 @@ interface ConsentFormWrapperProps {
   guardianDocument?: string;
   guardianRelationship?: string;
   guardianPhone?: string;
+  clinicalRiskNotes?: string;
 }
 
 export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
@@ -68,7 +69,8 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
   guardianName = '',
   guardianDocument = '',
   guardianRelationship = '',
-  guardianPhone = ''
+  guardianPhone = '',
+  clinicalRiskNotes = ''
 }) => {
   const { saveConsent, isSaving } = useAppConsent();
 
@@ -144,6 +146,7 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
           guardianSignature: currentGuardianSignature,
           hasDisability,
           isMinor,
+          clinicalRiskNotes: clinicalRiskNotes || undefined,
           generatedAt: new Date().toISOString()
         },
         professionalName: professionalData?.name,

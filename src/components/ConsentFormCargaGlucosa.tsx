@@ -321,6 +321,7 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
       guardianDocument={guardianDocument}
       guardianRelationship={guardianRelationship}
       guardianPhone={guardianPhone}
+      clinicalRiskNotes={clinicalRiskNotes}
     >
     <div id="consent-form-content" className="space-y-6">
       {/* Header */}
