@@ -151,8 +151,10 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
         const patient = result.data;
 
         // Validar que el tipo de documento seleccionado coincida con el del paciente
-        const apiDocType = patient.tipoDocumento?.toUpperCase()?.trim();
-        const selectedDocType = documentType?.toUpperCase()?.trim();
+        // Normalizar tipos de documento (quitar puntos, espacios, guiones) para comparar CC vs C.C.
+        const normalizeDocType = (dt: string) => dt?.toUpperCase()?.trim()?.replace(/[.\-\s]/g, '') || '';
+        const apiDocType = normalizeDocType(patient.tipoDocumento);
+        const selectedDocType = normalizeDocType(documentType);
         if (apiDocType && selectedDocType && apiDocType !== selectedDocType) {
           setSearchError({
             message: `El tipo de documento seleccionado (${documentType}) no corresponde al paciente. El tipo de documento registrado es: ${patient.tipoDocumento}. Por favor seleccione el tipo de documento correcto.`,
