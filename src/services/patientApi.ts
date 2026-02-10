@@ -255,12 +255,18 @@ class PatientApiService {
       patientRecord.eps_paciente || 
       "Sin EPS";
 
-    // Obtener sexo
-    const sexo = 
+    // Obtener sexo y normalizar a F/M
+    const sexoRaw = 
       patientRecord.sexo || 
       patientRecord.SEXO_PACIENTE || 
       patientRecord.SEXO || 
-      "No especificado";
+      patientRecord.sexoPaciente ||
+      "";
+    // Normalizar: "FEMENINO" -> "F", "MASCULINO" -> "M", "F" -> "F", "M" -> "M"
+    const sexoNormalized = String(sexoRaw).trim().toUpperCase();
+    const sexo = sexoNormalized.startsWith('F') ? 'F' 
+      : sexoNormalized.startsWith('M') ? 'M' 
+      : sexoNormalized || "No especificado";
 
     // Obtener dirección
     const direccion = 
