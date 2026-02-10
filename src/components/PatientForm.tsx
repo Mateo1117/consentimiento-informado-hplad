@@ -149,19 +149,29 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
       
       if (result.data) {
         const patient = result.data;
+
+        // Validar que el tipo de documento seleccionado coincida con el del paciente
+        const apiDocType = patient.tipoDocumento?.toUpperCase()?.trim();
+        const selectedDocType = documentType?.toUpperCase()?.trim();
+        if (apiDocType && selectedDocType && apiDocType !== selectedDocType) {
+          setSearchError({
+            message: `El tipo de documento seleccionado (${documentType}) no corresponde al paciente. El tipo de documento registrado es: ${patient.tipoDocumento}. Por favor seleccione el tipo de documento correcto.`,
+            type: 'validation'
+          });
+          setPatientData(null);
+          return;
+        }
         
         // Parsear fecha de nacimiento del API (viene como "1997-07-14 00:00:00" o "1997-07-14")
         let parsedBirthDate: Date | undefined;
         if (patient.fechaNacimiento && patient.fechaNacimiento !== "") {
-          const fechaStr = patient.fechaNacimiento.split(" ")[0]; // Tomar solo la fecha sin hora
-          parsedBirthDate = new Date(fechaStr + "T12:00:00"); // Agregar hora para evitar problemas de timezone
+          const fechaStr = patient.fechaNacimiento.split(" ")[0];
+          parsedBirthDate = new Date(fechaStr + "T12:00:00");
         }
         
-        // Usar edad del API primero, si no calcularla
         const apiAge = patient.edad && patient.edad > 0 ? patient.edad : 
           (parsedBirthDate ? calculateAge(parsedBirthDate) : 0);
         
-        // Si el usuario ya seleccionó una fecha manual, usarla
         const finalBirthDate = birthDate ? birthDate : parsedBirthDate;
         const finalAge = birthDate ? calculateAge(birthDate) : apiAge;
         
@@ -169,11 +179,11 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
           ...patient, 
           centroSalud: selectedSede,
           tipoDocumento: documentType,
-          fechaNacimiento: patient.fechaNacimiento || "", // Mantener la fecha original del API
+          fechaNacimiento: patient.fechaNacimiento || "",
         };
         
         setPatientData(patientWithSedeAndDocType);
-        setBirthDate(finalBirthDate); // Establecer la fecha parseada
+        setBirthDate(finalBirthDate);
         setEditableAge(finalAge);
         setSearchError(null);
         toast.success("Paciente encontrado exitosamente");
