@@ -46,6 +46,7 @@ interface ConsentPayload {
   
   // PDF y metadatos
   pdf_url: string | null;
+  riesgos_situacion_clinica: string | null;
   consent_id: string;
   payload_adicional: any;
 }
@@ -174,6 +175,7 @@ serve(async (req: Request) => {
       
       // PDF y metadatos
       pdf_url: body.pdf_url || null,
+      riesgos_situacion_clinica: body.riesgos_situacion_clinica || null,
       consent_id: body.consent_id || "",
       payload_adicional: body.payload_adicional || {}
     };

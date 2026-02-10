@@ -194,6 +194,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
       guardianDocument={guardianDocument}
       guardianRelationship={guardianRelationship}
       guardianPhone={guardianPhone}
+      clinicalRiskNotes={clinicalRiskNotes}
     >
     <div id="consent-form-content" className="space-y-6">
       {/* Header */}
