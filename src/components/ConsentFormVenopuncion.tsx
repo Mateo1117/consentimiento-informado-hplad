@@ -59,6 +59,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [patientPhoto, setPatientPhoto] = useState<string | null>(null);
   const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
+  const [clinicalRiskNotes, setClinicalRiskNotes] = useState('');
 
   const patientSignatureRef = useRef<SignatureRef>(null);
   const professionalSignatureRef = useRef<SignatureRef>(null);
@@ -155,6 +156,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         consentDecision: consentDecision || "aprobar",
         date,
         time,
+        clinicalRiskNotes,
         hasDisability,
         isMinor
       };
@@ -421,6 +423,20 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
                       <p className="medical-text-sm text-gray-700">
                         Imposibilidad de realizar los análisis solicitados, limitación en el diagnóstico y seguimiento médico.
                       </p>
+                    </div>
+
+                    {/* Riesgos en función de la situación clínica */}
+                    <div className="border-l-4 border-amber-500 bg-amber-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-amber-600">🏥</span>
+                        <h5 className="font-semibold text-amber-800">Riesgos en función de la situación clínica del paciente:</h5>
+                      </div>
+                      <Textarea
+                        value={clinicalRiskNotes}
+                        onChange={(e) => setClinicalRiskNotes(e.target.value)}
+                        placeholder="Escriba aquí los riesgos específicos según la situación clínica del paciente, o deje en blanco si no aplica..."
+                        className="min-h-[60px] bg-white border-amber-300 focus:border-amber-500 text-sm"
+                      />
                     </div>
 
                     {/* Declaración final */}

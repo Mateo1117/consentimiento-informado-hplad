@@ -33,6 +33,7 @@ interface FrotisVaginalPDFData {
   consentDecision: "aprobar" | "disentir";
   date: string;
   time: string;
+  clinicalRiskNotes?: string;
 }
 
 // Datos del procedimiento de Frotis Vaginal
@@ -109,7 +110,11 @@ export class FrotisVaginalPDFGenerator extends BasePDFGenerator {
         telefono: '',
         vinculo: data.guardianData.relationship
       } : null,
-      procedureData: FROTIS_VAGINAL_PROCEDURE_DATA,
+      procedureData: FROTIS_VAGINAL_PROCEDURE_DATA.map(item =>
+        item.label === 'RIESGOS EN FUNCIÓN DE LA SITUACIÓN CLÍNICA DEL PACIENTE'
+          ? { ...item, value: data.clinicalRiskNotes?.trim() || '' }
+          : item
+      ),
       professionalData: {
         nombreCompleto: data.professionalName,
         documento: data.professionalDocument,

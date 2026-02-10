@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -65,6 +66,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
     document: ''
   });
   const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
+  const [clinicalRiskNotes, setClinicalRiskNotes] = useState('');
   
   // Refs para SignaturePads, CameraCapture y GuardianSignature
   const signatureRef = useRef<SignatureRef>(null);
@@ -121,6 +123,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
         consentDecision,
         date: formData.fecha,
         time: formData.hora,
+        clinicalRiskNotes,
         hasDisability,
         isMinor
       };
@@ -376,6 +379,20 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
                         Impedimento para que el personal médico pueda realizar un diagnóstico oportuno, generar un plan de tratamiento adecuado, 
                         y prevenir la transmisión del virus. Esto puede resultar en complicaciones de salud graves y riesgo para terceros.
                       </p>
+                    </div>
+
+                    {/* Declaración final */}
+                    <div className="border-l-4 border-amber-500 bg-amber-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-amber-600">🏥</span>
+                        <h5 className="font-semibold text-amber-800">Riesgos en función de la situación clínica del paciente:</h5>
+                      </div>
+                      <Textarea
+                        value={clinicalRiskNotes}
+                        onChange={(e) => setClinicalRiskNotes(e.target.value)}
+                        placeholder="Escriba aquí los riesgos específicos según la situación clínica del paciente, o deje en blanco si no aplica..."
+                        className="min-h-[60px] bg-white border-amber-300 focus:border-amber-500 text-sm"
+                      />
                     </div>
 
                     {/* Declaración final */}

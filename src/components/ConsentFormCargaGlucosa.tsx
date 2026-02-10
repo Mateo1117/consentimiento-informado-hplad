@@ -56,6 +56,7 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
   const [guardianPhone, setGuardianPhone] = useState("");
   const [guardianSignature, setGuardianSignature] = useState<string | null>(null);
   const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
+  const [clinicalRiskNotes, setClinicalRiskNotes] = useState('');
 
   // Estados para firmas y foto
   const patientSignatureRef = useRef<SignatureRef>(null);
@@ -236,7 +237,8 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         patientPhoto: patientPhoto,
         consentDecision: consentDecision || "aprobar",
         date,
-        time
+        time,
+        clinicalRiskNotes
       };
 
       console.log("🔧 Generando PDF con datos:", {
@@ -498,6 +500,20 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
                       <p className="text-gray-700 text-sm">
                         Impide a los médicos tratantes tener información valiosa para determinar, confirmar o ajustar el diagnóstico y tratamiento médico
                       </p>
+                    </div>
+
+                    {/* Riesgos en función de la situación clínica */}
+                    <div className="border-l-4 border-amber-500 bg-amber-50 p-4 rounded-r-lg">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-amber-600">🏥</span>
+                        <h4 className="font-semibold text-amber-800">Riesgos en función de la situación clínica del paciente:</h4>
+                      </div>
+                      <Textarea
+                        value={clinicalRiskNotes}
+                        onChange={(e) => setClinicalRiskNotes(e.target.value)}
+                        placeholder="Escriba aquí los riesgos específicos según la situación clínica del paciente, o deje en blanco si no aplica..."
+                        className="min-h-[60px] bg-white border-amber-300 focus:border-amber-500 text-sm"
+                      />
                     </div>
 
                     {/* Declaración */}

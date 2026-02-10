@@ -34,6 +34,7 @@ interface HIVPDFData {
   consentDecision: "aprobar" | "disentir";
   date: string;
   time: string;
+  clinicalRiskNotes?: string;
 }
 
 // Datos del procedimiento de Prueba VIH
@@ -110,7 +111,11 @@ export class HIVPDFGenerator extends BasePDFGenerator {
         telefono: data.guardianData.phone,
         vinculo: data.guardianData.relationship
       } : null,
-      procedureData: HIV_PROCEDURE_DATA,
+      procedureData: HIV_PROCEDURE_DATA.map(item =>
+        item.label === 'RIESGOS EN FUNCIÓN DE LA SITUACIÓN CLÍNICA DEL PACIENTE'
+          ? { ...item, value: data.clinicalRiskNotes?.trim() || '' }
+          : item
+      ),
       professionalData: {
         nombreCompleto: data.professionalName,
         documento: data.professionalDocument,

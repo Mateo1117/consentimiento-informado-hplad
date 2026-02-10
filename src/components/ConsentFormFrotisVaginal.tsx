@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { SignaturePad, SignatureRef } from "./SignaturePad";
 import { CameraCapture, CameraCaptureRef } from "./CameraCapture";
 import { ProfessionalSelector } from "./ProfessionalSelector";
@@ -44,6 +45,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
   const [consentDecision, setConsentDecision] = useState<"aprobar" | "disentir">("aprobar");
   const [agreedToConsent, setAgreedToConsent] = useState(false);
   const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
+  const [clinicalRiskNotes, setClinicalRiskNotes] = useState('');
   
   // Estados para el profesional
   const [professionalData, setProfessionalData] = useState({
@@ -145,7 +147,8 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         patientPhoto: capturedPhoto,
         consentDecision,
         date: new Date().toISOString().split('T')[0],
-        time: new Date().toLocaleTimeString('es-CO', { hour12: false })
+        time: new Date().toLocaleTimeString('es-CO', { hour12: false }),
+        clinicalRiskNotes
       };
 
       const pdf = await generateFrotisVaginalPDF(pdfData);
@@ -410,6 +413,20 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
                         <p className="text-sm text-gray-700">
                           Imposibilidad de detectar infecciones vaginales o rectales, lo que puede llevar a complicaciones de salud no tratadas.
                         </p>
+                      </div>
+
+                      {/* Riesgos en función de la situación clínica */}
+                      <div className="border-l-4 border-amber-500 bg-amber-50 p-4 rounded-r-lg">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="text-amber-600">🏥</span>
+                          <h5 className="font-semibold text-amber-800">Riesgos en función de la situación clínica del paciente:</h5>
+                        </div>
+                        <Textarea
+                          value={clinicalRiskNotes}
+                          onChange={(e) => setClinicalRiskNotes(e.target.value)}
+                          placeholder="Escriba aquí los riesgos específicos según la situación clínica del paciente, o deje en blanco si no aplica..."
+                          className="min-h-[60px] bg-white border-amber-300 focus:border-amber-500 text-sm"
+                        />
                       </div>
 
                       {/* Declaración final */}
