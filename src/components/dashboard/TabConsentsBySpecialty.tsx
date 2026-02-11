@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from "recharts";
 import { Stethoscope } from "lucide-react";
+import { normalizeConsentType, CONSENT_TYPE_SPECIALTY } from "@/utils/consentTypeNormalizer";
 
 interface DateRangeProps {
   dateFrom?: string;
@@ -15,14 +16,6 @@ interface SpecialtyData {
   signed: number;
   pending: number;
 }
-
-const CONSENT_SPECIALTY: Record<string, string> = {
-  hiv: "Laboratorio Clínico",
-  venopuncion: "Laboratorio Clínico",
-  carga_glucosa: "Laboratorio Clínico",
-  frotis_vaginal: "Ginecología / Laboratorio",
-  hemocomponentes: "Banco de Sangre / Medicina Transfusional",
-};
 
 const COLORS = [
   "hsl(var(--primary))",
@@ -50,7 +43,7 @@ export function TabConsentsBySpecialty({ dateFrom, dateTo }: DateRangeProps) {
 
       const grouped: Record<string, { total: number; signed: number; pending: number }> = {};
       (consents || []).forEach((c) => {
-        const specialty = CONSENT_SPECIALTY[c.consent_type] || "General";
+        const specialty = CONSENT_TYPE_SPECIALTY[normalizeConsentType(c.consent_type)] || "General";
         if (!grouped[specialty]) grouped[specialty] = { total: 0, signed: 0, pending: 0 };
         grouped[specialty].total++;
         if (c.status === "signed") grouped[specialty].signed++;
