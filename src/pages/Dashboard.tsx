@@ -2,8 +2,11 @@ import { MainLayout } from "@/components/layout/MainLayout";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { DashboardStats } from "@/components/dashboard/DashboardStats";
 import { DashboardTabs } from "@/components/dashboard/DashboardTabs";
-import { DashboardCharts } from "@/components/dashboard/DashboardCharts";
 import { RecentActivity } from "@/components/dashboard/RecentActivity";
+import { TabConsentsByType } from "@/components/dashboard/TabConsentsByType";
+import { TabConsentsBySpecialty } from "@/components/dashboard/TabConsentsBySpecialty";
+import { TabConsentsBySource } from "@/components/dashboard/TabConsentsBySource";
+import { TabConsentsByDoctor } from "@/components/dashboard/TabConsentsByDoctor";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
@@ -196,104 +199,63 @@ const Dashboard = () => {
         {/* Tabs */}
         <DashboardTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-        {/* Charts Section */}
-        <div className="space-y-6">
-          {/* 30-Day Trend Chart */}
-          <Card className="border-border shadow-sm">
-            <CardHeader className="pb-2">
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg text-foreground">Tendencia - Últimos 30 Días</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={monthlyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis 
-                      dataKey="date" 
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                    />
-                    <YAxis 
-                      stroke="hsl(var(--muted-foreground))"
-                      fontSize={12}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-                    <Tooltip 
-                      contentStyle={{ 
-                        backgroundColor: 'hsl(var(--card))', 
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px'
-                      }}
-                    />
-                    <Area 
-                      type="monotone" 
-                      dataKey="value" 
-                      stroke="hsl(var(--primary))" 
-                      fill="hsl(var(--primary) / 0.2)"
-                      strokeWidth={2}
-                    />
-                  </AreaChart>
-                </ResponsiveContainer>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Weekly Trend and Recent Activity */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Weekly Trend */}
+        {/* Tab Content */}
+        {activeTab === "resumen" && (
+          <div className="space-y-6">
+            {/* 30-Day Trend Chart */}
             <Card className="border-border shadow-sm">
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg text-foreground">Tendencia Semanal</CardTitle>
+                  <CardTitle className="text-lg text-foreground">Tendencia - Últimos 30 Días</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
-                <div className="h-[250px] w-full">
+                <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={weeklyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <AreaChart data={monthlyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis 
-                        dataKey="date" 
-                        stroke="hsl(var(--muted-foreground))"
-                        fontSize={12}
-                        tickLine={false}
-                      />
-                      <YAxis 
-                        stroke="hsl(var(--muted-foreground))"
-                        fontSize={12}
-                        tickLine={false}
-                        axisLine={false}
-                      />
-                      <Tooltip 
-                        contentStyle={{ 
-                          backgroundColor: 'hsl(var(--card))', 
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px'
-                        }}
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="value" 
-                        stroke="hsl(var(--primary))" 
-                        strokeWidth={2}
-                        dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2 }}
-                      />
-                    </LineChart>
+                      <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} />
+                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                      <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
+                      <Area type="monotone" dataKey="value" stroke="hsl(var(--primary))" fill="hsl(var(--primary) / 0.2)" strokeWidth={2} />
+                    </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Recent Activity */}
-            <RecentActivity activities={recentActivity} isLoading={isLoading} />
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className="border-border shadow-sm">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    <CardTitle className="text-lg text-foreground">Tendencia Semanal</CardTitle>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="h-[250px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={weeklyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} />
+                        <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
+                        <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px' }} />
+                        <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2 }} />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                </CardContent>
+              </Card>
+              <RecentActivity activities={recentActivity} isLoading={isLoading} />
+            </div>
           </div>
-        </div>
+        )}
+
+        {activeTab === "tipo" && <TabConsentsByType />}
+        {activeTab === "especialidad" && <TabConsentsBySpecialty />}
+        {activeTab === "sede" && <TabConsentsBySource />}
+        {activeTab === "medico" && <TabConsentsByDoctor />}
       </div>
 
       {/* Footer */}
