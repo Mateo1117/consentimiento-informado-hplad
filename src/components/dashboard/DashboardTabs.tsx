@@ -18,15 +18,15 @@ export function DashboardTabs({ activeTab, onTabChange }: DashboardTabsProps) {
   return (
     <div className="mb-6">
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="w-full justify-start bg-card border border-border h-auto p-1 flex-wrap">
+        <TabsList className="w-full bg-card border border-border h-12 p-1 grid grid-cols-5">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.id}
               value={tab.id}
-              className="flex items-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2"
+              className="flex items-center justify-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2.5 text-sm font-medium"
             >
               <tab.icon className="h-4 w-4" />
-              <span className="hidden sm:inline">{tab.label}</span>
+              {tab.label}
             </TabsTrigger>
           ))}
         </TabsList>
