@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Clock, FileCheck } from "lucide-react";
+import { consentTypeLabel } from "@/utils/consentTypeNormalizer";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
@@ -16,16 +17,7 @@ interface RecentActivityProps {
 }
 
 export function RecentActivity({ activities, isLoading }: RecentActivityProps) {
-  const formatConsentType = (type: string) => {
-    const types: Record<string, string> = {
-      'hiv': 'VIH',
-      'frotis_vaginal': 'Frotis Vaginal',
-      'carga_glucosa': 'Carga de Glucosa',
-      'venopuncion': 'Venopunción',
-      'hemocomponentes': 'Hemocomponentes',
-    };
-    return types[type] || type;
-  };
+  const formatConsentType = (type: string) => consentTypeLabel(type);
 
   return (
     <Card className="border-border shadow-sm h-full">

@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { FileText } from "lucide-react";
+import { normalizeConsentType, consentTypeLabel } from "@/utils/consentTypeNormalizer";
 
 interface DateRangeProps {
   dateFrom?: string;
@@ -15,14 +16,6 @@ interface TypeData {
   signed: number;
   pending: number;
 }
-
-const CONSENT_LABELS: Record<string, string> = {
-  hiv: "VIH",
-  venopuncion: "Venopunción",
-  carga_glucosa: "Carga de Glucosa",
-  frotis_vaginal: "Frotis Vaginal",
-  hemocomponentes: "Hemocomponentes",
-};
 
 const COLORS = [
   "hsl(var(--primary))",
@@ -51,7 +44,7 @@ export function TabConsentsByType({ dateFrom, dateTo }: DateRangeProps) {
 
       const grouped: Record<string, { count: number; signed: number; pending: number }> = {};
       (consents || []).forEach((c) => {
-        const key = c.consent_type || "otro";
+        const key = normalizeConsentType(c.consent_type);
         if (!grouped[key]) grouped[key] = { count: 0, signed: 0, pending: 0 };
         grouped[key].count++;
         if (c.status === "signed") grouped[key].signed++;
@@ -59,7 +52,7 @@ export function TabConsentsByType({ dateFrom, dateTo }: DateRangeProps) {
       });
 
       const result = Object.entries(grouped).map(([key, val]) => ({
-        name: CONSENT_LABELS[key] || key,
+        name: consentTypeLabel(key),
         ...val,
       }));
       result.sort((a, b) => b.count - a.count);
