@@ -9,28 +9,40 @@ interface DateRangeProps {
   dateTo?: string;
 }
 
-interface SourceData {
+interface SedeData {
   name: string;
   total: number;
   signed: number;
   pending: number;
 }
 
-const SOURCE_LABELS: Record<string, string> = {
-  app: "Aplicación (Presencial)",
-  web: "Web (Remoto)",
-  webhook: "Webhook (Externo)",
-};
-
 const COLORS = [
   "hsl(var(--primary))",
   "hsl(var(--accent))",
   "hsl(210, 70%, 55%)",
   "hsl(280, 60%, 55%)",
+  "hsl(30, 80%, 55%)",
+  "hsl(160, 60%, 45%)",
+  "hsl(340, 65%, 50%)",
+  "hsl(50, 80%, 50%)",
+];
+
+// These are the sedes configured in the system (same as PatientForm)
+const KNOWN_SEDES = [
+  "Hospital Pedro Leon Alvarez Diaz de la Mesa",
+  "Centro de salud Anapoima",
+  "Centro de salud Quipile",
+  "Centro de salud La Gran Via",
+  "Centro de salud Cachipay",
+  "Centro de salud Anolaima",
+  "Centro de salud San Antonio del Tequendama",
+  "Centro de salud Tena",
+  "Centro de salud El Colegio",
+  "Centro de salud Viota",
 ];
 
 export function TabConsentsBySource({ dateFrom, dateTo }: DateRangeProps) {
-  const [data, setData] = useState<SourceData[]>([]);
+  const [data, setData] = useState<SedeData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -40,27 +52,39 @@ export function TabConsentsBySource({ dateFrom, dateTo }: DateRangeProps) {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      let q = supabase.from("consents").select("source, status");
+      let q = supabase.from("consents").select("payload, status");
       if (dateFrom) q = q.gte("created_at", dateFrom);
       if (dateTo) q = q.lte("created_at", dateTo);
       const { data: consents, error } = await q;
 
       const grouped: Record<string, { total: number; signed: number; pending: number }> = {};
+
+      // Initialize all known sedes
+      KNOWN_SEDES.forEach(sede => {
+        grouped[sede] = { total: 0, signed: 0, pending: 0 };
+      });
+
       (consents || []).forEach((c) => {
-        const key = c.source || "app";
-        if (!grouped[key]) grouped[key] = { total: 0, signed: 0, pending: 0 };
-        grouped[key].total++;
-        if (c.status === "signed") grouped[key].signed++;
-        else grouped[key].pending++;
+        const payload = c.payload as Record<string, any> | null;
+        const sede = payload?.patientData?.centroSalud || payload?.centroSalud || "Sin sede asignada";
+        
+        // Normalize sede name for grouping
+        const normalizedSede = normalizeSede(sede);
+        
+        if (!grouped[normalizedSede]) grouped[normalizedSede] = { total: 0, signed: 0, pending: 0 };
+        grouped[normalizedSede].total++;
+        if (c.status === "signed") grouped[normalizedSede].signed++;
+        else grouped[normalizedSede].pending++;
       });
 
       const result = Object.entries(grouped)
-        .map(([key, val]) => ({ name: SOURCE_LABELS[key] || key, ...val }))
+        .filter(([_, val]) => val.total > 0)
+        .map(([name, val]) => ({ name: shortenSedeName(name), ...val }))
         .sort((a, b) => b.total - a.total);
 
       setData(result);
     } catch (err) {
-      console.error("Error fetching by source:", err);
+      console.error("Error fetching by sede:", err);
     } finally {
       setIsLoading(false);
     }
@@ -82,14 +106,14 @@ export function TabConsentsBySource({ dateFrom, dateTo }: DateRangeProps) {
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg text-foreground">Distribución por Origen</CardTitle>
+            <CardTitle className="text-lg text-foreground">Distribución por Sede</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
           <div className="h-[350px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
-                <Pie data={pieData} cx="50%" cy="50%" outerRadius={120} dataKey="value" label={({ name, value }) => `${name}: ${value}`}>
+                <Pie data={pieData} cx="50%" cy="50%" outerRadius={120} dataKey="value" label={({ name, value }) => `${value}`}>
                   {pieData.map((_, i) => (
                     <Cell key={i} fill={COLORS[i % COLORS.length]} />
                   ))}
@@ -106,7 +130,7 @@ export function TabConsentsBySource({ dateFrom, dateTo }: DateRangeProps) {
         <CardHeader className="pb-2">
           <div className="flex items-center gap-2">
             <Building2 className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg text-foreground">Estado por Origen</CardTitle>
+            <CardTitle className="text-lg text-foreground">Estado por Sede</CardTitle>
           </div>
         </CardHeader>
         <CardContent>
@@ -114,7 +138,7 @@ export function TabConsentsBySource({ dateFrom, dateTo }: DateRangeProps) {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} />
+                <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} angle={-20} textAnchor="end" height={60} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
                 <Tooltip contentStyle={{ backgroundColor: "hsl(var(--card))", border: "1px solid hsl(var(--border))", borderRadius: "8px" }} />
                 <Legend />
@@ -128,14 +152,14 @@ export function TabConsentsBySource({ dateFrom, dateTo }: DateRangeProps) {
 
       <Card className="border-border shadow-sm lg:col-span-2">
         <CardHeader className="pb-2">
-          <CardTitle className="text-lg text-foreground">Resumen por Origen</CardTitle>
+          <CardTitle className="text-lg text-foreground">Resumen por Sede</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Origen</th>
+                  <th className="text-left py-3 px-4 font-semibold text-muted-foreground">Sede</th>
                   <th className="text-center py-3 px-4 font-semibold text-muted-foreground">Total</th>
                   <th className="text-center py-3 px-4 font-semibold text-muted-foreground">Firmados</th>
                   <th className="text-center py-3 px-4 font-semibold text-muted-foreground">Pendientes</th>
@@ -161,4 +185,31 @@ export function TabConsentsBySource({ dateFrom, dateTo }: DateRangeProps) {
       </Card>
     </div>
   );
+}
+
+/** Normalize sede names to group variations (e.g., uppercase vs mixed case) */
+function normalizeSede(sede: string): string {
+  const lower = sede.toLowerCase().trim();
+  
+  // Try to match against known sedes
+  for (const known of KNOWN_SEDES) {
+    if (lower.includes(known.toLowerCase()) || known.toLowerCase().includes(lower)) {
+      return known;
+    }
+  }
+  
+  // Check common patterns
+  if (lower.includes("hospital") && lower.includes("mesa")) {
+    return KNOWN_SEDES[0]; // Hospital principal
+  }
+  
+  return sede;
+}
+
+/** Shorten long sede names for chart display */
+function shortenSedeName(name: string): string {
+  return name
+    .replace("Hospital Pedro Leon Alvarez Diaz de la Mesa", "Hospital La Mesa")
+    .replace("Centro de salud ", "C.S. ")
+    .replace("San Antonio del Tequendama", "San Antonio Teq.");
 }
