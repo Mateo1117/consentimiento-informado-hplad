@@ -4,6 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { Building2 } from "lucide-react";
 
+interface DateRangeProps {
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 interface SourceData {
   name: string;
   total: number;
@@ -24,22 +29,21 @@ const COLORS = [
   "hsl(280, 60%, 55%)",
 ];
 
-export function TabConsentsBySource() {
+export function TabConsentsBySource({ dateFrom, dateTo }: DateRangeProps) {
   const [data, setData] = useState<SourceData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [dateFrom, dateTo]);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const { data: consents, error } = await supabase
-        .from("consents")
-        .select("source, status");
-
-      if (error) throw error;
+      let q = supabase.from("consents").select("source, status");
+      if (dateFrom) q = q.gte("created_at", dateFrom);
+      if (dateTo) q = q.lte("created_at", dateTo);
+      const { data: consents, error } = await q;
 
       const grouped: Record<string, { total: number; signed: number; pending: number }> = {};
       (consents || []).forEach((c) => {

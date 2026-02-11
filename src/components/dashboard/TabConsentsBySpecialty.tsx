@@ -4,6 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from "recharts";
 import { Stethoscope } from "lucide-react";
 
+interface DateRangeProps {
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 interface SpecialtyData {
   name: string;
   total: number;
@@ -27,22 +32,21 @@ const COLORS = [
   "hsl(30, 80%, 55%)",
 ];
 
-export function TabConsentsBySpecialty() {
+export function TabConsentsBySpecialty({ dateFrom, dateTo }: DateRangeProps) {
   const [data, setData] = useState<SpecialtyData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [dateFrom, dateTo]);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const { data: consents, error } = await supabase
-        .from("consents")
-        .select("consent_type, status");
-
-      if (error) throw error;
+      let q = supabase.from("consents").select("consent_type, status");
+      if (dateFrom) q = q.gte("created_at", dateFrom);
+      if (dateTo) q = q.lte("created_at", dateTo);
+      const { data: consents, error } = await q;
 
       const grouped: Record<string, { total: number; signed: number; pending: number }> = {};
       (consents || []).forEach((c) => {
