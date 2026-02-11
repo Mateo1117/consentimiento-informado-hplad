@@ -82,7 +82,7 @@ const Dashboard = () => {
         supabase.from('consents').select('*', { count: 'exact', head: true })
           .eq('status', 'signed'),
         supabase.from('consents').select('*', { count: 'exact', head: true })
-          .eq('status', 'pending'),
+          .eq('status', 'sent'),
         supabase.from('consents')
           .select('id, patient_name, consent_type, created_at')
           .order('created_at', { ascending: false })
