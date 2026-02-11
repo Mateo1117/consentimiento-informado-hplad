@@ -300,7 +300,8 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
         tipoDocumento: patientData.tipoDocumento,
         numeroDocumento: patientData.numeroDocumento,
         telefono: patientData.telefono,
-        email: patientData.email
+        email: patientData.email,
+        centroSalud: patientData.centroSalud,
       }}
       onGeneratePDF={generatePDF}
       onGetHTMLContent={getHTMLContent}

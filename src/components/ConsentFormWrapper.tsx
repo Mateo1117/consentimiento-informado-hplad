@@ -22,6 +22,12 @@ interface ConsentFormWrapperProps {
     numeroDocumento: string;
     telefono?: string;
     email?: string;
+    centroSalud?: string;
+    edad?: number;
+    eps?: string;
+    sexo?: string;
+    direccion?: string;
+    fechaNacimiento?: string;
   };
   onGeneratePDF: () => Promise<Blob>;
   onGetHTMLContent: () => string;

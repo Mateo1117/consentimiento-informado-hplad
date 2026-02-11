@@ -198,7 +198,8 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         tipoDocumento: patientData.tipoDocumento,
         numeroDocumento: patientData.numeroDocumento,
         telefono: patientData.telefono,
-        email: patientData.email
+        email: patientData.email,
+        centroSalud: patientData.centroSalud,
       }}
       onGeneratePDF={generatePDF}
       onGetHTMLContent={getHTMLContent}
