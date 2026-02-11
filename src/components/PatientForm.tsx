@@ -424,6 +424,13 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                 </div>
                 
                 <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">Sexo</Label>
+                  <p className="font-medium bg-muted/50 p-2 rounded border border-border">
+                    {patientData.sexo === 'F' ? 'Femenino' : patientData.sexo === 'M' ? 'Masculino' : patientData.sexo || 'No disponible'}
+                  </p>
+                </div>
+
+                <div className="space-y-2">
                   <Label className="text-xs text-muted-foreground">EPS</Label>
                   <p className="font-medium bg-muted/50 p-2 rounded border border-border">
                     {patientData.eps}
