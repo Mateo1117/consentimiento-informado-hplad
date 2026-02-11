@@ -4,6 +4,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { UserCircle } from "lucide-react";
 
+interface DateRangeProps {
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 interface DoctorData {
   name: string;
   total: number;
@@ -11,22 +16,21 @@ interface DoctorData {
   pending: number;
 }
 
-export function TabConsentsByDoctor() {
+export function TabConsentsByDoctor({ dateFrom, dateTo }: DateRangeProps) {
   const [data, setData] = useState<DoctorData[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [dateFrom, dateTo]);
 
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const { data: consents, error } = await supabase
-        .from("consents")
-        .select("professional_name, status");
-
-      if (error) throw error;
+      let q = supabase.from("consents").select("professional_name, status");
+      if (dateFrom) q = q.gte("created_at", dateFrom);
+      if (dateTo) q = q.lte("created_at", dateTo);
+      const { data: consents, error } = await q;
 
       const grouped: Record<string, { total: number; signed: number; pending: number }> = {};
       (consents || []).forEach((c) => {

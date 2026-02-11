@@ -10,12 +10,12 @@ import { TabConsentsByDoctor } from "@/components/dashboard/TabConsentsByDoctor"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, startOfWeek, endOfWeek, startOfMonth, endOfMonth } from "date-fns";
+import { format, subDays, startOfWeek, startOfMonth, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 
-interface DashboardStats {
+interface StatsData {
   totalConsents: number;
   todayConsents: number;
   weekConsents: number;
@@ -38,26 +38,33 @@ interface ActivityItem {
   createdAt: string;
 }
 
+// Helper: local date boundaries to ISO
+function localDayStart(date: Date): string {
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+function localDayEnd(date: Date): string {
+  const d = new Date(date);
+  d.setHours(23, 59, 59, 999);
+  return d.toISOString();
+}
+
 const Dashboard = () => {
-  const [stats, setStats] = useState<DashboardStats>({
-    totalConsents: 0,
-    todayConsents: 0,
-    weekConsents: 0,
-    monthConsents: 0,
-    signedConsents: 0,
-    pendingConsents: 0,
-    weekChange: 0,
-    monthChange: 0,
+  const [stats, setStats] = useState<StatsData>({
+    totalConsents: 0, todayConsents: 0, weekConsents: 0, monthConsents: 0,
+    signedConsents: 0, pendingConsents: 0, weekChange: 0, monthChange: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("resumen");
   const [dateFrom, setDateFrom] = useState<Date | undefined>(subDays(new Date(), 30));
   const [dateTo, setDateTo] = useState<Date | undefined>(new Date());
-  const [monthlyData, setMonthlyData] = useState<ChartData[]>([]);
+  const [trendData, setTrendData] = useState<ChartData[]>([]);
   const [weeklyData, setWeeklyData] = useState<ChartData[]>([]);
   const [recentActivity, setRecentActivity] = useState<ActivityItem[]>([]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     setIsLoading(true);
     try {
       const now = new Date();
@@ -65,7 +72,17 @@ const Dashboard = () => {
       const weekStart = startOfWeek(now, { weekStartsOn: 1 });
       const monthStart = startOfMonth(now);
 
-      // Parallel queries for stats
+      const rangeStart = dateFrom ? localDayStart(dateFrom) : undefined;
+      const rangeEnd = dateTo ? localDayEnd(dateTo) : undefined;
+
+      // Build filtered queries
+      const buildQuery = () => {
+        let q = supabase.from('consents').select('*', { count: 'exact', head: true });
+        if (rangeStart) q = q.gte('created_at', rangeStart);
+        if (rangeEnd) q = q.lte('created_at', rangeEnd);
+        return q;
+      };
+
       const [
         { count: total },
         { count: todayCount },
@@ -75,21 +92,21 @@ const Dashboard = () => {
         { count: pending },
         { data: recentData },
       ] = await Promise.all([
-        supabase.from('consents').select('*', { count: 'exact', head: true }),
-        supabase.from('consents').select('*', { count: 'exact', head: true })
-          .gte('created_at', today.toISOString()),
-        supabase.from('consents').select('*', { count: 'exact', head: true })
-          .gte('created_at', weekStart.toISOString()),
-        supabase.from('consents').select('*', { count: 'exact', head: true })
-          .gte('created_at', monthStart.toISOString()),
-        supabase.from('consents').select('*', { count: 'exact', head: true })
-          .eq('status', 'signed'),
-        supabase.from('consents').select('*', { count: 'exact', head: true })
-          .eq('status', 'sent'),
-        supabase.from('consents')
-          .select('id, patient_name, consent_type, created_at')
-          .order('created_at', { ascending: false })
-          .limit(5),
+        buildQuery(),
+        buildQuery().gte('created_at', today.toISOString()),
+        buildQuery().gte('created_at', weekStart.toISOString()),
+        buildQuery().gte('created_at', monthStart.toISOString()),
+        buildQuery().eq('status', 'signed'),
+        buildQuery().eq('status', 'sent'),
+        (() => {
+          let q = supabase.from('consents')
+            .select('id, patient_name, consent_type, created_at')
+            .order('created_at', { ascending: false })
+            .limit(10);
+          if (rangeStart) q = q.gte('created_at', rangeStart);
+          if (rangeEnd) q = q.lte('created_at', rangeEnd);
+          return q;
+        })(),
       ]);
 
       setStats({
@@ -100,10 +117,9 @@ const Dashboard = () => {
         signedConsents: signed || 0,
         pendingConsents: pending || 0,
         weekChange: weekCount && weekCount > 0 ? 100 : 0,
-        monthChange: monthCount && monthCount > 0 ? 1300 : 0,
+        monthChange: monthCount && monthCount > 0 ? 100 : 0,
       });
 
-      // Set recent activity
       if (recentData) {
         setRecentActivity(recentData.map(item => ({
           id: item.id,
@@ -113,75 +129,86 @@ const Dashboard = () => {
         })));
       }
 
-      // Generate chart data
-      await generateChartData();
+      // Generate chart data efficiently (single query, group client-side)
+      await generateChartData(rangeStart, rangeEnd);
 
     } catch (error) {
       console.error('Error fetching stats:', error);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [dateFrom, dateTo]);
 
-  const generateChartData = async () => {
-    const days = 30;
-    const monthlyChartData: ChartData[] = [];
-    
-    for (let i = days - 1; i >= 0; i--) {
-      const date = subDays(new Date(), i);
-      const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+  const generateChartData = async (rangeStart?: string, rangeEnd?: string) => {
+    try {
+      // Fetch all consents in range with just created_at
+      let q = supabase.from('consents').select('created_at');
+      if (rangeStart) q = q.gte('created_at', rangeStart);
+      if (rangeEnd) q = q.lte('created_at', rangeEnd);
+      q = q.order('created_at', { ascending: true });
 
-      const { count } = await supabase
-        .from('consents')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', dayStart.toISOString())
-        .lt('created_at', dayEnd.toISOString());
+      const { data: consents, error } = await q;
+      if (error) throw error;
 
-      monthlyChartData.push({
-        date: format(date, 'dd/MM', { locale: es }),
-        value: count || 0,
+      // Group by day
+      const dayCounts: Record<string, number> = {};
+      (consents || []).forEach(c => {
+        const day = format(new Date(c.created_at), 'yyyy-MM-dd');
+        dayCounts[day] = (dayCounts[day] || 0) + 1;
       });
+
+      // Build trend data for the date range
+      const from = dateFrom || subDays(new Date(), 30);
+      const to = dateTo || new Date();
+      const days = Math.max(differenceInDays(to, from), 1);
+      const trendChartData: ChartData[] = [];
+
+      for (let i = 0; i <= days; i++) {
+        const date = new Date(from);
+        date.setDate(date.getDate() + i);
+        const key = format(date, 'yyyy-MM-dd');
+        trendChartData.push({
+          date: format(date, 'dd/MM', { locale: es }),
+          value: dayCounts[key] || 0,
+        });
+      }
+      setTrendData(trendChartData);
+
+      // Weekly data (last 7 days from the end date)
+      const weekDayLabels = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
+      const weeklyChartData: ChartData[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = subDays(to, i);
+        const key = format(date, 'yyyy-MM-dd');
+        weeklyChartData.push({
+          date: weekDayLabels[date.getDay()],
+          value: dayCounts[key] || 0,
+        });
+      }
+      setWeeklyData(weeklyChartData);
+
+    } catch (error) {
+      console.error('Error generating chart data:', error);
     }
-
-    setMonthlyData(monthlyChartData);
-
-    // Weekly data (last 7 days by day name)
-    const weekDays = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
-    const weeklyChartData: ChartData[] = [];
-    
-    for (let i = 6; i >= 0; i--) {
-      const date = subDays(new Date(), i);
-      const dayStart = new Date(date.getFullYear(), date.getMonth(), date.getDate());
-      const dayEnd = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
-
-      const { count } = await supabase
-        .from('consents')
-        .select('*', { count: 'exact', head: true })
-        .gte('created_at', dayStart.toISOString())
-        .lt('created_at', dayEnd.toISOString());
-
-      weeklyChartData.push({
-        date: weekDays[date.getDay()],
-        value: count || 0,
-      });
-    }
-
-    setWeeklyData(weeklyChartData);
   };
 
   useEffect(() => {
     fetchStats();
-  }, []);
+  }, [fetchStats]);
 
   const handleRefresh = () => {
     fetchStats();
   };
 
+  // Date range props for tab components
+  const dateRangeProps = {
+    dateFrom: dateFrom ? localDayStart(dateFrom) : undefined,
+    dateTo: dateTo ? localDayEnd(dateTo) : undefined,
+  };
+
   return (
     <MainLayout>
       <div className="p-6">
-        {/* Header with filters */}
         <DashboardHeader
           dateFrom={dateFrom}
           dateTo={dateTo}
@@ -191,29 +218,27 @@ const Dashboard = () => {
           isLoading={isLoading}
         />
 
-        {/* Stats Cards */}
         <div className="mb-6">
           <DashboardStats stats={stats} isLoading={isLoading} />
         </div>
 
-        {/* Tabs */}
         <DashboardTabs activeTab={activeTab} onTabChange={setActiveTab} />
 
-        {/* Tab Content */}
         {activeTab === "resumen" && (
           <div className="space-y-6">
-            {/* 30-Day Trend Chart */}
             <Card className="border-border shadow-sm">
               <CardHeader className="pb-2">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg text-foreground">Tendencia - Últimos 30 Días</CardTitle>
+                  <CardTitle className="text-lg text-foreground">
+                    Tendencia{dateFrom && dateTo ? ` - ${format(dateFrom, 'dd/MM/yyyy', { locale: es })} a ${format(dateTo, 'dd/MM/yyyy', { locale: es })}` : ' - Últimos 30 Días'}
+                  </CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={monthlyData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <AreaChart data={trendData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
                       <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} />
                       <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
@@ -252,13 +277,12 @@ const Dashboard = () => {
           </div>
         )}
 
-        {activeTab === "tipo" && <TabConsentsByType />}
-        {activeTab === "especialidad" && <TabConsentsBySpecialty />}
-        {activeTab === "sede" && <TabConsentsBySource />}
-        {activeTab === "medico" && <TabConsentsByDoctor />}
+        {activeTab === "tipo" && <TabConsentsByType {...dateRangeProps} />}
+        {activeTab === "especialidad" && <TabConsentsBySpecialty {...dateRangeProps} />}
+        {activeTab === "sede" && <TabConsentsBySource {...dateRangeProps} />}
+        {activeTab === "medico" && <TabConsentsByDoctor {...dateRangeProps} />}
       </div>
 
-      {/* Footer */}
       <footer className="border-t border-border bg-card mt-auto">
         <div className="px-6 py-4">
           <div className="text-center text-sm text-muted-foreground">
