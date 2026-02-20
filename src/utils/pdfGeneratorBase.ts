@@ -144,157 +144,150 @@ export class BasePDFGenerator {
   }
 
   /**
-   * Pipeline dactilar completo para el PDF:
-   * 1. Escala de grises BT.709
-   * 2. CLAHE (ecualización local, bloques 32×32, clipLimit 3.0)
-   * 3. DoG (σ1=1, σ2=3) para resaltar crestas
-   * 4. Combinación 70% CLAHE + 30% DoG
-   * 5. Umbral adaptativo local Niblack (ventana 15×15, k=-0.2)
-   * 6. Render final: crestas = negro (tinta), fondo/surcos = blanco (papel)
-   * 7. Suavizado mínimo 0.3px para eliminar jaggies
+   * Full dactyloscopic ink-stamp pipeline for PDF (600×600 px):
+   *  1. BT.709 grayscale
+   *  2. CLAHE  (24px tiles, clip=2.5)
+   *  3. DoG    (σ1=0.8, σ2=2.5)  — ridge band-pass
+   *  4. Sobel  gradient magnitude — edge emphasis
+   *  5. Fusion: 55% CLAHE + 30% DoG + 15% Sobel
+   *  6. Niblack adaptive threshold (15×15 window, k=-0.12)
+   *  7. 0.25px anti-jaggies blur
    */
   protected applyInkStampEffect(dataUrl: string): Promise<string> {
+    // ── Local DSP helpers (self-contained, no external deps) ────────────────
+    const gaussBlur = (src: Float32Array, w: number, h: number, sigma: number): Float32Array => {
+      const r = Math.ceil(sigma * 3);
+      const ks = 2 * r + 1;
+      const ker = new Float32Array(ks);
+      let ksum = 0;
+      for (let i = 0; i < ks; i++) { const x = i - r; ker[i] = Math.exp(-(x*x)/(2*sigma*sigma)); ksum += ker[i]; }
+      for (let i = 0; i < ks; i++) ker[i] /= ksum;
+      const tmp = new Float32Array(w * h);
+      const n = w * h;
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        let v = 0;
+        for (let k = -r; k <= r; k++) { const xi = Math.max(0, Math.min(w-1, x+k)); v += src[y*w+xi]*ker[k+r]; }
+        tmp[y*w+x] = v;
+      }
+      const dst = new Float32Array(n);
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        let v = 0;
+        for (let k = -r; k <= r; k++) { const yi = Math.max(0, Math.min(h-1, y+k)); v += tmp[yi*w+x]*ker[k+r]; }
+        dst[y*w+x] = v;
+      }
+      return dst;
+    };
+
+    const clahe = (src: Float32Array, w: number, h: number, bs = 24, cl = 2.5): Float32Array => {
+      const out = new Float32Array(w * h);
+      const bw = Math.ceil(w / bs), bh = Math.ceil(h / bs);
+      for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
+        const x0 = bx*bs, y0 = by*bs, x1 = Math.min(x0+bs, w), y1 = Math.min(y0+bs, h);
+        const hist = new Float32Array(256); let count = 0;
+        for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { hist[Math.round(Math.min(255,Math.max(0,src[y*w+x])))]++; count++; }
+        const clip = cl * (count / 256); let excess = 0;
+        for (let i = 0; i < 256; i++) { if (hist[i] > clip) { excess += hist[i]-clip; hist[i]=clip; } }
+        const add = excess / 256;
+        for (let i = 0; i < 256; i++) hist[i] = Math.min(clip, hist[i]+add);
+        const lut = new Float32Array(256); let cdf = 0;
+        for (let i = 0; i < 256; i++) { cdf += hist[i]; lut[i] = (cdf/count)*255; }
+        for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
+          out[y*w+x] = lut[Math.round(Math.min(255,Math.max(0,src[y*w+x])))];
+        }
+      }
+      return out;
+    };
+
+    const sobel = (src: Float32Array, w: number, h: number): Float32Array => {
+      const mag = new Float32Array(w * h); let mx = 0;
+      for (let y = 1; y < h-1; y++) for (let x = 1; x < w-1; x++) {
+        const p = (r: number, c: number) => src[(y+r)*w+(x+c)];
+        const gx = -p(-1,-1)-2*p(0,-1)-p(1,-1)+p(-1,1)+2*p(0,1)+p(1,1);
+        const gy = -p(-1,-1)-2*p(-1,0)-p(-1,1)+p(1,-1)+2*p(1,0)+p(1,1);
+        const m = Math.sqrt(gx*gx+gy*gy); mag[y*w+x]=m; if (m>mx) mx=m;
+      }
+      if (mx>0) for (let i=0; i<mag.length; i++) mag[i]=(mag[i]/mx)*255;
+      return mag;
+    };
+
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const SIZE = 600; // mayor resolución para el PDF
+        const SIZE = 600;
         const canvas = document.createElement('canvas');
-        canvas.width  = SIZE;
-        canvas.height = SIZE;
+        canvas.width = canvas.height = SIZE;
         const ctx = canvas.getContext('2d')!;
 
-        // Fondo blanco (papel)
+        // White paper background + circular clip
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, SIZE, SIZE);
-
-        // Recorte circular
         ctx.save();
         ctx.beginPath();
-        ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - 2, 0, Math.PI * 2);
+        ctx.arc(SIZE/2, SIZE/2, SIZE/2 - 2, 0, Math.PI * 2);
         ctx.clip();
         ctx.drawImage(img, 0, 0, SIZE, SIZE);
         ctx.restore();
 
-        // ── Leer píxeles ────────────────────────────────────────────────────
-        const imageData = ctx.getImageData(0, 0, SIZE, SIZE);
-        const d = imageData.data;
+        const id = ctx.getImageData(0, 0, SIZE, SIZE);
+        const d = id.data;
         const n = SIZE * SIZE;
+        const half = SIZE / 2;
 
-        // ── 1. Escala de grises BT.709 ────────────────────────────────────
+        // ── 1. Grayscale ──────────────────────────────────────────────────
         const gray = new Float32Array(n);
         for (let i = 0; i < n; i++) {
-          gray[i] = 0.2126 * d[i * 4] + 0.7152 * d[i * 4 + 1] + 0.0722 * d[i * 4 + 2];
+          gray[i] = 0.2126*d[i*4] + 0.7152*d[i*4+1] + 0.0722*d[i*4+2];
         }
 
-        // ── 2. CLAHE local (bloques 32×32) ────────────────────────────────
-        const blockSize = 32;
-        const clipLimit = 3.0;
-        const enhanced = new Float32Array(n);
-        const bw = Math.ceil(SIZE / blockSize);
-        const bh = Math.ceil(SIZE / blockSize);
+        // ── 2. CLAHE ──────────────────────────────────────────────────────
+        const cl = clahe(gray, SIZE, SIZE, 24, 2.5);
 
-        for (let by = 0; by < bh; by++) {
-          for (let bx = 0; bx < bw; bx++) {
-            const x0 = bx * blockSize, y0 = by * blockSize;
-            const x1 = Math.min(x0 + blockSize, SIZE);
-            const y1 = Math.min(y0 + blockSize, SIZE);
-            const hist = new Float32Array(256);
-            let count = 0;
-            for (let y = y0; y < y1; y++) {
-              for (let x = x0; x < x1; x++) { hist[Math.round(gray[y * SIZE + x])]++; count++; }
-            }
-            const clip = clipLimit * (count / 256);
-            let excess = 0;
-            for (let i = 0; i < 256; i++) { if (hist[i] > clip) { excess += hist[i] - clip; hist[i] = clip; } }
-            const add = excess / 256;
-            for (let i = 0; i < 256; i++) hist[i] += add;
-            const lut = new Float32Array(256);
-            let cdf = 0;
-            for (let i = 0; i < 256; i++) { cdf += hist[i]; lut[i] = (cdf / count) * 255; }
-            for (let y = y0; y < y1; y++) {
-              for (let x = x0; x < x1; x++) {
-                enhanced[y * SIZE + x] = lut[Math.round(gray[y * SIZE + x])];
-              }
-            }
-          }
-        }
+        // ── 3. DoG (σ1=0.8, σ2=2.5) ──────────────────────────────────────
+        const g1 = gaussBlur(cl, SIZE, SIZE, 0.8);
+        const g2 = gaussBlur(cl, SIZE, SIZE, 2.5);
+        const dogRaw = new Float32Array(n);
+        let dMin = Infinity, dMax = -Infinity;
+        for (let i = 0; i < n; i++) { dogRaw[i]=g1[i]-g2[i]; if(dogRaw[i]<dMin)dMin=dogRaw[i]; if(dogRaw[i]>dMax)dMax=dogRaw[i]; }
+        const dRange = dMax - dMin || 1;
+        const dogN = new Float32Array(n);
+        for (let i = 0; i < n; i++) dogN[i] = ((dogRaw[i]-dMin)/dRange)*255;
 
-        // ── 3. DoG — Diferencia de Gaussianas (σ1=1, σ2=3) ───────────────
-        const gaussBlur = (src: Float32Array, sigma: number): Float32Array => {
-          const r = Math.ceil(sigma * 2);
-          const ks = 2 * r + 1;
-          const ker = new Float32Array(ks);
-          let ks_ = 0;
-          for (let i = 0; i < ks; i++) { const x = i - r; ker[i] = Math.exp(-(x*x)/(2*sigma*sigma)); ks_ += ker[i]; }
-          for (let i = 0; i < ks; i++) ker[i] /= ks_;
-          const tmp = new Float32Array(n);
-          for (let y = 0; y < SIZE; y++) {
-            for (let x = 0; x < SIZE; x++) {
-              let v = 0;
-              for (let k = -r; k <= r; k++) { const xi = Math.max(0, Math.min(SIZE-1, x+k)); v += src[y*SIZE+xi]*ker[k+r]; }
-              tmp[y*SIZE+x] = v;
-            }
-          }
-          const dst = new Float32Array(n);
-          for (let y = 0; y < SIZE; y++) {
-            for (let x = 0; x < SIZE; x++) {
-              let v = 0;
-              for (let k = -r; k <= r; k++) { const yi = Math.max(0, Math.min(SIZE-1, y+k)); v += tmp[yi*SIZE+x]*ker[k+r]; }
-              dst[y*SIZE+x] = v;
-            }
-          }
-          return dst;
-        };
+        // ── 4. Sobel ──────────────────────────────────────────────────────
+        const sb = sobel(cl, SIZE, SIZE);
 
-        const blur1 = gaussBlur(enhanced, 1.0);
-        const blur2 = gaussBlur(enhanced, 3.0);
-        let dogMin = Infinity, dogMax = -Infinity;
-        const dog = new Float32Array(n);
-        for (let i = 0; i < n; i++) { dog[i] = blur1[i] - blur2[i]; if (dog[i]<dogMin) dogMin=dog[i]; if (dog[i]>dogMax) dogMax=dog[i]; }
-        const dogRange = dogMax - dogMin || 1;
-        const combined = new Float32Array(n);
+        // ── 5. Fusion: 55% CLAHE + 30% DoG + 15% Sobel ───────────────────
+        const fused = new Float32Array(n);
         for (let i = 0; i < n; i++) {
-          const dogN = ((dog[i] - dogMin) / dogRange) * 255;
-          combined[i] = Math.min(255, Math.max(0, 0.7 * enhanced[i] + 0.3 * dogN));
+          fused[i] = Math.min(255, Math.max(0, 0.55*cl[i] + 0.30*dogN[i] + 0.15*sb[i]));
         }
 
-        // ── 4. Umbral adaptativo local Niblack (ventana 15×15, k=-0.2) ────
-        const halfSize = SIZE / 2;
-        const halfW = 7;
+        // ── 6. Niblack adaptive threshold (15×15, k=-0.12) ───────────────
+        const hw = 7, k = -0.12;
         const result = new Uint8ClampedArray(n);
-
         for (let py = 0; py < SIZE; py++) {
           for (let px = 0; px < SIZE; px++) {
-            const idx = py * SIZE + px;
-            const dx = px - halfSize, dy = py - halfSize;
-            if (dx*dx + dy*dy > (halfSize-2)*(halfSize-2)) { result[idx] = 255; continue; }
-
-            let sum = 0, sumSq = 0, cnt = 0;
-            for (let ky = Math.max(0, py-halfW); ky <= Math.min(SIZE-1, py+halfW); ky++) {
-              for (let kx = Math.max(0, px-halfW); kx <= Math.min(SIZE-1, px+halfW); kx++) {
-                const v = combined[ky*SIZE+kx]; sum += v; sumSq += v*v; cnt++;
+            const idx = py*SIZE+px;
+            const dx = px-half, dy = py-half;
+            if (dx*dx+dy*dy > (half-2)*(half-2)) { result[idx]=255; continue; }
+            let sum=0, sumSq=0, cnt=0;
+            for (let ky=Math.max(0,py-hw); ky<=Math.min(SIZE-1,py+hw); ky++)
+              for (let kx=Math.max(0,px-hw); kx<=Math.min(SIZE-1,px+hw); kx++) {
+                const v=fused[ky*SIZE+kx]; sum+=v; sumSq+=v*v; cnt++;
               }
-            }
-            const mean = sum / cnt;
-            const stddev = Math.sqrt(Math.max(0, sumSq/cnt - mean*mean));
-            const localThreshold = mean - 0.2 * stddev;
-            result[idx] = combined[idx] < localThreshold ? 0 : 255;
+            const mean=sum/cnt;
+            const stddev=Math.sqrt(Math.max(0,sumSq/cnt-mean*mean));
+            result[idx] = fused[idx] < mean + k*stddev ? 0 : 255;
           }
         }
 
-        // ── 5. Escribir al canvas ─────────────────────────────────────────
-        for (let i = 0; i < n; i++) {
-          d[i*4] = d[i*4+1] = d[i*4+2] = result[i];
-          d[i*4+3] = 255;
-        }
-        ctx.putImageData(imageData, 0, 0);
-
-        // Suavizado mínimo para eliminar jaggies
-        ctx.filter = 'blur(0.3px)';
+        // ── Write back ────────────────────────────────────────────────────
+        for (let i = 0; i < n; i++) { d[i*4]=d[i*4+1]=d[i*4+2]=result[i]; d[i*4+3]=255; }
+        ctx.putImageData(id, 0, 0);
+        ctx.filter = 'blur(0.25px)';
         ctx.drawImage(canvas, 0, 0);
         ctx.filter = 'none';
 
-        console.log('[PDF] applyInkStampEffect (Niblack+CLAHE+DoG) completado');
+        console.log('[PDF] applyInkStampEffect — CLAHE+DoG+Sobel+Niblack completado');
         resolve(canvas.toDataURL('image/png', 1.0));
       };
       img.onerror = () => {
