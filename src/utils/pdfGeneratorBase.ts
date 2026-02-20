@@ -556,8 +556,12 @@ export class BasePDFGenerator {
   }
 
   protected drawSignatureSection(data: BasePDFData) {
-    // NO hacer salto de página - forzar todo en una hoja
-    const signatureHeight = 26; // Aumentar ligeramente para acomodar huella+firma
+    // ── Diagnóstico: verificar que la huella llegó
+    console.log('[PDF] drawSignatureSection — patientPhoto presente:', !!data.patientPhoto,
+      '| longitud:', data.patientPhoto?.length ?? 0,
+      '| inicio:', data.patientPhoto?.substring(0, 40) ?? 'N/A');
+
+    const signatureHeight = 26;
     const colWidth = this.contentWidth / 3;
     // Dentro de col1: mitad izquierda = firma, mitad derecha = huella
     const halfCol = colWidth / 2;
@@ -592,17 +596,27 @@ export class BasePDFGenerator {
       x: number, y: number, w: number, h: number,
       label: string
     ) => {
-      if (!src || !src.startsWith('data:image') || src.length < 100) return;
+      if (!src || src.length < 100) {
+        console.warn(`[PDF] safeAddImage omitido (${label}): src vacío o muy corto`);
+        return;
+      }
+      // Asegurarse que es data URL válido
+      if (!src.startsWith('data:image')) {
+        console.warn(`[PDF] safeAddImage omitido (${label}): no es data:image URL`);
+        return;
+      }
       try {
         const fmt = detectFormat(src);
+        console.log(`[PDF] Agregando imagen ${label} — formato: ${fmt} — longitud: ${src.length}`);
         this.pdf.addImage(src, fmt, x, y, w, h);
       } catch (e1) {
         // Intentar con el formato alternativo
         try {
           const altFmt = src.includes('data:image/png') ? 'JPEG' : 'PNG';
+          console.warn(`[PDF] Reintentando ${label} con formato alternativo ${altFmt}`);
           this.pdf.addImage(src, altFmt, x, y, w, h);
         } catch (e2) {
-          console.error(`Error adding ${label} image:`, e2);
+          console.error(`[PDF] Error definitivo agregando ${label}:`, e2);
         }
       }
     };
