@@ -15,6 +15,7 @@ import {
   Stethoscope, Phone, Mail, CreditCard, Building2, Fingerprint
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { generateAndUploadSignedPDF } from "@/services/signedConsentPdfService";
 
 export const PublicConsentSigning: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -69,14 +70,31 @@ export const PublicConsentSigning: React.FC = () => {
         return;
       }
 
-      setConsent((prev: any) => ({
-        ...prev,
+      const updatedConsent = {
+        ...consent,
         status: 'signed',
         signed_at: new Date().toISOString(),
         signed_by_name: signedByName.trim(),
-        patient_photo_url: data?.patientPhotoUrl || prev?.patient_photo_url,
-      }));
+        patient_photo_url: data?.patientPhotoUrl || consent?.patient_photo_url,
+      };
+      setConsent(updatedConsent);
       toast.success('¡Consentimiento firmado exitosamente!');
+
+      // Generar PDF automáticamente con firma + huella y enviar al webhook
+      toast.loading('Generando PDF del consentimiento...', { id: 'pdf-gen' });
+      generateAndUploadSignedPDF({
+        consent: updatedConsent,
+        signatureData,
+        fingerprintData,
+        patientPhotoUrl: data?.patientPhotoUrl || null,
+      }).then(({ pdfUrl, webhookOk }) => {
+        toast.dismiss('pdf-gen');
+        if (pdfUrl) {
+          toast.success('PDF generado y guardado correctamente');
+        }
+      }).catch(() => {
+        toast.dismiss('pdf-gen');
+      });
     } catch (error: any) {
       toast.error(`Error al firmar: ${error?.message || 'Error desconocido'}`);
     } finally {
