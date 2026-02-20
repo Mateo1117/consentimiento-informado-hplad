@@ -92,7 +92,7 @@ export const InlinePendingConsentSigning: React.FC<InlinePendingConsentSigningPr
 
       toast.success('¡Consentimiento firmado exitosamente!');
 
-      // Generar PDF automáticamente con firma + huella y enviar al webhook
+      // Generar PDF automáticamente con firma + huella, guardarlo y actualizar pdf_url
       const consentForPdf = data?.consentData || {
         ...consent,
         status: 'signed',
@@ -100,18 +100,25 @@ export const InlinePendingConsentSigning: React.FC<InlinePendingConsentSigningPr
         signed_by_name: signedByName.trim(),
         patient_photo_url: data?.patientPhotoUrl || consent?.patient_photo_url,
       };
+
       toast.loading('Generando PDF del consentimiento...', { id: 'pdf-gen' });
-      generateAndUploadSignedPDF({
-        consent: consentForPdf,
-        signatureData,
-        fingerprintData,
-        patientPhotoUrl: data?.patientPhotoUrl || null,
-      }).then(({ pdfUrl }) => {
+      try {
+        const { pdfUrl, pdfPath } = await generateAndUploadSignedPDF({
+          consent: consentForPdf,
+          signatureData,
+          fingerprintData,
+          patientPhotoUrl: data?.patientPhotoUrl || null,
+        });
         toast.dismiss('pdf-gen');
-        if (pdfUrl) toast.success('PDF generado correctamente');
-      }).catch(() => {
+        if (pdfUrl) {
+          toast.success('PDF generado y guardado correctamente');
+        } else {
+          toast.warning('Consentimiento firmado, pero no se pudo generar el PDF');
+        }
+      } catch {
         toast.dismiss('pdf-gen');
-      });
+        toast.warning('Consentimiento firmado, pero no se pudo generar el PDF');
+      }
 
       onSigned();
     } catch (err: any) {

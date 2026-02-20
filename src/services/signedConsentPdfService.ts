@@ -177,15 +177,31 @@ export async function generateAndUploadSignedPDF(params: {
     if (!uploadError && uploadData) {
       pdfPath = uploadData.path;
 
-      // Intentar URL firmada (requiere auth) o pública según bucket config
+      // Generar URL firmada larga (1 año) para retornar al llamador
       const { data: signedData } = await supabase.storage
         .from(BUCKET)
-        .createSignedUrl(pdfPath, 60 * 60 * 24 * 30); // 30 días
+        .createSignedUrl(pdfPath, 60 * 60 * 24 * 365); // 1 año
 
       pdfPublicUrl = signedData?.signedUrl || null;
 
-      // 3) Actualizar consent con pdf_url usando service-role via edge function
-      // (No podemos hacer UPDATE directo sin auth, así que pasamos la URL al webhook)
+      // Guardar la RUTA del archivo (no la URL firmada efímera) en la BD
+      // así siempre se puede regenerar una URL firmada válida
+      if (consent.id) {
+        try {
+          const { error: updateErr } = await supabase
+            .from("consents")
+            .update({ pdf_url: pdfPath })
+            .eq("id", consent.id);
+          if (updateErr) {
+            logger.warn("No se pudo actualizar pdf_url en la BD:", updateErr.message);
+          } else {
+            logger.info("pdf_url actualizado en la BD con ruta:", pdfPath);
+          }
+        } catch (updateEx: any) {
+          logger.warn("Error actualizando pdf_url:", updateEx?.message);
+        }
+      }
+
       logger.info("PDF generado y subido:", { pdfPath, hasPdfUrl: !!pdfPublicUrl });
     } else {
       logger.warn("No se pudo subir PDF (sin auth o error):", uploadError?.message);
@@ -263,17 +279,6 @@ export async function generateAndUploadSignedPDF(params: {
     logger.error("Error enviando webhook post-firma:", err?.message);
   }
 
-  // 5) Actualizar consent con pdf_url (si tenemos sesión)
-  if (pdfPublicUrl && consent.id) {
-    try {
-      await supabase
-        .from("consents")
-        .update({ pdf_url: pdfPublicUrl })
-        .eq("id", consent.id);
-    } catch (_) {
-      // silencioso - no crítico
-    }
-  }
-
+  // La actualización de pdf_url ya se realizó arriba al subir el archivo (usando la ruta)
   return { pdfUrl: pdfPublicUrl, pdfPath, webhookOk };
 }
