@@ -99,8 +99,8 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
     }
 
     try {
-      // Get captured photo and signature
-      const capturedPhoto = cameraRef.current?.getFingerprintData();
+      // Get captured photo and signature — use ref first, fallback to state
+      const capturedPhoto = cameraRef.current?.getFingerprintData() ?? patientPhoto ?? undefined;
       const patientSignatureData = signatureRef.current?.getSignatureData();
       const guardianSignatureData = guardianSignatureRef.current?.getSignatureData();
 
@@ -119,7 +119,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
         // Firma del acudiente: solo cuando hay acudiente
         guardianSignature: requiresGuardian ? guardianSignatureData : null,
         professionalSignature,
-        patientPhoto: capturedPhoto,
+        patientPhoto: capturedPhoto ?? null,
         consentDecision,
         date: formData.fecha,
         time: formData.hora,
