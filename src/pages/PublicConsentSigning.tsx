@@ -70,28 +70,27 @@ export const PublicConsentSigning: React.FC = () => {
         return;
       }
 
-      const updatedConsent = {
+      // Usar datos completos devueltos por la edge function para el PDF
+      const consentForPdf = data?.consentData || {
         ...consent,
         status: 'signed',
         signed_at: new Date().toISOString(),
         signed_by_name: signedByName.trim(),
         patient_photo_url: data?.patientPhotoUrl || consent?.patient_photo_url,
       };
-      setConsent(updatedConsent);
+      setConsent((prev: any) => ({ ...prev, status: 'signed', signed_at: consentForPdf.signed_at, signed_by_name: signedByName.trim(), patient_photo_url: consentForPdf.patient_photo_url }));
       toast.success('¡Consentimiento firmado exitosamente!');
 
       // Generar PDF automáticamente con firma + huella y enviar al webhook
       toast.loading('Generando PDF del consentimiento...', { id: 'pdf-gen' });
       generateAndUploadSignedPDF({
-        consent: updatedConsent,
+        consent: consentForPdf,
         signatureData,
         fingerprintData,
         patientPhotoUrl: data?.patientPhotoUrl || null,
-      }).then(({ pdfUrl, webhookOk }) => {
+      }).then(({ pdfUrl }) => {
         toast.dismiss('pdf-gen');
-        if (pdfUrl) {
-          toast.success('PDF generado y guardado correctamente');
-        }
+        if (pdfUrl) toast.success('PDF generado y guardado correctamente');
       }).catch(() => {
         toast.dismiss('pdf-gen');
       });

@@ -93,27 +93,25 @@ export const InlinePendingConsentSigning: React.FC<InlinePendingConsentSigningPr
       toast.success('¡Consentimiento firmado exitosamente!');
 
       // Generar PDF automáticamente con firma + huella y enviar al webhook
-      if (consent) {
-        const updatedConsent = {
-          ...consent,
-          status: 'signed',
-          signed_at: new Date().toISOString(),
-          signed_by_name: signedByName.trim(),
-          patient_photo_url: data?.patientPhotoUrl || consent?.patient_photo_url,
-        };
-        toast.loading('Generando PDF del consentimiento...', { id: 'pdf-gen' });
-        generateAndUploadSignedPDF({
-          consent: updatedConsent,
-          signatureData,
-          fingerprintData,
-          patientPhotoUrl: data?.patientPhotoUrl || null,
-        }).then(({ pdfUrl }) => {
-          toast.dismiss('pdf-gen');
-          if (pdfUrl) toast.success('PDF generado correctamente');
-        }).catch(() => {
-          toast.dismiss('pdf-gen');
-        });
-      }
+      const consentForPdf = data?.consentData || {
+        ...consent,
+        status: 'signed',
+        signed_at: new Date().toISOString(),
+        signed_by_name: signedByName.trim(),
+        patient_photo_url: data?.patientPhotoUrl || consent?.patient_photo_url,
+      };
+      toast.loading('Generando PDF del consentimiento...', { id: 'pdf-gen' });
+      generateAndUploadSignedPDF({
+        consent: consentForPdf,
+        signatureData,
+        fingerprintData,
+        patientPhotoUrl: data?.patientPhotoUrl || null,
+      }).then(({ pdfUrl }) => {
+        toast.dismiss('pdf-gen');
+        if (pdfUrl) toast.success('PDF generado correctamente');
+      }).catch(() => {
+        toast.dismiss('pdf-gen');
+      });
 
       onSigned();
     } catch (err: any) {
