@@ -6,7 +6,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SignaturePad, SignatureRef } from "./SignaturePad";
-import { CameraCapture, CameraCaptureRef } from "./CameraCapture";
+import { FingerprintCapture, FingerprintCaptureRef } from "./FingerprintCapture";
 import { ProfessionalSelector } from "./ProfessionalSelector";
 import { FileText, AlertCircle, Shield, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
 import { ConsentFormWrapper } from './ConsentFormWrapper';
@@ -56,7 +56,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
   // Estados para firmas y foto
   const patientSignatureRef = useRef<SignatureRef>(null);
   const professionalSignatureRef = useRef<SignatureRef>(null);
-  const cameraCaptureRef = useRef<CameraCaptureRef>(null);
+  const cameraCaptureRef = useRef<FingerprintCaptureRef>(null);
   const guardianSignatureRef = useRef<GuardianSignatureRef>(null);
   
   // Estados para datos del acudiente
@@ -111,7 +111,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
     }
 
     try {
-      const capturedPhoto = cameraCaptureRef.current?.getCapturedPhoto();
+      const capturedPhoto = cameraCaptureRef.current?.getFingerprintData();
       const patientSignatureData = patientSignatureRef.current?.getSignatureData();
       const guardianSignatureData = guardianSignatureRef.current?.getSignatureData();
       const professionalSignatureData = professionalSignatureRef.current?.getSignatureData();
@@ -208,7 +208,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
       patientSignature={patientSignature}
       patientPhotoUrl={patientPhoto}
       getPatientSignature={() => patientSignatureRef.current?.getSignatureData() || null}
-      getPatientPhoto={() => cameraCaptureRef.current?.getCapturedPhoto() || null}
+      getPatientPhoto={() => cameraCaptureRef.current?.getFingerprintData() || null}
       hasDisability={hasDisability}
       isMinor={isMinor}
       guardianSignature={guardianSignature}
@@ -539,29 +539,30 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
                       <div>• Use "Guardar" para confirmar la firma</div>
                     </div>
                     
-                    {/* Foto del Paciente */}
+                    {/* Huella Dactilar */}
                     <div className="mt-4 pt-4 border-t border-gray-200">
-                      <CameraCapture
+                      <FingerprintCapture
                         ref={cameraCaptureRef}
-                        title="Foto del Paciente"
+                        title="Foto de Huella Dactilar"
+                        subtitle="Fotografíe la palma completa y seleccione el dedo para la firma"
                         required
+                        onFingerprintChange={(data) => setPatientPhoto(data)}
                       />
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Si requiere acudiente, mostrar foto por separado */}
+              {/* Si requiere acudiente, mostrar huella por separado */}
               {requiresGuardian && (
                 <div>
-                  <Label className="text-medical-blue font-medium">Foto del Paciente</Label>
-                  <div className="border rounded-lg p-4 bg-gray-50">
-                    <CameraCapture
-                      ref={cameraCaptureRef}
-                      title="Foto del Paciente"
-                      required
-                    />
-                  </div>
+                  <FingerprintCapture
+                    ref={cameraCaptureRef}
+                    title="Foto de Huella Dactilar"
+                    subtitle="Fotografíe la palma completa y seleccione el dedo para la firma"
+                    required
+                    onFingerprintChange={(data) => setPatientPhoto(data)}
+                  />
                 </div>
               )}
 

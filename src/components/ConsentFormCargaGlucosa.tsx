@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SignaturePad, SignatureRef } from "./SignaturePad";
-import { CameraCapture, CameraCaptureRef } from "./CameraCapture";
+import { FingerprintCapture, FingerprintCaptureRef } from "./FingerprintCapture";
 import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, Shield, Download, TestTube2, CheckCircle, ChevronDown, ChevronUp } from "lucide-react";
@@ -61,7 +61,7 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
   // Estados para firmas y foto
   const patientSignatureRef = useRef<SignatureRef>(null);
   const professionalSignatureRef = useRef<SignatureRef>(null);
-  const cameraCaptureRef = useRef<CameraCaptureRef>(null);
+  const cameraCaptureRef = useRef<FingerprintCaptureRef>(null);
   const guardianSignatureRef = useRef<GuardianSignatureRef>(null);
   
   const [patientSignature, setPatientSignature] = useState<string>("");
@@ -128,16 +128,10 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
     }
   };
 
-  const handlePhotoCapture = async () => {
-    try {
-      const photo = await cameraCaptureRef.current?.capturePhoto();
-      if (photo) {
-        setPatientPhoto(photo);
-        toast.success("Foto del paciente capturada exitosamente");
-      }
-    } catch (error) {
-      console.error("Error capturing photo:", error);
-      toast.error("Error al capturar la foto");
+  const handlePhotoCapture = (photo: string | null) => {
+    if (photo) {
+      setPatientPhoto(photo);
+      toast.success("Foto de huella dactilar capturada exitosamente");
     }
   };
 
@@ -313,7 +307,7 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
       patientSignature={patientSignature}
       patientPhotoUrl={patientPhoto}
       getPatientSignature={() => patientSignatureRef.current?.getSignatureData() || null}
-      getPatientPhoto={() => cameraCaptureRef.current?.getCapturedPhoto() || null}
+      getPatientPhoto={() => cameraCaptureRef.current?.getFingerprintData() || null}
       hasDisability={hasDisability}
       isMinor={isMinor}
       guardianSignature={guardianSignature}
@@ -624,29 +618,30 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
                     <div>• Use "Guardar" para confirmar la firma</div>
                   </div>
                   
-                  {/* Foto del Paciente */}
+                  {/* Huella Dactilar */}
                   <div className="mt-4 pt-4 border-t border-gray-200">
-                    <CameraCapture
+                    <FingerprintCapture
                       ref={cameraCaptureRef}
-                      title="Foto del Paciente"
+                      title="Foto de Huella Dactilar"
+                      subtitle="Fotografíe la palma completa y seleccione el dedo para la firma"
                       required
+                      onFingerprintChange={(data) => setPatientPhoto(data)}
                     />
                   </div>
                 </div>
               </div>
             )}
 
-            {/* Si requiere acudiente, mostrar foto por separado */}
+            {/* Si requiere acudiente, mostrar huella por separado */}
             {requiresGuardian && (
               <div>
-                <Label className="text-medical-blue font-medium">Foto del Paciente</Label>
-                <div className="border rounded-lg p-4 bg-gray-50">
-                  <CameraCapture
-                    ref={cameraCaptureRef}
-                    title="Foto del Paciente"
-                    required
-                  />
-                </div>
+                <FingerprintCapture
+                  ref={cameraCaptureRef}
+                  title="Foto de Huella Dactilar"
+                  subtitle="Fotografíe la palma completa y seleccione el dedo para la firma"
+                  required
+                  onFingerprintChange={(data) => setPatientPhoto(data)}
+                />
               </div>
             )}
 

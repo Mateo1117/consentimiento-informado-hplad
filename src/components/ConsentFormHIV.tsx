@@ -10,7 +10,7 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, Download, ArrowLeft, TestTube, Camera, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { toast } from 'sonner';
 import { SignaturePad, SignatureRef } from './SignaturePad';
-import { CameraCapture, CameraCaptureRef } from './CameraCapture';
+import { FingerprintCapture, FingerprintCaptureRef } from './FingerprintCapture';
 import { ProfessionalSelector } from './ProfessionalSelector';
 import { generateHIVPDF } from '@/utils/pdfGeneratorHIV';
 import { ConsentFormWrapper } from './ConsentFormWrapper';
@@ -71,7 +71,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
   // Refs para SignaturePads, CameraCapture y GuardianSignature
   const signatureRef = useRef<SignatureRef>(null);
   const professionalSignatureRef = useRef<SignatureRef>(null);
-  const cameraRef = useRef<CameraCaptureRef>(null);
+  const cameraRef = useRef<FingerprintCaptureRef>(null);
   const guardianSignatureRef = useRef<GuardianSignatureRef>(null);
   
   // Determinar si requiere firma de acudiente
@@ -100,7 +100,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
 
     try {
       // Get captured photo and signature
-      const capturedPhoto = cameraRef.current?.getCapturedPhoto();
+      const capturedPhoto = cameraRef.current?.getFingerprintData();
       const patientSignatureData = signatureRef.current?.getSignatureData();
       const guardianSignatureData = guardianSignatureRef.current?.getSignatureData();
 
@@ -186,7 +186,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
       patientSignature={patientSignature}
       patientPhotoUrl={patientPhoto}
       getPatientSignature={() => signatureRef.current?.getSignatureData() || null}
-      getPatientPhoto={() => cameraRef.current?.getCapturedPhoto() || null}
+      getPatientPhoto={() => cameraRef.current?.getFingerprintData() || null}
       hasDisability={hasDisability}
       isMinor={isMinor}
       guardianSignature={guardianSignature}
@@ -507,16 +507,15 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
             </div>
             )}
 
-            {/* Foto del Paciente - siempre visible */}
+            {/* Huella Dactilar - siempre visible */}
             <div>
-              <Label className="text-medical-blue font-medium">Foto del Paciente</Label>
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <CameraCapture
-                  ref={cameraRef}
-                  title="Foto del Paciente"
-                  required
-                />
-              </div>
+              <FingerprintCapture
+                ref={cameraRef}
+                title="Foto de Huella Dactilar"
+                subtitle="Fotografíe la palma completa y seleccione el dedo para la firma"
+                required
+                onFingerprintChange={(data) => setPatientPhoto(data)}
+              />
             </div>
 
             <div>
