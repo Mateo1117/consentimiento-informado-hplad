@@ -14,18 +14,21 @@ import { DeliveryHistoryPanel } from "@/components/DeliveryHistoryPanel";
 interface ShareConsentButtonsProps {
   consentData: ConsentData;
   onConsentCreated?: (shareableConsent: any) => void;
+  /** Si se pasa, se muestra directamente el QR sin crear un nuevo registro */
+  existingConsent?: { id: string; shareUrl: string; shareToken: string };
 }
 
 export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({ 
   consentData, 
-  onConsentCreated 
+  onConsentCreated,
+  existingConsent,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
-  const [shareableConsent, setShareableConsent] = useState<any>(null);
+  const [shareableConsent, setShareableConsent] = useState<any>(existingConsent ?? null);
   const [patientEmail, setPatientEmail] = useState(consentData.patientEmail || '');
   const [patientPhone, setPatientPhone] = useState(consentData.patientPhone || '');
-  const [showQR, setShowQR] = useState(false);
+  const [showQR, setShowQR] = useState(!!existingConsent);
   const [isSendingEmail, setIsSendingEmail] = useState(false);
   const [isSendingSms, setIsSendingSms] = useState(false);
   const [isSendingWhatsApp, setIsSendingWhatsApp] = useState(false);
@@ -327,7 +330,7 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
               variant="default"
               onClick={handleSendWhatsApp}
               disabled={isSendingWhatsApp}
-              className="bg-green-600 hover:bg-green-700 text-white"
+              className="bg-accent hover:bg-accent/90 text-accent-foreground"
             >
               {isSendingWhatsApp ? (
                 <Loader2 className="w-4 h-4 mr-1 animate-spin" />
@@ -341,7 +344,7 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
               variant="default"
               onClick={handleSendSms}
               disabled={isSendingSms}
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="bg-secondary hover:bg-secondary/80 text-secondary-foreground"
             >
               {isSendingSms ? (
                 <Loader2 className="w-4 h-4 mr-1 animate-spin" />
@@ -359,7 +362,7 @@ export const ShareConsentButtons: React.FC<ShareConsentButtonsProps> = ({
             variant="default"
             onClick={handleSendEmail}
             disabled={isSendingEmail}
-            className="bg-green-600 hover:bg-green-700 text-white"
+            className="bg-accent hover:bg-accent/90 text-accent-foreground"
           >
             {isSendingEmail ? (
               <Loader2 className="w-4 h-4 mr-1 animate-spin" />
