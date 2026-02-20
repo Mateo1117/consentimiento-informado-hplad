@@ -107,6 +107,12 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
 
   const startCamera = useCallback(async () => {
     setCameraError(null);
+    // Move to preview step FIRST so the <video> element is mounted in the DOM
+    setStep('preview');
+
+    // Small delay to ensure the video element is rendered before we assign srcObject
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
@@ -116,17 +122,27 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
         },
       });
       streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.play();
+
+      const video = videoRef.current;
+      if (video) {
+        video.srcObject = stream;
+        // Wait for metadata so videoWidth/videoHeight are ready
+        await new Promise<void>((res) => {
+          video.onloadedmetadata = () => res();
+        });
+        try {
+          await video.play();
+        } catch {
+          // Some browsers auto-play without needing explicit play()
+        }
       }
-      setStep('preview');
     } catch (err: any) {
       const msg = err?.name === 'NotAllowedError'
         ? 'Permiso de cámara denegado. Actívelo en la configuración del navegador.'
         : 'No se pudo acceder a la cámara del dispositivo.';
       setCameraError(msg);
       toast.error(msg);
+      setStep('idle');
     }
   }, []);
 
@@ -273,7 +289,12 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                 autoPlay
                 playsInline
                 muted
-                className="w-full object-cover max-h-72"
+                className="w-full object-cover"
+                style={{ minHeight: '240px', maxHeight: '360px', background: '#000' }}
+                onCanPlay={(e) => {
+                  const v = e.currentTarget;
+                  if (v.paused) v.play().catch(() => {});
+                }}
               />
               {/* Hand-shape guide overlay */}
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-2">
