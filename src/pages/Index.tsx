@@ -10,6 +10,7 @@ import { ConsentTypeCard } from "@/components/consent/ConsentTypeCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { InlinePendingConsentSigning } from "@/components/InlinePendingConsentSigning";
 import { 
   FileCheck, 
   Search,
@@ -81,10 +82,11 @@ const steps = [
 ];
 
 const Index = () => {
-  const [currentStep, setCurrentStep] = useState<'search' | 'select' | 'consent'>('search');
+  const [currentStep, setCurrentStep] = useState<'search' | 'select' | 'consent' | 'sign-pending'>('search');
   const [selectedPatient, setSelectedPatient] = useState<PatientData | null>(null);
   const [consentType, setConsentType] = useState<'hiv' | 'frotis_vaginal' | 'carga_glucosa' | 'venopuncion' | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
+  const [pendingToken, setPendingToken] = useState<string | null>(null);
 
   const handlePatientSelect = (patient: PatientData) => {
     setSelectedPatient(patient);
@@ -100,11 +102,18 @@ const Index = () => {
     setCurrentStep('search');
     setSelectedPatient(null);
     setConsentType(null);
+    setPendingToken(null);
   };
 
   const handleBackToSelect = () => {
     setCurrentStep('select');
     setConsentType(null);
+  };
+
+  /** Abre la firma inline de un consentimiento pre-diligenciado pendiente */
+  const handleSignPendingConsent = (token: string) => {
+    setPendingToken(token);
+    setCurrentStep('sign-pending');
   };
 
   const filteredConsentTypes = consentTypes.filter(type => 
@@ -114,7 +123,6 @@ const Index = () => {
 
   const renderConsentForm = () => {
     if (!selectedPatient || !consentType) return null;
-    
     switch (consentType) {
       case 'hiv':
         return <ConsentFormHIV patientData={selectedPatient} onBack={handleBackToSelect} />;
@@ -130,23 +138,21 @@ const Index = () => {
   };
 
   const getCompletedSteps = () => {
-    if (currentStep === 'consent') return ['search', 'select'];
+    if (currentStep === 'consent' || currentStep === 'sign-pending') return ['search', 'select'];
     if (currentStep === 'select') return ['search'];
     return [];
   };
 
   return (
     <MainLayout>
-      {/* Step Indicator */}
       <StepIndicator 
         steps={steps} 
-        currentStep={currentStep}
+        currentStep={currentStep === 'sign-pending' ? 'consent' : currentStep}
         completedSteps={getCompletedSteps()}
       />
 
-      {/* Main Content */}
       <div className="p-6">
-        {/* Header Card - Consentimiento Informado Digital */}
+        {/* Header Card */}
         <div className="mb-6">
           <Card className="border-border shadow-sm">
             <CardContent className="flex items-center gap-4 py-4">
@@ -165,15 +171,32 @@ const Index = () => {
 
         {/* Step 1: Patient Search */}
         {currentStep === 'search' && (
+          <PatientForm
+            onPatientSelect={handlePatientSelect}
+            onSignPendingConsent={handleSignPendingConsent}
+          />
+        )}
+
+        {/* Step 1b: Firma inline de consentimiento pendiente */}
+        {currentStep === 'sign-pending' && pendingToken && (
           <div>
-            <PatientForm onPatientSelect={handlePatientSelect} />
+            <div className="mb-4">
+              <Button variant="outline" size="sm" onClick={handleBackToSearch}>
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Volver a búsqueda
+              </Button>
+            </div>
+            <InlinePendingConsentSigning
+              token={pendingToken}
+              onSigned={handleBackToSearch}
+              onBack={handleBackToSearch}
+            />
           </div>
         )}
 
         {/* Step 2: Consent Type Selection */}
         {currentStep === 'select' && selectedPatient && (
           <div className="space-y-6">
-            {/* Patient Info Summary */}
             <Card className="border-border shadow-sm">
               <CardHeader className="pb-3">
                 <div className="flex items-center justify-between">
@@ -198,7 +221,6 @@ const Index = () => {
               </CardHeader>
             </Card>
 
-            {/* Consent Type Selection */}
             <Card className="border-border shadow-sm">
               <CardHeader className="pb-4">
                 <div className="flex items-center gap-3">
@@ -217,7 +239,6 @@ const Index = () => {
               </CardHeader>
               
               <CardContent className="space-y-4">
-                {/* Search Input */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -228,7 +249,6 @@ const Index = () => {
                   />
                 </div>
 
-                {/* Category Header */}
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                   <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                     <FlaskConical className="h-5 w-5 text-primary" />
@@ -242,7 +262,6 @@ const Index = () => {
                   </span>
                 </div>
 
-                {/* Consent Types Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {filteredConsentTypes.map((type) => (
                     <ConsentTypeCard
@@ -264,13 +283,10 @@ const Index = () => {
 
         {/* Step 3: Consent Form */}
         {currentStep === 'consent' && selectedPatient && consentType && (
-          <div>
-            {renderConsentForm()}
-          </div>
+          <div>{renderConsentForm()}</div>
         )}
       </div>
 
-      {/* Footer */}
       <footer className="border-t border-border bg-card mt-auto">
         <div className="px-6 py-4">
           <div className="text-center text-sm text-muted-foreground">
