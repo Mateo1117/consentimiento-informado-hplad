@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { SignaturePad, SignatureRef } from "./SignaturePad";
-import { CameraCapture, CameraCaptureRef } from "./CameraCapture";
+import { FingerprintCapture, FingerprintCaptureRef } from "./FingerprintCapture";
 import { ProfessionalSelector } from "./ProfessionalSelector";
 import { Separator } from "@/components/ui/separator";
 import { FileText, AlertCircle, Shield, Download, TestTube, CheckCircle, ChevronDown, ChevronUp, Camera, RotateCcw } from "lucide-react";
@@ -63,7 +63,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
 
   const patientSignatureRef = useRef<SignatureRef>(null);
   const professionalSignatureRef = useRef<SignatureRef>(null);
-  const cameraCaptureRef = useRef<CameraCaptureRef>(null);
+  const cameraCaptureRef = useRef<FingerprintCaptureRef>(null);
   const guardianSignatureRef = useRef<GuardianSignatureRef>(null);
 
   // Determinar si requiere firma de acudiente
@@ -239,7 +239,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
       patientSignature={patientSignature}
       patientPhotoUrl={patientPhoto}
       getPatientSignature={() => patientSignatureRef.current?.getSignatureData() || null}
-      getPatientPhoto={() => cameraCaptureRef.current?.getCapturedPhoto() || null}
+      getPatientPhoto={() => cameraCaptureRef.current?.getFingerprintData() || null}
       hasDisability={hasDisability}
       isMinor={isMinor}
       guardianSignature={guardianSignature}
@@ -553,16 +553,15 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
             </div>
             )}
 
-            {/* Foto del Paciente - siempre visible */}
+            {/* Huella Dactilar - siempre visible */}
             <div>
-              <Label className="text-medical-blue font-medium">Foto del Paciente</Label>
-              <div className="border rounded-lg p-4 bg-gray-50">
-                <CameraCapture
-                  ref={cameraCaptureRef}
-                  title="Foto del Paciente"
-                  required
-                />
-              </div>
+              <FingerprintCapture
+                ref={cameraCaptureRef}
+                title="Foto de Huella Dactilar"
+                subtitle="Fotografíe la palma completa y seleccione el dedo para la firma"
+                required
+                onFingerprintChange={(data) => setPatientPhoto(data)}
+              />
             </div>
 
             <div>
