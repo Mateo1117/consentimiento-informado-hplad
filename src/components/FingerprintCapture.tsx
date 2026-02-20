@@ -1,7 +1,7 @@
 import React, { useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Fingerprint, Camera, RotateCcw, Check, ZoomIn, Lightbulb } from 'lucide-react';
+import { Fingerprint, Camera, RotateCcw, Check, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
 
 export interface FingerprintCaptureRef {
@@ -65,19 +65,55 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     streamRef.current = null;
   }, []);
 
-  // ── Capture photo from video ──────────────────────────────────────────────
+  // ── Capture & crop to the guide circle ───────────────────────────────────
   const capturePhoto = useCallback(() => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (!video || !canvas) return;
 
-    // Draw frame to canvas
-    canvas.width = video.videoWidth || 640;
-    canvas.height = video.videoHeight || 480;
+    const vW = video.videoWidth  || 640;
+    const vH = video.videoHeight || 480;
+    const dW = video.clientWidth  || vW;   // CSS display width
+    const dH = video.clientHeight || vH;   // CSS display height
+
+    // Scale from CSS px → actual video px
+    const scaleX = vW / dW;
+    const scaleY = vH / dH;
+
+    // Guide circle = w-32 → 128 CSS px, centered in the display
+    const guideCSS   = 128;
+    const guidePxW   = guideCSS * scaleX;
+    const guidePxH   = guideCSS * scaleY;
+    const guideRadius = Math.min(guidePxW, guidePxH) / 2;
+
+    // Crop rectangle: center of video ± radius + 20 % padding
+    const pad   = guideRadius * 0.25;
+    const cx    = vW / 2;
+    const cy    = vH / 2;
+    const half  = guideRadius + pad;
+    const sx    = Math.max(0, cx - half);
+    const sy    = Math.max(0, cy - half);
+    const sSize = Math.min(half * 2, vW - sx, vH - sy);
+
+    // Output canvas: 400 × 400 circular crop
+    const OUT = 400;
+    canvas.width  = OUT;
+    canvas.height = OUT;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    // White background so the circular clip looks clean
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, OUT, OUT);
+
+    // Circular clip
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(OUT / 2, OUT / 2, OUT / 2, 0, Math.PI * 2);
+    ctx.clip();
+    ctx.drawImage(video, sx, sy, sSize, sSize, 0, 0, OUT, OUT);
+    ctx.restore();
+
     const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
 
     stopCamera();
@@ -181,7 +217,6 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                                shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
                 <div className="absolute text-primary text-xs font-semibold bg-black/60 px-2 py-1 rounded
                                top-[calc(50%+72px)] -translate-y-1/2 whitespace-nowrap">
-                  <ZoomIn className="inline h-3 w-3 mr-1" />
                   Centre el dedo aquí
                 </div>
               </div>
@@ -210,31 +245,37 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
         {/* ── STEP: captured ── */}
         {step === 'captured' && capturedImage && (
           <div className="space-y-3">
-            <div className="relative border-2 border-accent rounded-xl overflow-hidden">
-              <img
-                src={capturedImage}
-                alt="Huella dactilar capturada"
-                className="w-full object-cover max-h-72"
-              />
-              {/* Success badge */}
-              <div className="absolute top-2 right-2 bg-accent text-accent-foreground rounded-full px-2 py-1 flex items-center gap-1 text-xs font-semibold shadow">
-                <Check className="h-3 w-3" />
-                Capturada
+            {/* Compact: huella recortada circular + badge */}
+            <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4 border border-border">
+              {/* Huella circular */}
+              <div className="relative shrink-0">
+                <img
+                  src={capturedImage}
+                  alt="Huella dactilar capturada"
+                  className="w-24 h-24 rounded-full object-cover border-4 border-primary shadow-md"
+                />
+                <div className="absolute -bottom-1 -right-1 bg-accent text-accent-foreground rounded-full p-1 shadow">
+                  <Check className="h-3 w-3" />
+                </div>
+              </div>
+
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-foreground">Huella Dactilar Capturada</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Solo se conserva la zona del dedo — será adjuntada junto a la firma.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleRetake}
+                  className="mt-2 h-7 text-xs border-primary text-primary hover:bg-primary/10"
+                >
+                  <RotateCcw className="h-3 w-3 mr-1" />
+                  Tomar de nuevo
+                </Button>
               </div>
             </div>
-
-            <p className="text-xs text-center text-accent font-medium">
-              ✅ Foto de huella capturada — será incluida junto a la firma
-            </p>
-
-            <Button
-              variant="outline"
-              onClick={handleRetake}
-              className="w-full border-primary text-primary hover:bg-primary/10"
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Tomar de nuevo
-            </Button>
           </div>
         )}
 
