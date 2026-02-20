@@ -33,90 +33,200 @@ const FINGERS = [
 
 type FingerId = typeof FINGERS[number]['id'];
 
-// ─── Ink fingerprint effect ────────────────────────────────────────────────────
+// ─── Fingerprint ink effect — pipeline dactiloscópico ─────────────────────────
 /**
- * Convierte un ImageData de la yema del dedo a efecto de huella con tinta:
- * 1. Convierte a escala de grises ponderada (luminancia)
- * 2. Aumenta el contraste mediante un umbral adaptativo (Otsu simplificado)
- * 3. Invierte los colores: crestas oscuras sobre fondo blanco (como tinta sobre papel)
- * 4. Aplica un leve suavizado Gaussian de 1px para eliminar ruido
+ * Pipeline completo para convertir una foto del dedo en una impresión dactilar
+ * tipo tinta sobre papel:
+ *
+ * 1. Escala de grises ponderada (luminancia BT.709)
+ * 2. CLAHE simplificado: ecualización local de histograma por bloques 8×8
+ *    → aumenta el contraste local de crestas y surcos uniformemente
+ * 3. Filtro DoG (Diferencia de Gaussianas): σ1=1, σ2=3
+ *    → resalta los bordes de las crestas, suprime fondos planos
+ * 4. Umbral adaptativo local (ventana 15×15) — Niblack modificado
+ *    → binariza sin perder detalle en zonas de baja iluminación
+ * 5. Las crestas (zonas oscuras en la foto = piel elevada que presiona el papel)
+ *    se pintan en NEGRO; los surcos y fondo en BLANCO — igual que tinta real
+ * 6. Suavizado muy ligero (0.3px) para eliminar jaggies sin perder nitidez
  */
+
+/** Aplica un desenfoque gaussiano simplificado sobre un array de grises */
+function gaussianBlur(src: Float32Array, w: number, h: number, sigma: number): Float32Array {
+  const radius = Math.ceil(sigma * 2);
+  const kernelSize = 2 * radius + 1;
+  const kernel = new Float32Array(kernelSize);
+  let kernelSum = 0;
+  for (let i = 0; i < kernelSize; i++) {
+    const x = i - radius;
+    kernel[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
+    kernelSum += kernel[i];
+  }
+  for (let i = 0; i < kernelSize; i++) kernel[i] /= kernelSum;
+
+  const tmp = new Float32Array(w * h);
+  // Horizontal pass
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let val = 0;
+      for (let k = -radius; k <= radius; k++) {
+        const xi = Math.max(0, Math.min(w - 1, x + k));
+        val += src[y * w + xi] * kernel[k + radius];
+      }
+      tmp[y * w + x] = val;
+    }
+  }
+  const dst = new Float32Array(w * h);
+  // Vertical pass
+  for (let y = 0; y < h; y++) {
+    for (let x = 0; x < w; x++) {
+      let val = 0;
+      for (let k = -radius; k <= radius; k++) {
+        const yi = Math.max(0, Math.min(h - 1, y + k));
+        val += tmp[yi * w + x] * kernel[k + radius];
+      }
+      dst[y * w + x] = val;
+    }
+  }
+  return dst;
+}
+
+/** CLAHE simplificado: ecualización local de histograma por bloques */
+function applyCLAHE(gray: Float32Array, w: number, h: number, blockSize = 32, clipLimit = 3.0): Float32Array {
+  const out = new Float32Array(w * h);
+  const bw = Math.ceil(w / blockSize);
+  const bh = Math.ceil(h / blockSize);
+
+  for (let by = 0; by < bh; by++) {
+    for (let bx = 0; bx < bw; bx++) {
+      const x0 = bx * blockSize;
+      const y0 = by * blockSize;
+      const x1 = Math.min(x0 + blockSize, w);
+      const y1 = Math.min(y0 + blockSize, h);
+
+      // Histograma del bloque
+      const hist = new Float32Array(256);
+      let count = 0;
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          hist[Math.round(gray[y * w + x])]++;
+          count++;
+        }
+      }
+
+      // Clip + redistribución uniforme (CLAHE)
+      const clip = clipLimit * (count / 256);
+      let excess = 0;
+      for (let i = 0; i < 256; i++) {
+        if (hist[i] > clip) { excess += hist[i] - clip; hist[i] = clip; }
+      }
+      const add = excess / 256;
+      for (let i = 0; i < 256; i++) hist[i] += add;
+
+      // CDF para lookup table
+      const lut = new Float32Array(256);
+      let cdf = 0;
+      for (let i = 0; i < 256; i++) { cdf += hist[i]; lut[i] = (cdf / count) * 255; }
+
+      // Aplicar LUT al bloque
+      for (let y = y0; y < y1; y++) {
+        for (let x = x0; x < x1; x++) {
+          out[y * w + x] = lut[Math.round(gray[y * w + x])];
+        }
+      }
+    }
+  }
+  return out;
+}
+
 function applyInkEffect(ctx: CanvasRenderingContext2D, size: number): void {
   const imageData = ctx.getImageData(0, 0, size, size);
   const d = imageData.data;
+  const n = size * size;
 
-  // Paso 1: convertir a escala de grises y calcular histograma para umbral Otsu
-  const gray = new Uint8ClampedArray(size * size);
-  const hist = new Int32Array(256);
-
-  for (let i = 0; i < size * size; i++) {
-    const r = d[i * 4];
-    const g = d[i * 4 + 1];
-    const b = d[i * 4 + 2];
-    // Luminancia ponderada (estándar ITU-R BT.709)
-    const lum = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
-    gray[i] = lum;
-    hist[lum]++;
+  // ── 1. Escala de grises ponderada ─────────────────────────────────────────
+  const gray = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    gray[i] = 0.2126 * d[i * 4] + 0.7152 * d[i * 4 + 1] + 0.0722 * d[i * 4 + 2];
   }
 
-  // Paso 2: umbral Otsu para separar fondo (piel) de crestas (surcos)
-  const total = size * size;
-  let sum = 0;
-  for (let t = 0; t < 256; t++) sum += t * hist[t];
+  // ── 2. CLAHE — mejora contraste local ─────────────────────────────────────
+  const enhanced = applyCLAHE(gray, size, size, 32, 3.0);
 
-  let sumB = 0;
-  let wB = 0;
-  let maxVar = 0;
-  let threshold = 128;
+  // ── 3. DoG (Diferencia de Gaussianas) — realza crestas ───────────────────
+  const blur1 = gaussianBlur(enhanced, size, size, 1.0);  // fino
+  const blur2 = gaussianBlur(enhanced, size, size, 3.0);  // grueso
+  const dog = new Float32Array(n);
+  let dogMin = Infinity, dogMax = -Infinity;
+  for (let i = 0; i < n; i++) {
+    dog[i] = blur1[i] - blur2[i];
+    if (dog[i] < dogMin) dogMin = dog[i];
+    if (dog[i] > dogMax) dogMax = dog[i];
+  }
+  // Normalizar DoG a [0,255]
+  const dogRange = dogMax - dogMin || 1;
+  const dogNorm = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    dogNorm[i] = ((dog[i] - dogMin) / dogRange) * 255;
+  }
 
-  for (let t = 0; t < 256; t++) {
-    wB += hist[t];
-    if (wB === 0) continue;
-    const wF = total - wB;
-    if (wF === 0) break;
-    sumB += t * hist[t];
-    const mB = sumB / wB;
-    const mF = (sum - sumB) / wF;
-    const varBetween = wB * wF * (mB - mF) * (mB - mF);
-    if (varBetween > maxVar) {
-      maxVar = varBetween;
-      threshold = t;
+  // ── 4. Combinar CLAHE + DoG con pesos ────────────────────────────────────
+  // 70% CLAHE (estructura global) + 30% DoG (detalle de bordes)
+  const combined = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    combined[i] = Math.min(255, Math.max(0, 0.7 * enhanced[i] + 0.3 * dogNorm[i]));
+  }
+
+  // ── 5. Umbral adaptativo local (Niblack modificado, ventana 15×15) ────────
+  const halfW = 7;
+  const result = new Uint8ClampedArray(n); // 0 = negro (cresta/tinta), 255 = blanco (papel)
+  const halfSize = size / 2;
+
+  for (let py = 0; py < size; py++) {
+    for (let px = 0; px < size; px++) {
+      const idx = py * size + px;
+
+      // Fuera del círculo → blanco
+      const dx = px - halfSize;
+      const dy = py - halfSize;
+      if (dx * dx + dy * dy > (halfSize - 1) * (halfSize - 1)) {
+        result[idx] = 255;
+        continue;
+      }
+
+      // Media local en ventana
+      let sum = 0, sumSq = 0, cnt = 0;
+      for (let ky = Math.max(0, py - halfW); ky <= Math.min(size - 1, py + halfW); ky++) {
+        for (let kx = Math.max(0, px - halfW); kx <= Math.min(size - 1, px + halfW); kx++) {
+          const v = combined[ky * size + kx];
+          sum += v;
+          sumSq += v * v;
+          cnt++;
+        }
+      }
+      const mean = sum / cnt;
+      const variance = sumSq / cnt - mean * mean;
+      const stddev = Math.sqrt(Math.max(0, variance));
+
+      // Niblack: threshold = mean + k * stddev  (k=-0.2 para huellas)
+      const localThreshold = mean - 0.2 * stddev;
+
+      // Pixel < umbral local → cresta (oscuro) → tinta negra
+      // Pixel >= umbral → surco / fondo → papel blanco
+      result[idx] = combined[idx] < localThreshold ? 0 : 255;
     }
   }
 
-  // Ajuste: desplazar umbral hacia los tonos más oscuros para capturar mejor los surcos (más agresivo que -15)
-  threshold = Math.max(50, Math.min(210, threshold - 20));
-
-  // Paso 3: binarizar + invertir (surcos oscuros → tinta negra; piel clara → blanco)
-  for (let i = 0; i < size * size; i++) {
-    // Píxeles fuera del círculo (fondo blanco) → dejar blancos
-    const x = i % size;
-    const y = Math.floor(i / size);
-    const dx = x - size / 2;
-    const dy = y - size / 2;
-    const inCircle = dx * dx + dy * dy <= (size / 2) * (size / 2);
-
-    let val: number;
-    if (!inCircle) {
-      val = 255; // fuera del círculo: blanco
-    } else if (gray[i] < threshold) {
-      // Surco (zona oscura) → tinta negra
-      val = 0;
-    } else {
-      // Cresta / piel → blanco (papel)
-      val = 255;
-    }
-
-    d[i * 4]     = val;
-    d[i * 4 + 1] = val;
-    d[i * 4 + 2] = val;
+  // ── 6. Escribir resultado al canvas ──────────────────────────────────────
+  for (let i = 0; i < n; i++) {
+    d[i * 4]     = result[i];
+    d[i * 4 + 1] = result[i];
+    d[i * 4 + 2] = result[i];
     d[i * 4 + 3] = 255;
   }
-
   ctx.putImageData(imageData, 0, 0);
 
-  // Paso 4: suavizado suave para eliminar ruido pixelado
-  ctx.filter = 'blur(0.4px)';
+  // Suavizado mínimo para eliminar jaggies sin perder nitidez
+  ctx.filter = 'blur(0.3px)';
   ctx.drawImage(ctx.canvas, 0, 0);
   ctx.filter = 'none';
 }
@@ -126,8 +236,8 @@ function cropCircularRegion(
   imgDataUrl: string,
   normX: number,
   normY: number,
-  radiusFraction = 0.18,
-  outSize = 480,
+  radiusFraction = 0.20,   // mayor radio para capturar yema completa
+  outSize = 600,            // mayor resolución para mejor detalle
   applyInk = false,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -368,7 +478,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     // Generate live crop preview
     setCropPreview(null);
     try {
-      const preview = await cropCircularRegion(palmImage, normX, normY, 0.18, 120, true);
+      const preview = await cropCircularRegion(palmImage, normX, normY, 0.20, 120, true);
       setCropPreview(preview);
     } catch {
       // ignore preview error
@@ -389,7 +499,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     }
     setCropping(true);
     try {
-      const cropped = await cropCircularRegion(palmImage, tapPoint.x, tapPoint.y, 0.18, 480, true);
+      const cropped = await cropCircularRegion(palmImage, tapPoint.x, tapPoint.y, 0.20, 600, true);
       console.log('[FingerprintCapture] Huella capturada — tamaño data URL:', cropped.length, 'chars');
       setCapturedImage(cropped);
       setStep('captured');
