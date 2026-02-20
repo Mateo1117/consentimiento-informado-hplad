@@ -228,14 +228,30 @@ export default function ConsentManagement() {
     }
   };
 
-  const handleDownloadPDF = async (consentId: string) => {
+  const handleDownloadPDF = async (consent: ConsentForm) => {
     try {
-      const pdfUrl = await appConsentService.getConsentPDFUrl(consentId);
-      if (pdfUrl) {
-        window.open(pdfUrl, '_blank');
-      } else {
+      if (!consent.pdf_url) {
         toast.error('PDF no disponible para este consentimiento');
+        return;
       }
+
+      // Si ya es una URL pública (http), abrir directamente
+      if (consent.pdf_url.startsWith('http')) {
+        window.open(consent.pdf_url, '_blank');
+        return;
+      }
+
+      // Si es una ruta de Storage, generar URL firmada
+      const { supabase } = await import('@/integrations/supabase/client');
+      const { data, error } = await supabase.storage
+        .from('consent-pdfs')
+        .createSignedUrl(consent.pdf_url, 3600);
+
+      if (error || !data?.signedUrl) {
+        toast.error('No se pudo generar el enlace de descarga');
+        return;
+      }
+      window.open(data.signedUrl, '_blank');
     } catch (error) {
       toast.error('Error al descargar el PDF');
     }
@@ -548,7 +564,7 @@ export default function ConsentManagement() {
                                   </DialogContent>
                                 </Dialog>
                                 {consent.pdf_url && (
-                                  <Button variant="outline" size="sm" onClick={() => handleDownloadPDF(consent.id)} title="Descargar PDF">
+                                  <Button variant="outline" size="sm" onClick={() => handleDownloadPDF(consent)} title="Descargar PDF">
                                     <Download className="h-4 w-4" />
                                   </Button>
                                 )}
@@ -881,7 +897,7 @@ export default function ConsentManagement() {
                                   </DialogContent>
                                 </Dialog>
                                 {consent.pdf_url && (
-                                  <Button variant="outline" size="sm" onClick={() => handleDownloadPDF(consent.id)} className="h-8" title="Descargar PDF">
+                                  <Button variant="outline" size="sm" onClick={() => handleDownloadPDF(consent)} className="h-8" title="Descargar PDF">
                                     <Download className="h-3.5 w-3.5" />
                                   </Button>
                                 )}
