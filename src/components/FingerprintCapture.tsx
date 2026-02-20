@@ -1,7 +1,7 @@
-import React, { useRef, useState, useCallback, forwardRef, useImperativeHandle, useEffect } from 'react';
+import React, { useRef, useState, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Fingerprint, RotateCcw, Check } from 'lucide-react';
+import { Fingerprint, Camera, RotateCcw, Check, ZoomIn, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
 
 export interface FingerprintCaptureRef {
@@ -17,144 +17,92 @@ interface FingerprintCaptureProps {
   onFingerprintChange?: (data: string | null) => void;
 }
 
+type CaptureStep = 'idle' | 'preview' | 'captured';
+
 export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintCaptureProps>(({
   title = 'Huella Dactilar',
-  subtitle = 'Coloque su dedo en el área e imprima su huella',
+  subtitle = 'Fotografíe la yema del dedo del paciente con la cámara trasera',
   required = false,
   onFingerprintChange,
 }, ref) => {
+  const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [isDrawing, setIsDrawing] = useState(false);
-  const [hasPrint, setHasPrint] = useState(false);
-  const [isCaptured, setIsCaptured] = useState(false);
-  const lastPosRef = useRef<{ x: number; y: number } | null>(null);
-  const pointCountRef = useRef(0);
+  const streamRef = useRef<MediaStream | null>(null);
 
-  const getPos = (e: React.TouchEvent | React.MouseEvent, canvas: HTMLCanvasElement) => {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = canvas.width / rect.width;
-    const scaleY = canvas.height / rect.height;
-    if ('touches' in e) {
-      const touch = e.touches[0];
-      return {
-        x: (touch.clientX - rect.left) * scaleX,
-        y: (touch.clientY - rect.top) * scaleY,
-        pressure: (touch as any).force ?? 0.5,
-        radiusX: (touch as any).radiusX ?? 8,
-        radiusY: (touch as any).radiusY ?? 8,
-      };
-    } else {
-      return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY, pressure: 0.5, radiusX: 8, radiusY: 8 };
+  const [step, setStep] = useState<CaptureStep>('idle');
+  const [capturedImage, setCapturedImage] = useState<string | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+
+  // ── Open camera (rear / environment facing) ──────────────────────────────
+  const startCamera = useCallback(async () => {
+    setCameraError(null);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: { ideal: 'environment' }, // cámara trasera
+          width: { ideal: 1280 },
+          height: { ideal: 960 },
+        },
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.play();
+      }
+      setStep('preview');
+    } catch (err: any) {
+      const msg = err?.name === 'NotAllowedError'
+        ? 'Permiso de cámara denegado. Active el acceso en la configuración del navegador.'
+        : 'No se pudo acceder a la cámara del dispositivo.';
+      setCameraError(msg);
+      toast.error(msg);
     }
-  };
-
-  const drawInk = useCallback((ctx: CanvasRenderingContext2D, x: number, y: number, radiusX: number, radiusY: number, pressure: number) => {
-    const r = Math.max(radiusX, radiusY, 8) * (0.8 + pressure * 0.4);
-    const gradient = ctx.createRadialGradient(x, y, 0, x, y, r);
-    gradient.addColorStop(0, `rgba(20, 30, 80, ${0.7 + pressure * 0.3})`);
-    gradient.addColorStop(0.5, `rgba(20, 30, 80, ${0.3 + pressure * 0.2})`);
-    gradient.addColorStop(1, 'rgba(20, 30, 80, 0)');
-
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = gradient;
-    ctx.fill();
   }, []);
 
-  const startDraw = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
+  // ── Stop camera stream ────────────────────────────────────────────────────
+  const stopCamera = useCallback(() => {
+    streamRef.current?.getTracks().forEach(t => t.stop());
+    streamRef.current = null;
+  }, []);
+
+  // ── Capture photo from video ──────────────────────────────────────────────
+  const capturePhoto = useCallback(() => {
+    const video = videoRef.current;
     const canvas = canvasRef.current;
-    if (!canvas) return;
+    if (!video || !canvas) return;
+
+    // Draw frame to canvas
+    canvas.width = video.videoWidth || 640;
+    canvas.height = video.videoHeight || 480;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    setIsDrawing(true);
-    setIsCaptured(false);
-    const pos = getPos(e, canvas);
-    lastPosRef.current = pos;
-    pointCountRef.current = 0;
-    drawInk(ctx, pos.x, pos.y, pos.radiusX, pos.radiusY, pos.pressure);
-  }, [drawInk]);
 
-  const draw = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
-    if (!isDrawing) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const pos = getPos(e, canvas);
-    pointCountRef.current++;
-    drawInk(ctx, pos.x, pos.y, pos.radiusX, pos.radiusY, pos.pressure);
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
 
-    if (lastPosRef.current) {
-      ctx.beginPath();
-      ctx.moveTo(lastPosRef.current.x, lastPosRef.current.y);
-      ctx.lineTo(pos.x, pos.y);
-      ctx.strokeStyle = `rgba(20, 30, 80, 0.3)`;
-      ctx.lineWidth = Math.max(pos.radiusX, pos.radiusY, 6);
-      ctx.lineCap = 'round';
-      ctx.stroke();
-    }
-    lastPosRef.current = pos;
-    setHasPrint(true);
-  }, [isDrawing, drawInk]);
+    stopCamera();
+    setCapturedImage(dataUrl);
+    setStep('captured');
+    onFingerprintChange?.(dataUrl);
+    toast.success('Huella fotografiada correctamente');
+  }, [stopCamera, onFingerprintChange]);
 
-  const endDraw = useCallback((e: React.TouchEvent | React.MouseEvent) => {
-    e.preventDefault();
-    if (!isDrawing) return;
-    setIsDrawing(false);
-    lastPosRef.current = null;
-
-    const canvas = canvasRef.current;
-    if (!canvas || !hasPrint) return;
-
-    // Check if enough points were drawn to be a valid fingerprint
-    if (pointCountRef.current > 5) {
-      const data = canvas.toDataURL('image/png');
-      setIsCaptured(true);
-      onFingerprintChange?.(data);
-      toast.success('Huella capturada correctamente');
-    }
-  }, [isDrawing, hasPrint, onFingerprintChange]);
-
-  const handleClear = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    setHasPrint(false);
-    setIsCaptured(false);
-    pointCountRef.current = 0;
+  // ── Retake ────────────────────────────────────────────────────────────────
+  const handleRetake = useCallback(() => {
+    setCapturedImage(null);
+    setStep('idle');
     onFingerprintChange?.(null);
   }, [onFingerprintChange]);
 
+  // ── Imperative handle ─────────────────────────────────────────────────────
   useImperativeHandle(ref, () => ({
-    getFingerprintData: () => {
-      const canvas = canvasRef.current;
-      if (!canvas || !hasPrint) return null;
-      return canvas.toDataURL('image/png');
-    },
-    clear: handleClear,
-    isEmpty: () => !hasPrint,
-  }), [hasPrint, handleClear]);
+    getFingerprintData: () => capturedImage,
+    clear: handleRetake,
+    isEmpty: () => !capturedImage,
+  }), [capturedImage, handleRetake]);
 
-  // Draw guide circle on mount
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const cx = canvas.width / 2;
-    const cy = canvas.height / 2;
-    ctx.beginPath();
-    ctx.arc(cx, cy, Math.min(canvas.width, canvas.height) * 0.38, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(99, 120, 200, 0.25)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([6, 4]);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }, []);
+  // ── Cleanup on unmount ────────────────────────────────────────────────────
+  React.useEffect(() => () => stopCamera(), [stopCamera]);
 
   return (
     <Card className="w-full border-border shadow-sm">
@@ -168,64 +116,137 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {/* Canvas area */}
-        <div className={`relative border-2 rounded-xl overflow-hidden ${isCaptured ? 'border-green-400 bg-green-50/30' : 'border-dashed border-primary/30 bg-muted/30'}`} style={{ touchAction: 'none' }}>
-          <canvas
-            ref={canvasRef}
-            width={300}
-            height={240}
-            className="w-full cursor-crosshair block"
-            style={{ touchAction: 'none', userSelect: 'none' }}
-            onMouseDown={startDraw}
-            onMouseMove={draw}
-            onMouseUp={endDraw}
-            onMouseLeave={endDraw}
-            onTouchStart={startDraw}
-            onTouchMove={draw}
-            onTouchEnd={endDraw}
-          />
 
-          {/* Overlay when not drawing */}
-          {!hasPrint && !isDrawing && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-              <Fingerprint className="h-16 w-16 text-primary/20 mb-2" />
-              <p className="text-xs text-muted-foreground text-center px-4">
-                Presione y arrastre su dedo aquí
+        {/* ── STEP: idle ── */}
+        {step === 'idle' && (
+          <div className="space-y-4">
+            {/* Instructions */}
+            <div className="bg-muted/50 rounded-xl p-4 space-y-3">
+              <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                <Lightbulb className="h-4 w-4 text-primary" />
+                Instrucciones para capturar la huella
               </p>
+              <ol className="space-y-2 text-sm text-muted-foreground list-none">
+                <li className="flex items-start gap-2">
+                  <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center shrink-0 mt-0.5">1</span>
+                  Limpie la yema del pulgar del paciente con una toallita húmeda o alcohol.
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center shrink-0 mt-0.5">2</span>
+                  Pida al paciente que apoye el pulgar sobre una superficie blanca y plana.
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center shrink-0 mt-0.5">3</span>
+                  Acerque la tablet a <strong>5–10 cm</strong> del dedo y presione el botón para fotografiarlo.
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center shrink-0 mt-0.5">4</span>
+                  Asegúrese de que haya buena iluminación y la imagen sea nítida.
+                </li>
+              </ol>
             </div>
-          )}
 
-        {/* Captured badge */}
-          {isCaptured && (
-            <div className="absolute top-2 right-2 bg-accent text-accent-foreground rounded-full p-1">
-              <Check className="h-3 w-3" />
+            {cameraError && (
+              <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-3 text-sm text-destructive">
+                {cameraError}
+              </div>
+            )}
+
+            <Button
+              onClick={startCamera}
+              className="w-full"
+              size="lg"
+            >
+              <Camera className="h-5 w-5 mr-2" />
+              Abrir Cámara para Fotografiar Huella
+            </Button>
+          </div>
+        )}
+
+        {/* ── STEP: preview (live camera) ── */}
+        {step === 'preview' && (
+          <div className="space-y-3">
+            {/* Guide overlay */}
+            <div className="relative rounded-xl overflow-hidden border-2 border-primary bg-black">
+              <video
+                ref={videoRef}
+                autoPlay
+                playsInline
+                muted
+                className="w-full object-cover max-h-80"
+              />
+              {/* Finger guide frame */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div className="border-4 border-primary/80 rounded-full w-32 h-32 opacity-70
+                               shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
+                <div className="absolute text-primary text-xs font-semibold bg-black/60 px-2 py-1 rounded
+                               top-[calc(50%+72px)] -translate-y-1/2 whitespace-nowrap">
+                  <ZoomIn className="inline h-3 w-3 mr-1" />
+                  Centre el dedo aquí
+                </div>
+              </div>
             </div>
-          )}
-        </div>
 
-        {/* Actions */}
-        <div className="flex gap-2 justify-center">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleClear}
-            className="border-primary text-primary hover:bg-primary/10"
-          >
-            <RotateCcw className="h-4 w-4 mr-2" />
-            Limpiar
-          </Button>
-        </div>
+            {/* Hidden canvas for capture */}
+            <canvas ref={canvasRef} className="hidden" />
 
-        {/* Hint */}
-        <div className="bg-muted/50 rounded-lg p-3 flex items-start gap-2">
-          <Fingerprint className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-          <p className="text-xs text-muted-foreground">
-            <strong>Tip:</strong> Use la yema del dedo y mantenga presionado mientras imprime para obtener una huella clara. En computadora puede usar el mouse.
-          </p>
-        </div>
+            <div className="flex gap-3">
+              <Button variant="outline" onClick={handleRetake} className="flex-1">
+                <RotateCcw className="h-4 w-4 mr-2" />
+                Cancelar
+              </Button>
+              <Button onClick={capturePhoto} className="flex-1" size="lg">
+                <Camera className="h-5 w-5 mr-2" />
+                Capturar Huella
+              </Button>
+            </div>
 
-        {isCaptured && (
-          <p className="text-xs text-accent font-medium text-center">✅ Huella capturada — será incluida junto a su firma</p>
+            <p className="text-xs text-center text-muted-foreground">
+              Acerque la cámara al dedo y asegúrese de que las líneas del dedo sean visibles.
+            </p>
+          </div>
+        )}
+
+        {/* ── STEP: captured ── */}
+        {step === 'captured' && capturedImage && (
+          <div className="space-y-3">
+            <div className="relative border-2 border-accent rounded-xl overflow-hidden">
+              <img
+                src={capturedImage}
+                alt="Huella dactilar capturada"
+                className="w-full object-cover max-h-72"
+              />
+              {/* Success badge */}
+              <div className="absolute top-2 right-2 bg-accent text-accent-foreground rounded-full px-2 py-1 flex items-center gap-1 text-xs font-semibold shadow">
+                <Check className="h-3 w-3" />
+                Capturada
+              </div>
+            </div>
+
+            <p className="text-xs text-center text-accent font-medium">
+              ✅ Foto de huella capturada — será incluida junto a la firma
+            </p>
+
+            <Button
+              variant="outline"
+              onClick={handleRetake}
+              className="w-full border-primary text-primary hover:bg-primary/10"
+            >
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Tomar de nuevo
+            </Button>
+          </div>
+        )}
+
+        {/* Tips */}
+        {step !== 'preview' && (
+          <div className="bg-muted/40 rounded-lg p-3 flex items-start gap-2">
+            <Fingerprint className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <p className="text-xs text-muted-foreground">
+              <strong>Tip:</strong> Use la cámara trasera de la tablet para mayor resolución.
+              Apoye el dedo sobre papel blanco con buena luz para obtener la imagen más clara de las huellas.
+            </p>
+          </div>
         )}
       </CardContent>
     </Card>
