@@ -93,44 +93,69 @@ export class BasePDFGenerator {
   }
 
   /**
-   * Convierte una URL HTTP o una cadena base64 en base64 puro.
+   * Convierte cualquier fuente de imagen (URL HTTP, base64, blob URL) a un data URL base64.
    * jsPDF no puede cargar imágenes desde URLs HTTP directamente.
+   * Retorna también el formato detectado ('JPEG' | 'PNG').
    */
-  protected async toBase64(src: string | undefined | null): Promise<string | null> {
+  protected async toBase64(
+    src: string | undefined | null
+  ): Promise<{ dataUrl: string; format: 'JPEG' | 'PNG' } | null> {
     if (!src) return null;
-    // Ya es base64 (data URL)
-    if (src.startsWith('data:image')) return src;
-    // Es una URL HTTP → fetch y convertir
+
+    // Ya es data URL → detectar formato y devolver tal cual
+    if (src.startsWith('data:image')) {
+      const format: 'JPEG' | 'PNG' = src.includes('data:image/png') ? 'PNG' : 'JPEG';
+      return { dataUrl: src, format };
+    }
+
+    // Es URL HTTP/HTTPS → fetch → convertir a base64
     if (src.startsWith('http')) {
       try {
-        const response = await fetch(src);
+        const response = await fetch(src, { cache: 'no-store' });
+        if (!response.ok) {
+          console.error('Error HTTP al convertir imagen:', response.status, src);
+          return null;
+        }
         const blob = await response.blob();
-        return new Promise((resolve, reject) => {
+        const format: 'JPEG' | 'PNG' = blob.type.includes('png') ? 'PNG' : 'JPEG';
+        const dataUrl = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader();
           reader.onloadend = () => resolve(reader.result as string);
           reader.onerror = reject;
           reader.readAsDataURL(blob);
         });
+        return { dataUrl, format };
       } catch (err) {
         console.error('Error convirtiendo imagen a base64:', err);
         return null;
       }
     }
+
     return null;
+  }
+
+  /**
+   * Obtiene el data URL de una imagen (convirtiendo si es necesario).
+   * Compatibilidad con el código anterior que solo esperaba el string.
+   */
+  protected async toBase64Url(src: string | undefined | null): Promise<string | null> {
+    const result = await this.toBase64(src);
+    return result?.dataUrl ?? null;
   }
 
   async generate(data: BasePDFData): Promise<jsPDF> {
     await this.loadLogo();
 
     // Normalizar todas las imágenes a base64 para que jsPDF pueda renderizarlas
+    // toBase64Url retorna solo el string del data URL (sin el objeto formato)
     const normalizedData: BasePDFData = {
       ...data,
-      patientSignature:  (await this.toBase64(data.patientSignature))  ?? data.patientSignature,
-      guardianSignature: (await this.toBase64(data.guardianSignature)) ?? data.guardianSignature,
-      patientPhoto:      (await this.toBase64(data.patientPhoto))      ?? data.patientPhoto,
+      patientSignature:  (await this.toBase64Url(data.patientSignature))  ?? data.patientSignature,
+      guardianSignature: (await this.toBase64Url(data.guardianSignature)) ?? data.guardianSignature,
+      patientPhoto:      (await this.toBase64Url(data.patientPhoto))      ?? data.patientPhoto,
       professionalData: {
         ...data.professionalData,
-        firma: (await this.toBase64(data.professionalData?.firma)) ?? data.professionalData?.firma,
+        firma: (await this.toBase64Url(data.professionalData?.firma)) ?? data.professionalData?.firma,
       },
     };
     data = normalizedData;
@@ -557,70 +582,73 @@ export class BasePDFGenerator {
     this.pdf.text('Firma', this.margin + halfCol / 2, this.currentY + 2.5, { align: 'center' });
     this.pdf.text('Huella dactilar', this.margin + halfCol + halfCol / 2, this.currentY + 2.5, { align: 'center' });
 
+    // Helper: detectar formato real desde data URL
+    const detectFormat = (src: string): 'JPEG' | 'PNG' =>
+      src.includes('data:image/png') ? 'PNG' : 'JPEG';
+
+    // Helper: agregar imagen con fallback de formato
+    const safeAddImage = (
+      src: string,
+      x: number, y: number, w: number, h: number,
+      label: string
+    ) => {
+      if (!src || !src.startsWith('data:image') || src.length < 100) return;
+      try {
+        const fmt = detectFormat(src);
+        this.pdf.addImage(src, fmt, x, y, w, h);
+      } catch (e1) {
+        // Intentar con el formato alternativo
+        try {
+          const altFmt = src.includes('data:image/png') ? 'JPEG' : 'PNG';
+          this.pdf.addImage(src, altFmt, x, y, w, h);
+        } catch (e2) {
+          console.error(`Error adding ${label} image:`, e2);
+        }
+      }
+    };
+
     // SOLO colocar firmas/huella si la decisión es APROBAR
     if (data.consentDecision === 'aprobar') {
       // ── Primera columna izquierda: Firma del paciente (solo si NO hay guardianData)
-      if (!data.guardianData && data.patientSignature &&
-          typeof data.patientSignature === 'string' &&
-          data.patientSignature.length > 100 &&
-          data.patientSignature.startsWith('data:image')) {
-        try {
-          this.pdf.addImage(
-            data.patientSignature, 'PNG',
-            this.margin + 1, this.currentY + 4,
-            halfCol - 2, signatureHeight - 6
-          );
-        } catch (error) {
-          console.error('Error adding patient signature:', error);
-        }
+      if (!data.guardianData && data.patientSignature) {
+        safeAddImage(
+          data.patientSignature,
+          this.margin + 1, this.currentY + 4,
+          halfCol - 2, signatureHeight - 6,
+          'patient signature'
+        );
       }
 
       // ── Primera columna derecha: Huella dactilar del paciente (cuadrada, centrada)
-      if (data.patientPhoto &&
-          typeof data.patientPhoto === 'string' &&
-          data.patientPhoto.length > 100) {
-        try {
-          const thumbSize = Math.min(halfCol - 4, signatureHeight - 7);
-          const thumbX = this.margin + halfCol + (halfCol - thumbSize) / 2;
-          const thumbY = this.currentY + (signatureHeight - thumbSize) / 2;
-          // Intentar JPEG primero (cámara), luego PNG (canvas)
-          const imgFormat = data.patientPhoto.includes('data:image/png') ? 'PNG' : 'JPEG';
-          this.pdf.addImage(data.patientPhoto, imgFormat, thumbX, thumbY, thumbSize, thumbSize);
-        } catch (error) {
-          console.error('Error adding fingerprint photo:', error);
-        }
+      if (data.patientPhoto && typeof data.patientPhoto === 'string' && data.patientPhoto.length > 100) {
+        const thumbSize = Math.min(halfCol - 4, signatureHeight - 8);
+        const thumbX = this.margin + halfCol + (halfCol - thumbSize) / 2;
+        const thumbY = this.currentY + 4 + (signatureHeight - 8 - thumbSize) / 2;
+        safeAddImage(
+          data.patientPhoto,
+          thumbX, thumbY, thumbSize, thumbSize,
+          'fingerprint'
+        );
       }
 
       // ── Segunda columna: Firma del representante legal (cuando hay guardianData)
-      if (data.guardianData && data.guardianSignature &&
-          typeof data.guardianSignature === 'string' &&
-          data.guardianSignature.length > 100 &&
-          data.guardianSignature.startsWith('data:image')) {
-        try {
-          this.pdf.addImage(
-            data.guardianSignature, 'PNG',
-            this.margin + colWidth + 2, this.currentY + 4,
-            colWidth - 4, signatureHeight - 6
-          );
-        } catch (error) {
-          console.error('Error adding guardian signature:', error);
-        }
+      if (data.guardianData && data.guardianSignature) {
+        safeAddImage(
+          data.guardianSignature,
+          this.margin + colWidth + 2, this.currentY + 4,
+          colWidth - 4, signatureHeight - 6,
+          'guardian signature'
+        );
       }
 
       // ── Tercera columna: Firma del profesional
-      if (data.professionalData.firma &&
-          typeof data.professionalData.firma === 'string' &&
-          data.professionalData.firma.length > 100 &&
-          data.professionalData.firma.startsWith('data:image')) {
-        try {
-          this.pdf.addImage(
-            data.professionalData.firma, 'PNG',
-            this.margin + 2 * colWidth + 2, this.currentY + 4,
-            colWidth - 4, signatureHeight - 6
-          );
-        } catch (error) {
-          console.error('Error adding professional signature:', error);
-        }
+      if (data.professionalData?.firma) {
+        safeAddImage(
+          data.professionalData.firma,
+          this.margin + 2 * colWidth + 2, this.currentY + 4,
+          colWidth - 4, signatureHeight - 6,
+          'professional signature'
+        );
       }
     }
 
@@ -698,68 +726,38 @@ export class BasePDFGenerator {
     this.pdf.text('Firma', this.margin + halfCol / 2, this.currentY + 2.5, { align: 'center' });
     this.pdf.text('Huella dactilar', this.margin + halfCol + halfCol / 2, this.currentY + 2.5, { align: 'center' });
 
+    // Helper compartido (también disponible en drawSignatureSection tras normalización)
+    const detectFmt = (src: string): 'JPEG' | 'PNG' =>
+      src.includes('data:image/png') ? 'PNG' : 'JPEG';
+
+    const safeImg = (src: string, x: number, y: number, w: number, h: number, tag: string) => {
+      if (!src || !src.startsWith('data:image') || src.length < 100) return;
+      try {
+        this.pdf.addImage(src, detectFmt(src), x, y, w, h);
+      } catch {
+        try { this.pdf.addImage(src, src.includes('data:image/png') ? 'JPEG' : 'PNG', x, y, w, h); }
+        catch (e) { console.error(`Error adding withdrawal ${tag}:`, e); }
+      }
+    };
+
     // Firmas en la sección de desistimiento
-    // Primera columna izquierda: Firma del paciente (solo si NO hay guardianData)
-    if (!data.guardianData && data.patientSignature &&
-        typeof data.patientSignature === 'string' &&
-        data.patientSignature.length > 100 &&
-        data.patientSignature.startsWith('data:image')) {
-      try {
-        this.pdf.addImage(
-          data.patientSignature, 'PNG',
-          this.margin + 1, this.currentY + 4,
-          halfCol - 2, signatureHeight - 6
-        );
-      } catch (error) {
-        console.error('Error adding withdrawal patient signature:', error);
-      }
+    if (!data.guardianData && data.patientSignature) {
+      safeImg(data.patientSignature, this.margin + 1, this.currentY + 4, halfCol - 2, signatureHeight - 6, 'patient sig');
     }
 
-    // Primera columna derecha: Huella dactilar
-    if (data.patientPhoto &&
-        typeof data.patientPhoto === 'string' &&
-        data.patientPhoto.length > 100) {
-      try {
-        const thumbSize = Math.min(halfCol - 4, signatureHeight - 7);
-        const thumbX = this.margin + halfCol + (halfCol - thumbSize) / 2;
-        const thumbY = this.currentY + (signatureHeight - thumbSize) / 2;
-        const imgFormat = data.patientPhoto.includes('data:image/png') ? 'PNG' : 'JPEG';
-        this.pdf.addImage(data.patientPhoto, imgFormat, thumbX, thumbY, thumbSize, thumbSize);
-      } catch (error) {
-        console.error('Error adding withdrawal fingerprint photo:', error);
-      }
+    if (data.patientPhoto && typeof data.patientPhoto === 'string' && data.patientPhoto.length > 100) {
+      const thumbSize = Math.min(halfCol - 4, signatureHeight - 8);
+      const thumbX = this.margin + halfCol + (halfCol - thumbSize) / 2;
+      const thumbY = this.currentY + 4 + (signatureHeight - 8 - thumbSize) / 2;
+      safeImg(data.patientPhoto, thumbX, thumbY, thumbSize, thumbSize, 'fingerprint');
     }
 
-    // Segunda columna: Firma del representante legal
-    if (data.guardianData && data.guardianSignature &&
-        typeof data.guardianSignature === 'string' &&
-        data.guardianSignature.length > 100 &&
-        data.guardianSignature.startsWith('data:image')) {
-      try {
-        this.pdf.addImage(
-          data.guardianSignature, 'PNG',
-          this.margin + colWidth + 2, this.currentY + 4,
-          colWidth - 4, signatureHeight - 6
-        );
-      } catch (error) {
-        console.error('Error adding withdrawal guardian signature:', error);
-      }
+    if (data.guardianData && data.guardianSignature) {
+      safeImg(data.guardianSignature, this.margin + colWidth + 2, this.currentY + 4, colWidth - 4, signatureHeight - 6, 'guardian sig');
     }
 
-    // Tercera columna: Firma del profesional
-    if (data.professionalData.firma &&
-        typeof data.professionalData.firma === 'string' &&
-        data.professionalData.firma.length > 100 &&
-        data.professionalData.firma.startsWith('data:image')) {
-      try {
-        this.pdf.addImage(
-          data.professionalData.firma, 'PNG',
-          this.margin + 2 * colWidth + 2, this.currentY + 4,
-          colWidth - 4, signatureHeight - 6
-        );
-      } catch (error) {
-        console.error('Error adding withdrawal professional signature:', error);
-      }
+    if (data.professionalData?.firma) {
+      safeImg(data.professionalData.firma, this.margin + 2 * colWidth + 2, this.currentY + 4, colWidth - 4, signatureHeight - 6, 'professional sig');
     }
 
     this.currentY += signatureHeight;

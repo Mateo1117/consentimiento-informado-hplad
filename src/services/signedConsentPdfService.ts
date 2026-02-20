@@ -141,8 +141,9 @@ export async function generateAndUploadSignedPDF(params: {
 }): Promise<GeneratePdfAfterSignResult> {
   const { consent, signatureData, fingerprintData, patientPhotoUrl } = params;
 
-  // Usar URL pública si ya fue subida, si no usar el base64 directamente para el PDF
-  const photoForPdf = patientPhotoUrl || fingerprintData;
+  // Preferir base64 directo (ya en memoria, evita fetch adicional).
+  // Si no hay base64, intentar con la URL pública (toBase64Url la convertirá en el PDF).
+  const photoForPdf = fingerprintData || patientPhotoUrl || null;
 
   let pdfPath: string | null = null;
   let pdfPublicUrl: string | null = null;
