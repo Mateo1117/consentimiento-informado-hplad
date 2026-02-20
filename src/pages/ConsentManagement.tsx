@@ -22,8 +22,10 @@ export default function ConsentManagement() {
   const [consents, setConsents] = useState<ConsentForm[]>([])
   const [filteredConsents, setFilteredConsents] = useState<ConsentForm[]>([])
   const [pendingConsents, setPendingConsents] = useState<ConsentForm[]>([])
+  const [signedConsents, setSignedConsents] = useState<ConsentForm[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isPendingLoading, setIsPendingLoading] = useState(false)
+  const [isSignedLoading, setIsSignedLoading] = useState(false)
   const [selectedConsent, setSelectedConsent] = useState<ConsentForm | null>(null)
   const [activeTab, setActiveTab] = useState("todos")
   
@@ -63,11 +65,17 @@ export default function ConsentManagement() {
     }
     loadConsents()
     loadPendingConsents()
+    loadSignedConsents()
   }, [])
 
   useEffect(() => {
     setFilteredConsents(consents)
   }, [consents])
+
+  useEffect(() => {
+    if (activeTab === 'pendientes') loadPendingConsents()
+    if (activeTab === 'firmados') loadSignedConsents()
+  }, [activeTab])
 
   const loadPendingConsents = async () => {
     if (!isSupabaseConfigured()) return
@@ -82,6 +90,19 @@ export default function ConsentManagement() {
       toast.error("Error al cargar consentimientos pendientes")
     } finally {
       setIsPendingLoading(false)
+    }
+  }
+
+  const loadSignedConsents = async () => {
+    if (!isSupabaseConfigured()) return
+    setIsSignedLoading(true)
+    try {
+      const data = await consentService.getConsentsByStatus('signed')
+      setSignedConsents(data)
+    } catch (error) {
+      toast.error("Error al cargar consentimientos firmados")
+    } finally {
+      setIsSignedLoading(false)
     }
   }
 
@@ -297,13 +318,13 @@ export default function ConsentManagement() {
 
         {/* Tabs principales */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="w-full bg-card border border-border h-12 p-1 grid grid-cols-2 mb-6">
+          <TabsList className="w-full bg-card border border-border h-12 p-1 grid grid-cols-3 mb-6">
             <TabsTrigger
               value="todos"
               className="flex items-center justify-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2.5 text-sm font-medium"
             >
-              <CheckCircle2 className="h-4 w-4" />
-              Todos los Consentimientos
+              <Layers className="h-4 w-4" />
+              Todos
               <Badge variant="secondary" className="ml-1 text-xs">{consents.length}</Badge>
             </TabsTrigger>
             <TabsTrigger
@@ -315,6 +336,18 @@ export default function ConsentManagement() {
               {pendingConsents.length > 0 && (
                 <Badge className="ml-1 text-xs bg-amber-200 text-amber-900 border-0">
                   {pendingConsents.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+            <TabsTrigger
+              value="firmados"
+              className="flex items-center justify-center gap-2 data-[state=active]:bg-green-600 data-[state=active]:text-white px-4 py-2.5 text-sm font-medium"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Firmados
+              {signedConsents.length > 0 && (
+                <Badge className="ml-1 text-xs bg-green-200 text-green-900 border-0">
+                  {signedConsents.length}
                 </Badge>
               )}
             </TabsTrigger>
@@ -707,6 +740,155 @@ export default function ConsentManagement() {
                             </TableRow>
                           )
                         })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* TAB: Firmados */}
+          <TabsContent value="firmados">
+            <Card className="mb-4 border-green-200 bg-green-50/50">
+              <CardContent className="flex items-center gap-3 py-3 px-4">
+                <CheckCircle2 className="h-5 w-5 text-green-600 shrink-0" />
+                <p className="text-sm text-green-800">
+                  Consentimientos que ya fueron <strong>firmados por el paciente</strong>. Incluye todos los registros independientemente del profesional que los creó.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto shrink-0 border-green-300 text-green-700 hover:bg-green-100"
+                  onClick={loadSignedConsents}
+                  disabled={isSignedLoading}
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isSignedLoading ? 'animate-spin' : ''}`} />
+                  Actualizar
+                </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-green-700">
+                  <CheckCircle2 className="h-5 w-5" />
+                  Consentimientos Firmados
+                  <Badge className="ml-auto bg-green-100 text-green-800 border-green-200">
+                    {signedConsents.length} registro{signedConsents.length !== 1 ? 's' : ''}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isSignedLoading ? (
+                  <div className="text-center py-10 text-muted-foreground">
+                    <RefreshCw className="h-8 w-8 mx-auto mb-3 animate-spin opacity-50" />
+                    <p>Cargando firmados...</p>
+                  </div>
+                ) : signedConsents.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground">
+                    <FileText className="h-14 w-14 mx-auto mb-4 opacity-30" />
+                    <p className="font-medium">Sin consentimientos firmados</p>
+                    <p className="text-sm mt-1">Aún no hay consentimientos firmados en el sistema.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Fecha Firma</TableHead>
+                          <TableHead>Paciente</TableHead>
+                          <TableHead>Documento</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Profesional</TableHead>
+                          <TableHead>Firmado por</TableHead>
+                          <TableHead>Firma / Foto</TableHead>
+                          <TableHead>Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {signedConsents.map((consent) => (
+                          <TableRow key={consent.id} className="hover:bg-green-50/30">
+                            <TableCell className="text-sm text-muted-foreground">
+                              {consent.signed_at
+                                ? format(new Date(consent.signed_at), "dd/MM/yyyy HH:mm", { locale: es })
+                                : consent.created_at && formatDate(consent.created_at)}
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{consent.patient_name}</p>
+                                {consent.patient_email && <p className="text-xs text-muted-foreground">{consent.patient_email}</p>}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="text-sm font-medium">{consent.patient_document_type}</p>
+                                <p className="text-xs text-muted-foreground">{consent.patient_document_number}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary" className="text-xs">
+                                {getConsentLabel(consent.consent_type)}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-muted-foreground">
+                              {consent.professional_name || '—'}
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              {consent.signed_by_name ? (
+                                <span className="text-green-700 font-medium">{consent.signed_by_name}</span>
+                              ) : (
+                                <span className="text-muted-foreground">—</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {consent.patient_signature_data && (
+                                  <div className="flex items-center gap-1 text-green-600">
+                                    <PenTool className="h-4 w-4" />
+                                    <span className="text-xs">Firma</span>
+                                  </div>
+                                )}
+                                {consent.patient_photo_url && (
+                                  <div className="flex items-center gap-1 text-blue-600">
+                                    <Camera className="h-4 w-4" />
+                                    <span className="text-xs">Foto</span>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm" onClick={() => setSelectedConsent(consent)} className="h-8 text-xs">
+                                      <Eye className="h-3.5 w-3.5 mr-1" />
+                                      Ver
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-4xl max-h-[90vh]">
+                                    <DialogHeader>
+                                      <DialogTitle className="flex items-center gap-2">
+                                        <FileText className="h-5 w-5" />
+                                        Detalles del Consentimiento
+                                      </DialogTitle>
+                                    </DialogHeader>
+                                    {selectedConsent && (
+                                      <ScrollArea className="max-h-[70vh]">
+                                        <ConsentDetails consent={selectedConsent} />
+                                      </ScrollArea>
+                                    )}
+                                  </DialogContent>
+                                </Dialog>
+                                {consent.pdf_url && (
+                                  <Button variant="outline" size="sm" onClick={() => handleDownloadPDF(consent.id)} className="h-8" title="Descargar PDF">
+                                    <Download className="h-3.5 w-3.5" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
                       </TableBody>
                     </Table>
                   </div>
