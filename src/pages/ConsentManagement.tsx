@@ -10,18 +10,22 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
-import { Search, FileText, Calendar, User, Eye, Download, Filter, Camera, PenTool, Trash2, Monitor, Smartphone, Layers } from "lucide-react"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Search, FileText, Calendar, User, Eye, Download, Filter, Camera, PenTool, Trash2, Monitor, Smartphone, Layers, Clock, CheckCircle2, RefreshCw, Share2, Copy, ExternalLink } from "lucide-react"
 import { toast } from "sonner"
 import { consentManagementService as consentService, isSupabaseConfigured, type ConsentManagementData as ConsentForm } from "@/services/consentManagementService";
 import { appConsentService } from "@/services/appConsentService"
-import { format } from "date-fns"
+import { format, isAfter } from "date-fns"
 import { es } from "date-fns/locale"
 
 export default function ConsentManagement() {
   const [consents, setConsents] = useState<ConsentForm[]>([])
   const [filteredConsents, setFilteredConsents] = useState<ConsentForm[]>([])
+  const [pendingConsents, setPendingConsents] = useState<ConsentForm[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [isPendingLoading, setIsPendingLoading] = useState(false)
   const [selectedConsent, setSelectedConsent] = useState<ConsentForm | null>(null)
+  const [activeTab, setActiveTab] = useState("todos")
   
   // Filtros mejorados
   const [filters, setFilters] = useState({
@@ -53,18 +57,33 @@ export default function ConsentManagement() {
   ];
 
   useEffect(() => {
-    // Check if Supabase is configured
     if (!isSupabaseConfigured()) {
       toast.error("Base de datos no configurada. Las credenciales de Supabase son necesarias para el módulo de gestión.")
       return
     }
     loadConsents()
+    loadPendingConsents()
   }, [])
 
   useEffect(() => {
-    // Solo cargar todos los consentimientos al inicio, no aplicar filtros automáticamente
     setFilteredConsents(consents)
   }, [consents])
+
+  const loadPendingConsents = async () => {
+    if (!isSupabaseConfigured()) return
+    setIsPendingLoading(true)
+    try {
+      const data = await consentService.getConsentsByStatus('sent')
+      // Filter only non-expired
+      const now = new Date()
+      const active = data.filter(c => !c.share_expires_at || isAfter(new Date(c.share_expires_at), now))
+      setPendingConsents(active)
+    } catch (error) {
+      toast.error("Error al cargar consentimientos pendientes")
+    } finally {
+      setIsPendingLoading(false)
+    }
+  }
 
   const loadConsents = async () => {
     if (!isSupabaseConfigured()) {
@@ -223,6 +242,33 @@ export default function ConsentManagement() {
     }
   };
 
+  const CONSENT_TYPE_LABELS: Record<string, string> = {
+    venopuncion: 'Venopunción',
+    hiv: 'Prueba VIH',
+    frotis_vaginal: 'Frotis Vaginal',
+    carga_glucosa: 'Carga de Glucosa',
+    hemocomponentes: 'Hemocomponentes',
+  }
+
+  const getConsentLabel = (type: string) => {
+    const lower = type.toLowerCase()
+    for (const key of Object.keys(CONSENT_TYPE_LABELS)) {
+      if (lower.includes(key)) return CONSENT_TYPE_LABELS[key]
+    }
+    return type
+  }
+
+  const copyShareLink = (token: string) => {
+    const url = `${window.location.origin}/consent/${token}`
+    navigator.clipboard.writeText(url)
+    toast.success('Enlace copiado al portapapeles')
+  }
+
+  const openShareLink = (token: string) => {
+    const url = `${window.location.origin}/consent/${token}`
+    window.open(url, '_blank')
+  }
+
   return (
     <MainLayout>
       <div className="p-6">
@@ -233,275 +279,442 @@ export default function ConsentManagement() {
               <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
                 <Layers className="h-6 w-6 text-primary" />
               </div>
-              <div>
+              <div className="flex-1">
                 <h2 className="text-xl font-bold text-primary">Consentimientos Creados</h2>
                 <p className="text-sm text-muted-foreground">
                   Consulta y administra todos los consentimientos informados generados
                 </p>
               </div>
+              {pendingConsents.length > 0 && (
+                <Badge className="bg-amber-100 text-amber-800 border-amber-200 text-sm px-3 py-1">
+                  <Clock className="h-3.5 w-3.5 mr-1.5" />
+                  {pendingConsents.length} pendiente{pendingConsents.length !== 1 ? 's' : ''}
+                </Badge>
+              )}
             </CardContent>
           </Card>
         </div>
 
-        {/* Filtros */}
-        <Card className="mb-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2 text-medical-blue">
-              <Filter className="h-5 w-5" />
-              Filtros de Búsqueda
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-              <div className="space-y-2">
-                <Label>Tipo de Documento</Label>
-                <Select value={filters.documentType} onValueChange={(value) => handleFilterChange("documentType", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos los tipos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los tipos</SelectItem>
-                    {documentTypes.map((type) => (
-                      <SelectItem key={type.value} value={type.value}>
-                        {type.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+        {/* Tabs principales */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <TabsList className="w-full bg-card border border-border h-12 p-1 grid grid-cols-2 mb-6">
+            <TabsTrigger
+              value="todos"
+              className="flex items-center justify-center gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground px-4 py-2.5 text-sm font-medium"
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Todos los Consentimientos
+              <Badge variant="secondary" className="ml-1 text-xs">{consents.length}</Badge>
+            </TabsTrigger>
+            <TabsTrigger
+              value="pendientes"
+              className="flex items-center justify-center gap-2 data-[state=active]:bg-amber-500 data-[state=active]:text-white px-4 py-2.5 text-sm font-medium"
+            >
+              <Clock className="h-4 w-4" />
+              Pendientes de Firma
+              {pendingConsents.length > 0 && (
+                <Badge className="ml-1 text-xs bg-amber-200 text-amber-900 border-0">
+                  {pendingConsents.length}
+                </Badge>
+              )}
+            </TabsTrigger>
+          </TabsList>
 
-              <div className="space-y-2">
-                <Label>Número de Documento</Label>
-                <Input
-                  placeholder="Buscar por documento..."
-                  value={filters.documentNumber}
-                  onChange={(e) => handleFilterChange("documentNumber", e.target.value)}
-                />
-              </div>
+          {/* TAB: Todos los consentimientos */}
+          <TabsContent value="todos">
+            {/* Filtros */}
+            <Card className="mb-6">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-primary">
+                  <Filter className="h-5 w-5" />
+                  Filtros de Búsqueda
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  <div className="space-y-2">
+                    <Label>Tipo de Documento</Label>
+                    <Select value={filters.documentType} onValueChange={(value) => handleFilterChange("documentType", value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos los tipos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los tipos</SelectItem>
+                        {documentTypes.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>{type.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              <div className="space-y-2">
-                <Label>Nombre del Paciente</Label>
-                <Input
-                  placeholder="Buscar por nombre..."
-                  value={filters.patientName}
-                  onChange={(e) => handleFilterChange("patientName", e.target.value)}
-                />
-              </div>
+                  <div className="space-y-2">
+                    <Label>Número de Documento</Label>
+                    <Input
+                      placeholder="Buscar por documento..."
+                      value={filters.documentNumber}
+                      onChange={(e) => handleFilterChange("documentNumber", e.target.value)}
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label>Estado</Label>
-                <Select value={filters.status} onValueChange={(value) => handleFilterChange("status", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos los estados" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los estados</SelectItem>
-                    {statusTypes.map((status) => (
-                      <SelectItem key={status.value} value={status.value}>
-                        {status.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+                  <div className="space-y-2">
+                    <Label>Nombre del Paciente</Label>
+                    <Input
+                      placeholder="Buscar por nombre..."
+                      value={filters.patientName}
+                      onChange={(e) => handleFilterChange("patientName", e.target.value)}
+                    />
+                  </div>
 
-              <div className="space-y-2">
-                <Label>Origen</Label>
-                <Select value={filters.source} onValueChange={(value) => handleFilterChange("source", value)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Todos los orígenes" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos los orígenes</SelectItem>
-                    {sourceTypes.map((source) => (
-                      <SelectItem key={source.value} value={source.value}>
-                        {source.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+                  <div className="space-y-2">
+                    <Label>Estado</Label>
+                    <Select value={filters.status} onValueChange={(value) => handleFilterChange("status", value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos los estados" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los estados</SelectItem>
+                        {statusTypes.map((status) => (
+                          <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-            <div className="flex gap-2 mb-4">
-              <Button
-                onClick={handleSearch}
-                className="bg-medical-blue hover:bg-medical-blue/90 text-white"
-              >
-                <Search className="h-4 w-4 mr-2" />
-                Buscar
-              </Button>
-              
-              <Button
-                variant="outline"
-                onClick={clearFilters}
-              >
-                Limpiar Filtros
-              </Button>
-            </div>
-
-            <div className="text-sm text-medical-gray">
-              <strong>Total de consentimientos:</strong> {filteredConsents.length} de {consents.length}
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Tabla de consentimientos */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-medical-blue">
-              Consentimientos Registrados
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            {!isSupabaseConfigured() ? (
-              <div className="text-center py-8">
-                <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
-                  <FileText className="h-12 w-12 mx-auto mb-4 text-yellow-600" />
-                  <h3 className="text-lg font-semibold text-yellow-800 mb-2">
-                    Base de Datos No Configurada
-                  </h3>
-                  <p className="text-yellow-700 mb-4">
-                    Para usar el módulo de gestión de consentimientos, necesitas configurar las credenciales de Supabase.
-                  </p>
+                  <div className="space-y-2">
+                    <Label>Origen</Label>
+                    <Select value={filters.source} onValueChange={(value) => handleFilterChange("source", value)}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Todos los orígenes" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los orígenes</SelectItem>
+                        {sourceTypes.map((source) => (
+                          <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-              </div>
-            ) : isLoading ? (
-              <div className="text-center py-8">
-                <p>Cargando consentimientos...</p>
-              </div>
-            ) : filteredConsents.length === 0 ? (
-              <div className="text-center py-8 text-medical-gray">
-                <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                <p>No se encontraron consentimientos</p>
-                {Object.values(filters).some(f => f !== "all" && f) && (
-                  <p className="text-sm mt-2">Intenta ajustar los filtros de búsqueda</p>
-                )}
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Fecha</TableHead>
-                      <TableHead>Paciente</TableHead>
-                      <TableHead>Documento</TableHead>
-                      <TableHead>Tipo Consentimiento</TableHead>
-                      <TableHead>Origen</TableHead>
-                      <TableHead>Estado</TableHead>
-                      <TableHead>Firma</TableHead>
-                      <TableHead>Acciones</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredConsents.map((consent) => (
-                      <TableRow key={consent.id}>
-                        <TableCell className="text-sm">
-                          {consent.created_at && formatDate(consent.created_at)}
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">
-                              {consent.patient_name}
-                            </p>
-                            {consent.patient_email && (
-                              <p className="text-sm text-medical-gray">{consent.patient_email}</p>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div>
-                            <p className="font-medium">{consent.patient_document_type}</p>
-                            <p className="text-sm text-medical-gray">{consent.patient_document_number}</p>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          <Badge variant="secondary">
-                            {consent.consent_type}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-sm">
-                          {getSourceBadge(consent.source || 'app')}
-                        </TableCell>
-                        <TableCell>
-                          {getConsentStatusBadge(consent.status, consent.signed_at || undefined)}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            {consent.patient_signature_data && (
-                              <div className="flex items-center gap-1 text-green-600">
-                                <PenTool className="h-4 w-4" />
-                                <span className="text-xs">Firmado</span>
+
+                <div className="flex gap-2 mb-4">
+                  <Button onClick={handleSearch} className="bg-primary hover:bg-primary/90 text-primary-foreground">
+                    <Search className="h-4 w-4 mr-2" />
+                    Buscar
+                  </Button>
+                  <Button variant="outline" onClick={clearFilters}>
+                    Limpiar Filtros
+                  </Button>
+                </div>
+
+                <div className="text-sm text-muted-foreground">
+                  <strong>Total de consentimientos:</strong> {filteredConsents.length} de {consents.length}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Tabla todos */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-primary">Consentimientos Registrados</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {!isSupabaseConfigured() ? (
+                  <div className="text-center py-8">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6">
+                      <FileText className="h-12 w-12 mx-auto mb-4 text-yellow-600" />
+                      <h3 className="text-lg font-semibold text-yellow-800 mb-2">Base de Datos No Configurada</h3>
+                      <p className="text-yellow-700 mb-4">Para usar el módulo de gestión de consentimientos, necesitas configurar las credenciales de Supabase.</p>
+                    </div>
+                  </div>
+                ) : isLoading ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <RefreshCw className="h-8 w-8 mx-auto mb-3 animate-spin opacity-50" />
+                    <p>Cargando consentimientos...</p>
+                  </div>
+                ) : filteredConsents.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>No se encontraron consentimientos</p>
+                    {Object.values(filters).some(f => f !== "all" && f) && (
+                      <p className="text-sm mt-2">Intenta ajustar los filtros de búsqueda</p>
+                    )}
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Fecha</TableHead>
+                          <TableHead>Paciente</TableHead>
+                          <TableHead>Documento</TableHead>
+                          <TableHead>Tipo Consentimiento</TableHead>
+                          <TableHead>Origen</TableHead>
+                          <TableHead>Estado</TableHead>
+                          <TableHead>Firma</TableHead>
+                          <TableHead>Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredConsents.map((consent) => (
+                          <TableRow key={consent.id}>
+                            <TableCell className="text-sm">{consent.created_at && formatDate(consent.created_at)}</TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{consent.patient_name}</p>
+                                {consent.patient_email && <p className="text-sm text-muted-foreground">{consent.patient_email}</p>}
                               </div>
-                            )}
-                            {consent.patient_photo_url && (
-                              <div className="flex items-center gap-1 text-blue-600">
-                                <Camera className="h-4 w-4" />
-                                <span className="text-xs">Foto</span>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{consent.patient_document_type}</p>
+                                <p className="text-sm text-muted-foreground">{consent.patient_document_number}</p>
                               </div>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => setSelectedConsent(consent)}
-                                >
-                                  <Eye className="h-4 w-4 mr-1" />
-                                  Ver
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent className="max-w-4xl max-h-[90vh]">
-                                <DialogHeader>
-                                  <DialogTitle className="flex items-center gap-2">
-                                    <FileText className="h-5 w-5" />
-                                    Detalles del Consentimiento
-                                  </DialogTitle>
-                                </DialogHeader>
-                                {selectedConsent && (
-                                  <ScrollArea className="max-h-[70vh]">
-                                    <ConsentDetails consent={selectedConsent} />
-                                  </ScrollArea>
+                            </TableCell>
+                            <TableCell className="text-sm">
+                              <Badge variant="secondary">{consent.consent_type}</Badge>
+                            </TableCell>
+                            <TableCell className="text-sm">{getSourceBadge(consent.source || 'app')}</TableCell>
+                            <TableCell>{getConsentStatusBadge(consent.status, consent.signed_at || undefined)}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {consent.patient_signature_data && (
+                                  <div className="flex items-center gap-1 text-green-600">
+                                    <PenTool className="h-4 w-4" />
+                                    <span className="text-xs">Firmado</span>
+                                  </div>
                                 )}
-                              </DialogContent>
-                            </Dialog>
+                                {consent.patient_photo_url && (
+                                  <div className="flex items-center gap-1 text-blue-600">
+                                    <Camera className="h-4 w-4" />
+                                    <span className="text-xs">Foto</span>
+                                  </div>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Dialog>
+                                  <DialogTrigger asChild>
+                                    <Button variant="outline" size="sm" onClick={() => setSelectedConsent(consent)}>
+                                      <Eye className="h-4 w-4 mr-1" />
+                                      Ver
+                                    </Button>
+                                  </DialogTrigger>
+                                  <DialogContent className="max-w-4xl max-h-[90vh]">
+                                    <DialogHeader>
+                                      <DialogTitle className="flex items-center gap-2">
+                                        <FileText className="h-5 w-5" />
+                                        Detalles del Consentimiento
+                                      </DialogTitle>
+                                    </DialogHeader>
+                                    {selectedConsent && (
+                                      <ScrollArea className="max-h-[70vh]">
+                                        <ConsentDetails consent={selectedConsent} />
+                                      </ScrollArea>
+                                    )}
+                                  </DialogContent>
+                                </Dialog>
+                                {consent.pdf_url && (
+                                  <Button variant="outline" size="sm" onClick={() => handleDownloadPDF(consent.id)} title="Descargar PDF">
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                {consent.source === 'web' && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleDeleteConsent(consent.id)}
+                                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                    title="Eliminar consentimiento"
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-                            {consent.pdf_url && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDownloadPDF(consent.id)}
-                                title="Descargar PDF"
-                              >
-                                <Download className="h-4 w-4" />
-                              </Button>
-                            )}
+          {/* TAB: Pendientes de Firma */}
+          <TabsContent value="pendientes">
+            <Card className="mb-4 border-amber-200 bg-amber-50/50">
+              <CardContent className="flex items-center gap-3 py-3 px-4">
+                <Clock className="h-5 w-5 text-amber-600 shrink-0" />
+                <p className="text-sm text-amber-800">
+                  Consentimientos enviados que aún <strong>no han sido firmados</strong> por el paciente y cuyo enlace sigue vigente.
+                </p>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="ml-auto shrink-0 border-amber-300 text-amber-700 hover:bg-amber-100"
+                  onClick={loadPendingConsents}
+                  disabled={isPendingLoading}
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isPendingLoading ? 'animate-spin' : ''}`} />
+                  Actualizar
+                </Button>
+              </CardContent>
+            </Card>
 
-                            {consent.source === 'web' && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => handleDeleteConsent(consent.id)}
-                                className="text-red-600 hover:text-red-700 hover:bg-red-50"
-                                title="Eliminar consentimiento"
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-amber-700">
+                  <Clock className="h-5 w-5" />
+                  Pendientes de Firma
+                  <Badge className="ml-auto bg-amber-100 text-amber-800 border-amber-200">
+                    {pendingConsents.length} registro{pendingConsents.length !== 1 ? 's' : ''}
+                  </Badge>
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isPendingLoading ? (
+                  <div className="text-center py-10 text-muted-foreground">
+                    <RefreshCw className="h-8 w-8 mx-auto mb-3 animate-spin opacity-50" />
+                    <p>Cargando pendientes...</p>
+                  </div>
+                ) : pendingConsents.length === 0 ? (
+                  <div className="text-center py-10 text-muted-foreground">
+                    <CheckCircle2 className="h-14 w-14 mx-auto mb-4 text-green-400" />
+                    <p className="font-medium">¡Sin pendientes!</p>
+                    <p className="text-sm mt-1">Todos los consentimientos enviados han sido firmados.</p>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Fecha Creación</TableHead>
+                          <TableHead>Paciente</TableHead>
+                          <TableHead>Documento</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Profesional</TableHead>
+                          <TableHead>Expira</TableHead>
+                          <TableHead>Enlace</TableHead>
+                          <TableHead>Acciones</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {pendingConsents.map((consent) => {
+                          const expiresAt = consent.share_expires_at ? new Date(consent.share_expires_at) : null
+                          const now = new Date()
+                          const hoursLeft = expiresAt ? Math.floor((expiresAt.getTime() - now.getTime()) / (1000 * 60 * 60)) : null
+                          const isExpiringSoon = hoursLeft !== null && hoursLeft < 24
+
+                          return (
+                            <TableRow key={consent.id} className="hover:bg-amber-50/30">
+                              <TableCell className="text-sm text-muted-foreground">
+                                {consent.created_at && formatDate(consent.created_at)}
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{consent.patient_name}</p>
+                                  {consent.patient_email && <p className="text-xs text-muted-foreground">{consent.patient_email}</p>}
+                                  {consent.patient_phone && <p className="text-xs text-muted-foreground">{consent.patient_phone}</p>}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="text-sm font-medium">{consent.patient_document_type}</p>
+                                  <p className="text-xs text-muted-foreground">{consent.patient_document_number}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="secondary" className="text-xs">
+                                  {getConsentLabel(consent.consent_type)}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground">
+                                {consent.professional_name || '—'}
+                              </TableCell>
+                              <TableCell>
+                                {expiresAt ? (
+                                  <div className={`text-xs font-medium ${isExpiringSoon ? 'text-red-600' : 'text-muted-foreground'}`}>
+                                    {isExpiringSoon && <span className="mr-1">⚠️</span>}
+                                    {format(expiresAt, "dd/MM/yyyy", { locale: es })}
+                                    {hoursLeft !== null && hoursLeft < 72 && (
+                                      <p className="text-[10px] font-normal">
+                                        {hoursLeft < 1 ? 'Expira pronto' : `${hoursLeft}h restantes`}
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <span className="text-xs text-muted-foreground">Sin límite</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                    onClick={() => copyShareLink(consent.share_token)}
+                                    title="Copiar enlace"
+                                  >
+                                    <Copy className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs text-primary hover:text-primary"
+                                    onClick={() => openShareLink(consent.share_token)}
+                                    title="Abrir enlace"
+                                  >
+                                    <ExternalLink className="h-3.5 w-3.5" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-1">
+                                  <Dialog>
+                                    <DialogTrigger asChild>
+                                      <Button variant="outline" size="sm" onClick={() => setSelectedConsent(consent)} className="h-8 text-xs">
+                                        <Eye className="h-3.5 w-3.5 mr-1" />
+                                        Ver
+                                      </Button>
+                                    </DialogTrigger>
+                                    <DialogContent className="max-w-4xl max-h-[90vh]">
+                                      <DialogHeader>
+                                        <DialogTitle className="flex items-center gap-2">
+                                          <FileText className="h-5 w-5" />
+                                          Detalles del Consentimiento
+                                        </DialogTitle>
+                                      </DialogHeader>
+                                      {selectedConsent && (
+                                        <ScrollArea className="max-h-[70vh]">
+                                          <ConsentDetails consent={selectedConsent} />
+                                        </ScrollArea>
+                                      )}
+                                    </DialogContent>
+                                  </Dialog>
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-8 text-xs text-amber-700 border-amber-200 hover:bg-amber-50"
+                                    onClick={() => openShareLink(consent.share_token)}
+                                  >
+                                    <Share2 className="h-3.5 w-3.5 mr-1" />
+                                    Enviar
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </MainLayout>
   )
