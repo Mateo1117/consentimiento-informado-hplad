@@ -143,12 +143,102 @@ export class BasePDFGenerator {
     return result?.dataUrl ?? null;
   }
 
+  /**
+   * Procesa la imagen de la huella dactilar para que luzca como un sello con tinta sobre papel:
+   * 1. Dibuja la imagen en un canvas circular (480×480)
+   * 2. Aplica binarización Otsu de alto contraste (surcos = negro puro, piel = blanco puro)
+   * 3. Devuelve PNG lossless para máxima nitidez en el PDF
+   */
+  protected applyInkStampEffect(dataUrl: string): Promise<string> {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const SIZE = 480;
+        const canvas = document.createElement('canvas');
+        canvas.width  = SIZE;
+        canvas.height = SIZE;
+        const ctx = canvas.getContext('2d')!;
+
+        // Fondo blanco (simula papel)
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, SIZE, SIZE);
+
+        // Recorte circular
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(SIZE / 2, SIZE / 2, SIZE / 2 - 2, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(img, 0, 0, SIZE, SIZE);
+        ctx.restore();
+
+        // Leer píxeles y calcular umbral Otsu
+        const imageData = ctx.getImageData(0, 0, SIZE, SIZE);
+        const d = imageData.data;
+        const total = SIZE * SIZE;
+        const gray = new Uint8ClampedArray(total);
+        const hist = new Int32Array(256);
+
+        for (let i = 0; i < total; i++) {
+          const lum = Math.round(0.2126 * d[i * 4] + 0.7152 * d[i * 4 + 1] + 0.0722 * d[i * 4 + 2]);
+          gray[i] = lum;
+          hist[lum]++;
+        }
+
+        let sum = 0;
+        for (let t = 0; t < 256; t++) sum += t * hist[t];
+        let sumB = 0, wB = 0, maxVar = 0, threshold = 128;
+        for (let t = 0; t < 256; t++) {
+          wB += hist[t];
+          if (!wB) continue;
+          const wF = total - wB;
+          if (!wF) break;
+          sumB += t * hist[t];
+          const mB = sumB / wB;
+          const mF = (sum - sumB) / wF;
+          const v = wB * wF * (mB - mF) ** 2;
+          if (v > maxVar) { maxVar = v; threshold = t; }
+        }
+        // Desplazar umbral hacia tonos más oscuros para enfatizar surcos
+        threshold = Math.max(50, Math.min(210, threshold - 20));
+
+        const halfSize = SIZE / 2;
+        for (let i = 0; i < total; i++) {
+          const x = i % SIZE;
+          const y = Math.floor(i / SIZE);
+          const dx = x - halfSize;
+          const dy = y - halfSize;
+          const inCircle = dx * dx + dy * dy <= (halfSize - 2) * (halfSize - 2);
+          // Surco oscuro dentro del círculo → negro; todo lo demás → blanco
+          const val = (inCircle && gray[i] < threshold) ? 0 : 255;
+          d[i * 4]     = val;
+          d[i * 4 + 1] = val;
+          d[i * 4 + 2] = val;
+          d[i * 4 + 3] = 255;
+        }
+        ctx.putImageData(imageData, 0, 0);
+
+        // Suavizado mínimo para eliminar píxeles sueltos
+        ctx.filter = 'blur(0.3px)';
+        ctx.drawImage(canvas, 0, 0);
+        ctx.filter = 'none';
+
+        console.log('[PDF] applyInkStampEffect completado — threshold:', threshold);
+        resolve(canvas.toDataURL('image/png', 1.0));
+      };
+      img.onerror = () => {
+        console.warn('[PDF] applyInkStampEffect: error cargando imagen, usando original');
+        resolve(dataUrl);
+      };
+      img.src = dataUrl;
+    });
+  }
+
   async generate(data: BasePDFData): Promise<jsPDF> {
     await this.loadLogo();
 
     // Normalizar todas las imágenes a base64 para que jsPDF pueda renderizarlas
     // toBase64Url retorna solo el string del data URL (sin el objeto formato)
-    const normalizedData: BasePDFData = {
+    let normalizedData: BasePDFData = {
       ...data,
       patientSignature:  (await this.toBase64Url(data.patientSignature))  ?? data.patientSignature,
       guardianSignature: (await this.toBase64Url(data.guardianSignature)) ?? data.guardianSignature,
@@ -158,6 +248,19 @@ export class BasePDFGenerator {
         firma: (await this.toBase64Url(data.professionalData?.firma)) ?? data.professionalData?.firma,
       },
     };
+
+    // Aplicar efecto de tinta tipo sello a la huella dactilar para el PDF
+    if (normalizedData.patientPhoto && normalizedData.patientPhoto.startsWith('data:image')) {
+      try {
+        normalizedData = {
+          ...normalizedData,
+          patientPhoto: await this.applyInkStampEffect(normalizedData.patientPhoto),
+        };
+      } catch (e) {
+        console.warn('[PDF] No se pudo aplicar efecto tinta a la huella:', e);
+      }
+    }
+
     data = normalizedData;
     
     // Page 1 - Consent form
@@ -633,23 +736,38 @@ export class BasePDFGenerator {
         );
       }
 
-      // ── Primera columna derecha: Huella dactilar del paciente (efecto tinta sobre papel)
+      // ── Primera columna derecha: Huella dactilar (estilo sello de tinta sobre papel)
       if (data.patientPhoto && typeof data.patientPhoto === 'string' && data.patientPhoto.length > 100) {
-        const thumbSize = Math.min(halfCol - 4, signatureHeight - 8);
-        const thumbX = this.margin + halfCol + (halfCol - thumbSize) / 2;
-        const thumbY = this.currentY + 4 + (signatureHeight - 8 - thumbSize) / 2;
-        // Fondo blanco explícito (simula papel)
+        // Calcular tamaño y posición centrada — usar círculo, no cuadrado
+        const thumbSize = Math.min(halfCol - 4, signatureHeight - 6);
+        const cx = this.margin + halfCol + halfCol / 2;  // centro X de la sub-columna
+        const cy = this.currentY + signatureHeight / 2;   // centro Y del recuadro
+        const r  = thumbSize / 2;
+        const thumbX = cx - r;
+        const thumbY = cy - r;
+
+        // 1. Fondo blanco circular (simula papel donde se estampa la tinta)
         this.pdf.setFillColor(255, 255, 255);
-        this.pdf.rect(thumbX, thumbY, thumbSize, thumbSize, 'F');
+        this.pdf.circle(cx, cy, r + 0.5, 'F');
+
+        // 2. Imagen de la huella procesada (PNG binarizado, applyInkStampEffect)
         safeAddImage(
           data.patientPhoto,
           thumbX, thumbY, thumbSize, thumbSize,
           'fingerprint'
         );
-        // Borde circular oscuro que refuerza el efecto de sello con tinta
-        this.pdf.setDrawColor(40, 40, 40);
-        this.pdf.setLineWidth(0.3);
-        this.pdf.circle(thumbX + thumbSize / 2, thumbY + thumbSize / 2, thumbSize / 2, 'S');
+
+        // 3. Anillo exterior del sello — línea gruesa de tinta oscura
+        this.pdf.setDrawColor(20, 20, 20);
+        this.pdf.setLineWidth(0.55);
+        this.pdf.circle(cx, cy, r, 'S');
+
+        // 4. Anillo interior del sello — línea fina a ~1.2mm hacia adentro
+        this.pdf.setDrawColor(20, 20, 20);
+        this.pdf.setLineWidth(0.2);
+        this.pdf.circle(cx, cy, Math.max(r - 1.2, 1), 'S');
+
+        // Restablecer color de línea por defecto
         this.pdf.setDrawColor(0, 0, 0);
         this.pdf.setLineWidth(0.2);
       }

@@ -84,8 +84,8 @@ function applyInkEffect(ctx: CanvasRenderingContext2D, size: number): void {
     }
   }
 
-  // Ajuste: desplazar umbral hacia los tonos más oscuros para capturar mejor los surcos
-  threshold = Math.max(60, Math.min(220, threshold - 15));
+  // Ajuste: desplazar umbral hacia los tonos más oscuros para capturar mejor los surcos (más agresivo que -15)
+  threshold = Math.max(50, Math.min(210, threshold - 20));
 
   // Paso 3: binarizar + invertir (surcos oscuros → tinta negra; piel clara → blanco)
   for (let i = 0; i < size * size; i++) {
@@ -645,13 +645,26 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
         {/* ── captured ─────────────────────────────────────────────────────── */}
         {step === 'captured' && capturedImage && (
           <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4 border border-border">
-            {/* Circular fingerprint */}
+            {/* Huella estilo sello de tinta — doble anillo */}
             <div className="relative shrink-0">
-              <img
-                src={capturedImage}
-                alt="Huella dactilar capturada"
-                className="w-24 h-24 rounded-full object-cover border-4 border-primary shadow-md"
-              />
+              {/* Anillo exterior del sello */}
+              <div
+                className="w-24 h-24 rounded-full flex items-center justify-center shadow-md"
+                style={{ border: '2.5px solid #141414', padding: '2px', background: '#fff' }}
+              >
+                {/* Anillo interior del sello */}
+                <div
+                  className="w-full h-full rounded-full overflow-hidden flex items-center justify-center"
+                  style={{ border: '1px solid #141414', background: '#fff' }}
+                >
+                  <img
+                    src={capturedImage}
+                    alt="Huella dactilar capturada"
+                    className="w-full h-full object-cover"
+                    style={{ filter: 'grayscale(100%) contrast(160%)' }}
+                  />
+                </div>
+              </div>
               <div className="absolute -bottom-1 -right-1 bg-accent text-accent-foreground rounded-full p-1 shadow">
                 <Check className="h-3 w-3" />
               </div>
