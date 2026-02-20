@@ -7,7 +7,6 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
 import { SignaturePad } from '@/components/SignaturePad';
-import { CameraCapture, CameraCaptureRef } from '@/components/CameraCapture';
 import { FingerprintCapture, FingerprintCaptureRef } from '@/components/FingerprintCapture';
 import { toast } from 'sonner';
 import {
@@ -34,7 +33,6 @@ export const InlinePendingConsentSigning: React.FC<InlinePendingConsentSigningPr
   const [fingerprintData, setFingerprintData] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const cameraRef = useRef<CameraCaptureRef>(null);
   const fingerprintRef = useRef<FingerprintCaptureRef>(null);
 
   useEffect(() => {
@@ -72,8 +70,7 @@ export const InlinePendingConsentSigning: React.FC<InlinePendingConsentSigningPr
   const handleSign = async () => {
     if (!signedByName.trim()) { toast.error('Confirme el nombre del paciente'); return; }
     if (!signatureData || signatureData.length < 100) { toast.error('Por favor firme en el área designada'); return; }
-
-    const capturedPhoto = cameraRef.current?.getCapturedPhoto();
+    if (!fingerprintData) { toast.error('Por favor capture la foto de huella dactilar antes de firmar'); return; }
 
     setSigning(true);
     try {
@@ -82,8 +79,8 @@ export const InlinePendingConsentSigning: React.FC<InlinePendingConsentSigningPr
           token,
           signedByName: signedByName.trim(),
           signatureData,
-          patientPhoto: capturedPhoto || null,
-          fingerprintData: fingerprintData || null,
+          patientPhoto: fingerprintData,
+          fingerprintData: fingerprintData,
         }
       });
 
@@ -227,7 +224,7 @@ export const InlinePendingConsentSigning: React.FC<InlinePendingConsentSigningPr
           <section className="space-y-5">
             <h3 className="text-base font-semibold text-primary">Firma del Paciente</h3>
             <p className="text-sm text-muted-foreground">
-              Confirme su nombre, capture la foto, la huella y firme para completar el consentimiento.
+              Confirme su nombre, capture la foto de huella dactilar y firme para completar el consentimiento.
             </p>
 
             <div>
@@ -241,17 +238,12 @@ export const InlinePendingConsentSigning: React.FC<InlinePendingConsentSigningPr
               />
             </div>
 
-            <CameraCapture
-              ref={cameraRef}
-              title="Foto del Paciente"
-              subtitle="Capture una foto del paciente"
-              required={false}
-            />
-
+            {/* Foto de Huella Dactilar */}
             <FingerprintCapture
               ref={fingerprintRef}
-              title="Huella Dactilar"
-              subtitle="Fotografíe la yema del pulgar con la cámara trasera"
+              title="Foto de Huella Dactilar"
+              subtitle="Fotografíe la yema del pulgar del paciente con la cámara trasera de la tablet"
+              required
               onFingerprintChange={setFingerprintData}
             />
 
@@ -269,7 +261,7 @@ export const InlinePendingConsentSigning: React.FC<InlinePendingConsentSigningPr
 
             <Button
               onClick={handleSign}
-              disabled={signing || !signedByName.trim() || !signatureData}
+              disabled={signing || !signedByName.trim() || !signatureData || !fingerprintData}
               size="lg"
               className="w-full"
             >
