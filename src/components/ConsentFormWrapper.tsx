@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { FileText } from 'lucide-react';
+import { FileText, ClipboardCheck } from 'lucide-react';
 import { useAppConsent } from '@/hooks/useAppConsent';
 import { toast } from 'sonner';
 import { ShareConsentButtons } from './ShareConsentButtons';
 import { consentService, type ConsentData } from '@/services/consentService';
 import { formatProcedureInfoForPayload } from '@/data/procedureInfo';
+import { supabase } from '@/integrations/supabase/client';
+import { PhotoService } from '@/services/photoService';
 interface ConsentFormWrapperProps {
   children: React.ReactNode;
   /** Etiqueta visible / nombre del consentimiento (para UI/archivo). */
@@ -79,6 +81,89 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
   clinicalRiskNotes = ''
 }) => {
   const { saveConsent, isSaving } = useAppConsent();
+  const [isPreDiligenciando, setIsPreDiligenciando] = useState(false);
+  const [preDiligenciadoConsent, setPreDiligenciadoConsent] = useState<any>(null);
+
+  /**
+   * Guarda el consentimiento pre-diligenciado por el médico (con su firma) pero en estado
+   * "sent" para que el paciente solo añada foto, huella y firma después.
+   */
+  const handlePreDiligenciar = async () => {
+    setIsPreDiligenciando(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) throw new Error('Usuario no autenticado');
+
+      // Obtener firma profesional
+      const { data: profSig } = await supabase
+        .from('professional_signatures')
+        .select('signature_data, professional_name, professional_document')
+        .eq('created_by', user.id)
+        .single();
+
+      // Normalizar firma profesional a URL si viene en base64
+      let profSigUrl: string | null = profSig?.signature_data || null;
+      if (profSigUrl && profSigUrl.startsWith('data:image')) {
+        const uploaded = await PhotoService.uploadPhoto(profSigUrl, 'firma_profesional');
+        if (uploaded?.url) profSigUrl = uploaded.url;
+      }
+
+      const procedureInfo = formatProcedureInfoForPayload(consentTypeCode || consentType);
+
+      const { data: consent, error } = await supabase
+        .from('consents')
+        .insert({
+          patient_name: `${patientData.nombre} ${patientData.apellidos}`,
+          patient_document_type: patientData.tipoDocumento,
+          patient_document_number: patientData.numeroDocumento,
+          patient_email: patientData.email,
+          patient_phone: patientData.telefono,
+          consent_type: consentTypeCode || consentType,
+          payload: {
+            patientData,
+            professionalData,
+            decision: consentDecision,
+            consentDecision,
+            ...procedureInfo,
+            hasDisability,
+            isMinor,
+            guardianName: guardianName || undefined,
+            guardianDocument: guardianDocument || undefined,
+            guardianRelationship: guardianRelationship || undefined,
+            guardianPhone: guardianPhone || undefined,
+            clinicalRiskNotes: clinicalRiskNotes || undefined,
+            generatedAt: new Date().toISOString(),
+          },
+          created_by: user.id,
+          professional_name: profSig?.professional_name || professionalData?.name,
+          professional_document: profSig?.professional_document || professionalData?.document,
+          professional_signature_data: profSigUrl,
+          status: 'sent', // paciente aún debe firmar
+          source: 'web',
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Construir URL de firma pública
+      const baseUrl = (import.meta.env.VITE_PUBLIC_APP_URL || window.location.origin).replace(/\/+$/, '');
+      const shareUrl = `${baseUrl}/firmar/${consent.share_token}`;
+
+      setPreDiligenciadoConsent({ id: consent.id, shareUrl, shareToken: consent.share_token });
+      toast.success('Consentimiento pre-diligenciado', {
+        description: 'Ahora puede mostrar el QR al paciente para que firme.',
+        duration: 6000,
+      });
+    } catch (err: any) {
+      console.error('Error al pre-diligenciar:', err);
+      toast.error('Error al pre-diligenciar el consentimiento');
+    } finally {
+      setIsPreDiligenciando(false);
+    }
+  };
+
+
 
   const handleSaveAndGenerate = async () => {
     try {
@@ -226,30 +311,87 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       
       <Separator />
       
-      {/* Botones de acción - orden unificado para todos los módulos */}
+      {/* Botones de acción */}
       <div className="space-y-4">
-        {/* Botón principal: Generar Consentimiento */}
-        <div className="flex justify-center">
-          <Button
-            onClick={handleSaveAndGenerate}
-            disabled={isSaving}
-            size="lg"
-            className="w-full sm:w-auto min-w-[300px]"
-          >
-            <FileText className="h-5 w-5 mr-2" />
-            {isSaving ? 'Generando...' : 'Generar Consentimiento'}
-          </Button>
+
+        {/* ── OPCIÓN 1: Médico pre-diligencia y el paciente solo firma ── */}
+        <div className="rounded-lg border-2 border-primary/30 bg-primary/5 p-4 space-y-3">
+          <div className="flex items-start gap-3">
+            <ClipboardCheck className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+            <div>
+              <p className="font-semibold text-sm text-primary">Firma en consultorio (paciente presente)</p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                El médico pre-diligencia el formulario con su firma. El paciente escanea el QR y solo
+                añade su foto, huella y firma.
+              </p>
+            </div>
+          </div>
+          {!preDiligenciadoConsent ? (
+            <div className="flex justify-center">
+              <Button
+                onClick={handlePreDiligenciar}
+                disabled={isPreDiligenciando}
+                size="lg"
+                className="w-full"
+                variant="default"
+              >
+                {isPreDiligenciando ? (
+                  <>Procesando...</>
+                ) : (
+                  <>
+                    <ClipboardCheck className="h-5 w-5 mr-2" />
+                    Pre-diligenciar y generar QR para firma del paciente
+                  </>
+                )}
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              <p className="text-xs text-accent font-medium text-center">
+                ✅ Pre-diligenciado — Muestre el QR al paciente para que firme
+              </p>
+              <ShareConsentButtons
+                consentData={{
+                  ...shareConsentData,
+                  // Pass existing consent id so it reuses the already-created record
+                }}
+                onConsentCreated={() => {}}
+                existingConsent={preDiligenciadoConsent}
+              />
+            </div>
+          )}
         </div>
-        
-        {/* Botón secundario: Crear Enlace para Firma */}
-        <div className="flex justify-center">
-          <div className="w-full sm:w-auto min-w-[300px]">
-            <ShareConsentButtons 
-              consentData={shareConsentData}
-              onConsentCreated={(shareableConsent) => {
-                console.log('Enlace de consentimiento creado:', shareableConsent);
-              }}
-            />
+
+        <Separator />
+
+        {/* ── OPCIÓN 2: Generar PDF completo (médico y paciente firman en el momento) ── */}
+        <div className="space-y-3">
+          <p className="text-xs text-muted-foreground text-center font-medium">
+            — O complete el consentimiento directamente aquí —
+          </p>
+          <div className="flex justify-center">
+            <Button
+              onClick={handleSaveAndGenerate}
+              disabled={isSaving}
+              size="lg"
+              variant="outline"
+              className="w-full sm:w-auto min-w-[300px]"
+            >
+              <FileText className="h-5 w-5 mr-2" />
+              {isSaving ? 'Generando...' : 'Generar Consentimiento Completo (PDF)'}
+            </Button>
+          </div>
+
+          {/* Crear enlace remoto */}
+          <div className="flex justify-center">
+            <div className="w-full sm:w-auto min-w-[300px]">
+              <ShareConsentButtons 
+                consentData={shareConsentData}
+                onConsentCreated={(shareableConsent) => {
+                  console.log('Enlace de consentimiento creado:', shareableConsent);
+                }}
+              />
+            </div>
           </div>
         </div>
         
@@ -258,7 +400,7 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
           <div className="flex justify-center">
             <Button
               onClick={onBack}
-              variant="outline"
+              variant="ghost"
               size="lg"
               className="w-full sm:w-auto min-w-[300px]"
             >

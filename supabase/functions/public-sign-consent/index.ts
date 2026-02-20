@@ -102,12 +102,14 @@ serve(async (req: Request) => {
       signedByName?: string;
       signatureData?: string;
       patientPhoto?: string;
+      fingerprintData?: string;
     };
 
     const token = (body.token || "").trim();
     const signedByName = (body.signedByName || "").trim();
     const signatureData = body.signatureData || "";
     const patientPhoto = body.patientPhoto || "";
+    const fingerprintData = body.fingerprintData || "";
 
     if (!token || token.length < 32) {
       return new Response(JSON.stringify({ success: false, error: "Token inválido" }), {
@@ -141,6 +143,9 @@ serve(async (req: Request) => {
     // 1) Subir evidencias (URLs públicas)
     const patientPhotoUrl = await toPublicUrl(supabase, patientPhoto, "patient");
     const signatureUrl = await toPublicUrl(supabase, signatureData, "firma_remota");
+    const fingerprintUrl = fingerprintData
+      ? await toPublicUrl(supabase, fingerprintData, "huella")
+      : null;
 
     // 2) Firmar (DB)
     const { data: signData, error: signError } = await supabase.rpc("sign_consent_by_token_secure", {
@@ -209,6 +214,7 @@ serve(async (req: Request) => {
       paciente_telefono: consent.patient_phone || null,
       paciente_firma: requiresGuardian ? null : (signatureUrl || signatureData),
       paciente_foto: patientPhotoUrl || consent.patient_photo_url || null,
+      paciente_huella: fingerprintUrl || null,
       paciente_tiene_discapacidad: hasDisability,
       paciente_es_menor: isMinor,
 

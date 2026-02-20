@@ -8,10 +8,13 @@ import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { SignaturePad } from "@/components/SignaturePad";
 import { CameraCapture, CameraCaptureRef } from "@/components/CameraCapture";
+import { FingerprintCapture, FingerprintCaptureRef } from "@/components/FingerprintCapture";
 import { consentService } from "@/services/consentService";
-import { PhotoService } from "@/services/photoService";
 import { toast } from "sonner";
-import { CheckCircle, FileText, User, Calendar, AlertCircle } from "lucide-react";
+import {
+  CheckCircle, FileText, User, Calendar, AlertCircle,
+  Stethoscope, Phone, Mail, CreditCard, Building2, Fingerprint
+} from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 export const PublicConsentSigning: React.FC = () => {
@@ -21,133 +24,55 @@ export const PublicConsentSigning: React.FC = () => {
   const [signing, setSigning] = useState(false);
   const [signedByName, setSignedByName] = useState('');
   const [signatureData, setSignatureData] = useState<string>('');
+  const [fingerprintData, setFingerprintData] = useState<string | null>(null);
   const [error, setError] = useState<string>('');
   const cameraRef = useRef<CameraCaptureRef>(null);
+  const fingerprintRef = useRef<FingerprintCaptureRef>(null);
 
   useEffect(() => {
-    if (token) {
-      loadConsent();
-    }
+    if (token) loadConsent();
   }, [token]);
 
   const loadConsent = async () => {
     try {
       setLoading(true);
-      console.log('📱 Cargando consentimiento desde móvil, token:', token);
-      
       const data = await consentService.getConsentByToken(token!);
-      
-      if (!data) {
-        console.error('❌ Consentimiento no encontrado con token:', token);
-        setError('Consentimiento no encontrado o enlace expirado');
-        return;
-      }
-
-      if (data.status === 'signed') {
-        console.log('ℹ️ Consentimiento ya firmado');
-        setError('Este consentimiento ya ha sido firmado');
-        return;
-      }
-
-      console.log('✅ Consentimiento cargado exitosamente:', {
-        id: data.id,
-        patient_name: data.patient_name,
-        status: data.status,
-        consent_type: data.consent_type
-      });
-      
+      if (!data) { setError('Consentimiento no encontrado o enlace expirado'); return; }
+      if (data.status === 'signed') { setError('Este consentimiento ya ha sido firmado'); return; }
       setConsent(data);
+      // Pre-fill patient name from consent data
+      if (data.patient_name) setSignedByName(data.patient_name);
     } catch (err) {
-      console.error('❌ Error crítico cargando consentimiento:', err);
       setError('Error al cargar el consentimiento');
     } finally {
       setLoading(false);
     }
   };
 
-  // Helper function to get consent display name for webhook
-  const getConsentDisplayName = (consentType: string): string => {
-    const key = consentType.toLowerCase().replace(/[\s-]/g, '_');
-    const displayNames: Record<string, string> = {
-      hiv: 'VIH',
-      vih: 'VIH',
-      venopuncion: 'VENOPUNCION', 
-      carga_glucosa: 'GLUCOSA',
-      frotis_vaginal: 'FROTIS VAGINAL',
-      hemocomponentes: 'HEMOCOMPONENTES'
-    };
-    return displayNames[key] || key.toUpperCase().replace(/_/g, ' ');
-  };
-
-  // Helper function to get procedure name for webhook
-  const getProcedureName = (consentType: string): string => {
-    const key = consentType.toLowerCase().replace(/[\s-]/g, '_');
-    const procedureNames: Record<string, string> = {
-      venopuncion: 'Toma de Muestra por Venopunción',
-      hiv: 'Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)',
-      vih: 'Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)',
-      hemocomponentes: 'Transfusión de Hemocomponentes Sanguíneos',
-      carga_glucosa: 'Administración oral de carga de glucosa (Dextrosa Anhidra)',
-      frotis_vaginal: 'Toma de Muestra para Frotis Vaginal - Cultivo Recto-Vaginal'
-    };
-    return procedureNames[key] || consentType;
-  };
-
   const handleSign = async () => {
-    console.log('🖊️ Iniciando proceso de firma desde móvil');
-    console.log('Validando datos de entrada...');
-    console.log('Nombre firmante:', signedByName.trim());
-    console.log('Tiene signatureData:', !!signatureData);
-    console.log('Longitud signatureData:', signatureData?.length || 0);
-    
-    if (!signedByName.trim()) {
-      console.error('❌ Error: Nombre firmante vacío');
-      toast.error('Por favor ingrese su nombre completo');
-      return;
-    }
-
-    if (!signatureData || signatureData.length < 100) {
-      console.error('❌ Error: Firma inválida o vacía');
-      console.log('SignatureData:', signatureData?.substring(0, 50) + '...');
-      toast.error('Por favor firme en el área designada');
-      return;
-    }
-
-    // Verificar que se haya capturado la foto
+    if (!signedByName.trim()) { toast.error('Por favor confirme su nombre completo'); return; }
+    if (!signatureData || signatureData.length < 100) { toast.error('Por favor firme en el área designada'); return; }
     const capturedPhoto = cameraRef.current?.getCapturedPhoto();
-    if (!capturedPhoto) {
-      console.error('❌ Error: Foto del paciente no capturada');
-      toast.error('Por favor capture una foto antes de firmar');
-      return;
-    }
+    if (!capturedPhoto) { toast.error('Por favor capture una foto antes de firmar'); return; }
 
     setSigning(true);
     try {
-      console.log('📡 Firmando (server-side) y enviando al webhook...');
-
       const { data, error } = await supabase.functions.invoke('public-sign-consent', {
         body: {
           token: token!,
           signedByName: signedByName.trim(),
           signatureData,
           patientPhoto: capturedPhoto,
+          fingerprintData: fingerprintData || null,
         }
       });
 
-      if (error) {
-        console.error('❌ Error en public-sign-consent:', error);
-        toast.error('No se pudo completar la firma', { description: error.message });
+      if (error || !data?.success) {
+        toast.error('No se pudo completar la firma', { description: data?.error || error?.message });
         return;
       }
 
-      if (!data?.success) {
-        console.error('❌ public-sign-consent respondió success=false:', data);
-        toast.error('No se pudo completar la firma', { description: data?.error || 'Error desconocido' });
-        return;
-      }
-
-      console.log('✅ Firma + webhook OK:', data);
-      setConsent(prev => ({
+      setConsent((prev: any) => ({
         ...prev,
         status: 'signed',
         signed_at: new Date().toISOString(),
@@ -156,28 +81,21 @@ export const PublicConsentSigning: React.FC = () => {
       }));
       toast.success('¡Consentimiento firmado exitosamente!');
     } catch (error: any) {
-      console.error('❌ Error crítico en proceso de firma:', error);
-      const errorMessage = error?.message || 'Error desconocido';
-      console.error('Detalle del error:', errorMessage);
-      toast.error(`Error al firmar: ${errorMessage}`);
+      toast.error(`Error al firmar: ${error?.message || 'Error desconocido'}`);
     } finally {
       setSigning(false);
     }
   };
 
-  if (!token) {
-    return <Navigate to="/404" replace />;
-  }
+  if (!token) return <Navigate to="/404" replace />;
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-center space-x-2">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-              <span>Cargando consentimiento...</span>
-            </div>
+          <CardContent className="p-6 flex items-center justify-center space-x-2">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+            <span>Cargando consentimiento...</span>
           </CardContent>
         </Card>
       </div>
@@ -203,11 +121,9 @@ export const PublicConsentSigning: React.FC = () => {
       <div className="min-h-screen flex items-center justify-center bg-background">
         <Card className="w-full max-w-md">
           <CardContent className="p-6 text-center">
-            <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-4" />
+            <CheckCircle className="w-12 h-12 text-accent mx-auto mb-4" />
             <h2 className="text-lg font-semibold mb-2">Consentimiento Firmado</h2>
-            <p className="text-muted-foreground mb-4">
-              Este consentimiento ya ha sido firmado exitosamente.
-            </p>
+            <p className="text-muted-foreground mb-4">Este consentimiento ya ha sido firmado exitosamente.</p>
             {consent.signed_at && (
               <p className="text-sm text-muted-foreground">
                 Firmado el: {new Date(consent.signed_at).toLocaleString()}
@@ -219,165 +135,136 @@ export const PublicConsentSigning: React.FC = () => {
     );
   }
 
+  const payload = consent.payload || {};
+  const patientData = payload.patientData || {};
+  const professionalData = payload.professionalData || {};
+  const hasProfessionalSignature = !!consent.professional_signature_data || !!consent.professional_name;
+
   return (
-    <div className="min-h-screen bg-background py-8">
+    <div className="min-h-screen bg-background py-6">
       <div className="container mx-auto px-4 max-w-4xl">
         <Card>
-          <CardHeader className="text-center">
-            <div className="flex items-center justify-center mb-4">
+          <CardHeader className="text-center border-b pb-6">
+            <div className="flex items-center justify-center mb-3">
               <FileText className="w-8 h-8 text-primary mr-2" />
               <CardTitle className="text-2xl">Consentimiento Informado</CardTitle>
             </div>
-            <Badge variant="outline" className="mx-auto">
-              {consent.consent_type}
+            <Badge variant="outline" className="mx-auto text-sm px-3 py-1">
+              {payload.procedureName || consent.consent_type?.toUpperCase()}
             </Badge>
+            {hasProfessionalSignature && (
+              <div className="mt-3 inline-flex items-center gap-2 bg-accent/10 text-accent text-sm px-3 py-1.5 rounded-full mx-auto">
+                <CheckCircle className="h-4 w-4" />
+                Pre-diligenciado y firmado por el profesional médico
+              </div>
+            )}
           </CardHeader>
 
-          <CardContent className="space-y-6">
-            {/* Patient Information */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
-                <div>
-                  <Label className="text-sm font-medium text-muted-foreground">Paciente</Label>
-                  <div className="flex items-center mt-1">
-                    <User className="w-4 h-4 mr-2 text-muted-foreground" />
-                    <span className="font-medium">{consent.patient_name}</span>
-                  </div>
+          <CardContent className="space-y-6 pt-6">
+            {/* ─── DATOS DEL PACIENTE (pre-diligenciados) ─── */}
+            <section>
+              <h3 className="text-base font-semibold flex items-center gap-2 mb-3 text-primary">
+                <User className="w-4 h-4" /> Datos del Paciente
+              </h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/40 rounded-lg p-4">
+                <DataRow icon={<User className="w-3.5 h-3.5" />} label="Nombre completo" value={consent.patient_name} />
+                <DataRow
+                  icon={<CreditCard className="w-3.5 h-3.5" />}
+                  label="Documento"
+                  value={consent.patient_document_type && consent.patient_document_number
+                    ? `${consent.patient_document_type}: ${consent.patient_document_number}`
+                    : undefined}
+                />
+                {(patientData.edad || patientData.fechaNacimiento) && (
+                  <DataRow icon={<Calendar className="w-3.5 h-3.5" />} label="Edad / Fecha nac." value={patientData.edad ? `${patientData.edad} años` : patientData.fechaNacimiento} />
+                )}
+                {patientData.eps && <DataRow label="EPS" value={patientData.eps} />}
+                {patientData.centroSalud && <DataRow icon={<Building2 className="w-3.5 h-3.5" />} label="Centro de Salud" value={patientData.centroSalud} />}
+                {consent.patient_phone && <DataRow icon={<Phone className="w-3.5 h-3.5" />} label="Teléfono" value={consent.patient_phone} />}
+                {consent.patient_email && <DataRow icon={<Mail className="w-3.5 h-3.5" />} label="Email" value={consent.patient_email} />}
+              </div>
+            </section>
+
+            {/* ─── DATOS DEL PROFESIONAL ─── */}
+            {(consent.professional_name || professionalData.name) && (
+              <section>
+                <h3 className="text-base font-semibold flex items-center gap-2 mb-3 text-primary">
+                  <Stethoscope className="w-4 h-4" /> Profesional Médico
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-muted/40 rounded-lg p-4">
+                  <DataRow label="Nombre" value={consent.professional_name || professionalData.name} />
+                  {(consent.professional_document || professionalData.document) && (
+                    <DataRow label="Documento" value={consent.professional_document || professionalData.document} />
+                  )}
                 </div>
-                 {consent.patient_document_number && (
-                   <div>
-                     <Label className="text-sm font-medium text-muted-foreground">Documento</Label>
-                     <p className="mt-1">
-                       {consent.patient_document_type} {consent.patient_document_number}
-                     </p>
-                   </div>
-               )}
-            </div>
+                {consent.professional_signature_data && (
+                  <div className="mt-3 p-3 border rounded-lg bg-muted/20">
+                    <p className="text-xs text-muted-foreground mb-2 font-medium">Firma del Profesional:</p>
+                    <img
+                      src={consent.professional_signature_data}
+                      alt="Firma profesional"
+                      className="max-h-20 object-contain"
+                    />
+                  </div>
+                )}
+              </section>
+            )}
 
             <Separator />
 
-            {/* Consent Content */}
-            <div className="prose prose-sm max-w-none">
-              <h3 className="text-lg font-semibold mb-4 text-primary">Información del Procedimiento</h3>
-              
-              {consent.payload && (
-                <div className="space-y-6">
-                  {/* Descripción del Procedimiento */}
-                  {(consent.payload.procedureDescription || consent.payload.procedurePurpose) && (
-                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-                      <h4 className="font-semibold mb-3 text-blue-800 flex items-center">
-                        <FileText className="w-4 h-4 mr-2" />
-                        {consent.payload.procedureName || consent.consent_type}
-                      </h4>
-                      {consent.payload.procedureDescription && (
-                        <p className="text-sm text-blue-900 mb-3">
-                          {consent.payload.procedureDescription}
-                        </p>
-                      )}
-                      {consent.payload.procedurePurpose && (
-                        <div className="bg-blue-100 p-3 rounded">
-                          <p className="text-sm font-medium text-blue-800">
-                            <strong>Propósito:</strong> {consent.payload.procedurePurpose}
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {consent.payload.procedures && consent.payload.procedures.length > 0 && (
-                    <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
-                      <h4 className="font-semibold mb-3 text-indigo-800 flex items-center">
-                        <FileText className="w-4 h-4 mr-2" />
-                        Procedimientos a Realizar:
-                      </h4>
-                      <ul className="space-y-2">
-                        {consent.payload.procedures.map((proc: any, index: number) => (
-                          <li key={index} className="flex items-start">
-                            <CheckCircle className="w-4 h-4 mr-2 text-indigo-600 mt-0.5 flex-shrink-0" />
-                            <div>
-                              <span className="text-sm font-medium text-indigo-900">{proc.name || proc}</span>
-                              {proc.description && (
-                                <p className="text-xs text-indigo-700 mt-1">{proc.description}</p>
-                              )}
-                            </div>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {consent.payload.benefits && consent.payload.benefits.length > 0 && (
-                    <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-                      <h4 className="font-semibold mb-3 text-green-800 flex items-center">
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Beneficios Esperados:
-                      </h4>
-                      <ul className="space-y-2">
-                        {consent.payload.benefits.map((benefit: string, index: number) => (
-                          <li key={index} className="flex items-start">
-                            <span className="w-2 h-2 bg-green-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                            <span className="text-sm text-green-900">{benefit}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {consent.payload.risks && consent.payload.risks.length > 0 && (
-                    <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-                      <h4 className="font-semibold mb-3 text-yellow-800 flex items-center">
-                        <AlertCircle className="w-4 h-4 mr-2" />
-                        Riesgos Asociados:
-                      </h4>
-                      <ul className="space-y-2">
-                        {consent.payload.risks.map((risk: string, index: number) => (
-                          <li key={index} className="flex items-start">
-                            <span className="w-2 h-2 bg-yellow-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                            <span className="text-sm text-yellow-900">{risk}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  {consent.payload.alternatives && consent.payload.alternatives.length > 0 && (
-                    <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-                      <h4 className="font-semibold mb-3 text-purple-800">
-                        Alternativas de Tratamiento:
-                      </h4>
-                      <ul className="space-y-2">
-                        {consent.payload.alternatives.map((alt: string, index: number) => (
-                          <li key={index} className="flex items-start">
-                            <span className="w-2 h-2 bg-purple-600 rounded-full mt-2 mr-3 flex-shrink-0"></span>
-                            <span className="text-sm text-purple-900">{alt}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-
-                  <div className="bg-gray-50 p-4 rounded-lg border border-gray-200">
-                    <h4 className="font-semibold mb-2 text-gray-800">Declaración de Consentimiento:</h4>
-                    <p className="text-sm text-gray-700 leading-relaxed">
-                      He sido informado(a) sobre el procedimiento, sus riesgos, beneficios y alternativas. 
-                      He tenido la oportunidad de hacer preguntas y todas han sido respondidas satisfactoriamente. 
-                      Entiendo que ningún procedimiento médico garantiza resultados al 100%. 
-                      Por lo tanto, doy mi consentimiento libre e informado para la realización del procedimiento descrito.
-                      Asimismo, autorizo a la E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa para el tratamiento 
-                      de mis datos personales y datos sensibles de salud conforme a la Ley 1581 de 2012 y el Decreto 1377 de 2013.
-                    </p>
+            {/* ─── INFORMACIÓN DEL PROCEDIMIENTO ─── */}
+            <section>
+              <h3 className="text-base font-semibold flex items-center gap-2 mb-4 text-primary">
+                <FileText className="w-4 h-4" /> Información del Procedimiento
+              </h3>
+              <div className="space-y-4">
+                {(payload.procedureDescription || payload.procedurePurpose) && (
+                  <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
+                    <h4 className="font-semibold mb-2 text-primary text-sm">
+                      {payload.procedureName || consent.consent_type}
+                    </h4>
+                    {payload.procedureDescription && (
+                      <p className="text-sm text-foreground mb-2">{payload.procedureDescription}</p>
+                    )}
+                    {payload.procedurePurpose && (
+                      <p className="text-sm text-foreground"><strong>Propósito:</strong> {payload.procedurePurpose}</p>
+                    )}
                   </div>
+                )}
+
+                {payload.benefits && payload.benefits.length > 0 && (
+                  <InfoList title="Beneficios Esperados" items={payload.benefits} color="green" icon={<CheckCircle className="w-4 h-4" />} />
+                )}
+                {payload.risks && payload.risks.length > 0 && (
+                  <InfoList title="Riesgos Asociados" items={payload.risks} color="yellow" icon={<AlertCircle className="w-4 h-4" />} />
+                )}
+                {payload.alternatives && payload.alternatives.length > 0 && (
+                  <InfoList title="Alternativas" items={payload.alternatives} color="purple" />
+                )}
+
+                <div className="bg-muted/50 p-4 rounded-lg border text-sm text-foreground leading-relaxed">
+                  <strong>Al firmar este consentimiento declaro que:</strong> He sido informado(a) sobre el
+                  procedimiento, sus riesgos, beneficios y alternativas. He tomado una decisión informada y
+                  autorizo al equipo médico a proceder. En cumplimiento de la Ley 1581 de 2012 y el Decreto
+                  1377 de 2013, <strong>AUTORIZO</strong> a la E.S.E. Hospital Pedro León Álvarez Díaz de La
+                  Mesa para la recolección, almacenamiento, uso y tratamiento de mis datos personales y datos
+                  sensibles de salud.
                 </div>
-              )}
-            </div>
+              </div>
+            </section>
 
             <Separator />
 
-            {/* Photo and Signature Section */}
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold">Captura de Foto y Firma</h3>
-              
+            {/* ─── SECCIÓN DE FIRMA DEL PACIENTE ─── */}
+            <section className="space-y-5">
+              <h3 className="text-lg font-semibold text-primary">Firma del Paciente</h3>
+              <p className="text-sm text-muted-foreground">
+                Los datos del consentimiento ya están diligenciados. Solo necesita capturar su foto, su huella y firmar para completar el proceso.
+              </p>
+
+              {/* Nombre confirmación */}
               <div>
-                <Label htmlFor="signed-by-name">Nombre completo del firmante *</Label>
+                <Label htmlFor="signed-by-name">Confirme su nombre completo *</Label>
                 <Input
                   id="signed-by-name"
                   value={signedByName}
@@ -387,63 +274,98 @@ export const PublicConsentSigning: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <CameraCapture
-                  ref={cameraRef}
-                  title="Foto del Paciente"
-                  subtitle="Capture una foto clara del paciente para incluir en el consentimiento"
-                  required
-                />
-              </div>
+              {/* Foto */}
+              <CameraCapture
+                ref={cameraRef}
+                title="Foto del Paciente"
+                subtitle="Capture una foto clara del paciente para incluir en el consentimiento"
+                required
+              />
 
+              {/* Huella */}
+              <FingerprintCapture
+                ref={fingerprintRef}
+                title="Huella Dactilar"
+                subtitle="Presione la yema del dedo en el área e imprima su huella digital"
+                onFingerprintChange={setFingerprintData}
+              />
+
+              {/* Firma */}
               <div>
                 <Label>Firma Digital *</Label>
                 <div className="mt-2">
                   <SignaturePad
                     title="Firma del Paciente"
-                    subtitle="Por favor firme en el área siguiente"
+                    subtitle="Firme en el área siguiente"
                     onSignatureChange={setSignatureData}
                     required
                   />
                 </div>
               </div>
 
-              <div className="bg-muted/50 p-4 rounded-lg border">
-                <p className="text-sm text-muted-foreground leading-relaxed">
-                  <strong>Al firmar este consentimiento declaro que:</strong> He sido informado(a) sobre el procedimiento, 
-                  sus riesgos, beneficios y alternativas. He tomado una decisión informada y autorizo al equipo médico a proceder. 
-                  En cumplimiento de la Ley 1581 de 2012 y el Decreto 1377 de 2013 sobre protección de datos personales, 
-                  <strong> AUTORIZO</strong> de manera libre, expresa e informada a la E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa 
-                  para la recolección, almacenamiento, uso y tratamiento de mis datos personales y datos sensibles de salud.
-                </p>
-              </div>
-
-              <div className="text-center">
-                <Button
-                  onClick={handleSign}
-                  disabled={signing || !signedByName.trim() || !signatureData}
-                  size="lg"
-                  className="w-full sm:w-auto"
-                >
-                  {signing ? 'Procesando...' : 'Firmar Consentimiento'}
-                </Button>
-              </div>
-            </div>
+              <Button
+                onClick={handleSign}
+                disabled={signing || !signedByName.trim() || !signatureData}
+                size="lg"
+                className="w-full"
+              >
+                {signing ? 'Procesando...' : 'Firmar Consentimiento'}
+              </Button>
+            </section>
 
             {/* Footer */}
-            <div className="text-center text-sm text-muted-foreground pt-6">
-              <div className="flex items-center justify-center mb-2">
+            <div className="text-center text-sm text-muted-foreground pt-2">
+              <div className="flex items-center justify-center mb-1">
                 <Calendar className="w-4 h-4 mr-2" />
-                Enlace válido hasta: {consent.share_expires_at ? 
-                  new Date(consent.share_expires_at).toLocaleDateString() : 
-                  'Sin expiración'
-                }
+                Enlace válido hasta: {consent.share_expires_at
+                  ? new Date(consent.share_expires_at).toLocaleDateString()
+                  : 'Sin expiración'}
               </div>
               <p>Al firmar este documento, confirma que ha leído y comprende toda la información proporcionada.</p>
             </div>
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+};
+
+// ─── Helper components ───────────────────────────────────────────────────────
+
+const DataRow: React.FC<{ icon?: React.ReactNode; label: string; value?: string }> = ({ icon, label, value }) => {
+  if (!value) return null;
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground font-medium mb-0.5">{label}</p>
+      <div className="flex items-center gap-1.5">
+        {icon && <span className="text-muted-foreground">{icon}</span>}
+        <span className="text-sm font-medium">{value}</span>
+      </div>
+    </div>
+  );
+};
+
+const colorMap: Record<string, { bg: string; border: string; title: string; text: string; dot: string }> = {
+  green:  { bg: 'bg-secondary/30', border: 'border-secondary', title: 'text-foreground', text: 'text-foreground', dot: 'bg-primary' },
+  yellow: { bg: 'bg-muted/60',     border: 'border-border',    title: 'text-foreground', text: 'text-foreground', dot: 'bg-muted-foreground' },
+  purple: { bg: 'bg-accent/10',    border: 'border-accent/30', title: 'text-foreground', text: 'text-foreground', dot: 'bg-accent' },
+};
+
+const InfoList: React.FC<{ title: string; items: string[]; color: 'green' | 'yellow' | 'purple'; icon?: React.ReactNode }> = ({ title, items, color, icon }) => {
+  const c = colorMap[color];
+  return (
+    <div className={`${c.bg} p-4 rounded-lg border ${c.border}`}>
+      <h4 className={`font-semibold mb-2 ${c.title} text-sm flex items-center gap-2`}>
+        {icon}{title}
+      </h4>
+      <ul className="space-y-1">
+        {items.map((item, i) => (
+          <li key={i} className="flex items-start gap-2">
+            <span className={`w-2 h-2 ${c.dot} rounded-full mt-1.5 shrink-0`} />
+            <span className={`text-sm ${c.text}`}>{item}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
