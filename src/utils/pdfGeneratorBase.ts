@@ -801,36 +801,45 @@ export class BasePDFGenerator {
         );
       }
 
-      // ── Primera columna derecha: Huella dactilar (estilo sello de tinta sobre papel)
+      // ── Primera columna derecha: Huella dactilar (forma de cápsula/falange vertical)
       if (data.patientPhoto && typeof data.patientPhoto === 'string' && data.patientPhoto.length > 100) {
-        // Calcular tamaño y posición centrada — usar círculo, no cuadrado
-        const thumbSize = Math.min(halfCol - 4, signatureHeight - 6);
+        // Cápsula vertical: más alta que ancha, igual que la foto del paciente
+        const capsuleW = halfCol - 6;
+        const capsuleH = signatureHeight - 5;
         const cx = this.margin + halfCol + halfCol / 2;  // centro X de la sub-columna
-        const cy = this.currentY + signatureHeight / 2;   // centro Y del recuadro
-        const r  = thumbSize / 2;
-        const thumbX = cx - r;
-        const thumbY = cy - r;
+        const cy = this.currentY + signatureHeight / 2;  // centro Y del recuadro
+        const capX = cx - capsuleW / 2;
+        const capY = cy - capsuleH / 2;
+        const cornerR = capsuleW / 2; // radio de esquinas = mitad del ancho → forma de cápsula
 
-        // 1. Fondo blanco circular (simula papel donde se estampa la tinta)
+        // 1. Fondo blanco en forma de cápsula (simula papel donde se estampa la tinta)
         this.pdf.setFillColor(255, 255, 255);
-        this.pdf.circle(cx, cy, r + 0.5, 'F');
+        this.pdf.roundedRect(capX - 0.5, capY - 0.5, capsuleW + 1, capsuleH + 1, cornerR, cornerR, 'F');
 
         // 2. Imagen de la huella procesada (PNG binarizado, applyInkStampEffect)
+        //    Recorte visual: la imagen cuadrada se coloca centrada; las esquinas
+        //    quedan ocultas bajo el anillo de la cápsula que se dibuja encima.
         safeAddImage(
           data.patientPhoto,
-          thumbX, thumbY, thumbSize, thumbSize,
+          capX, capY, capsuleW, capsuleH,
           'fingerprint'
         );
 
-        // 3. Anillo exterior del sello — línea gruesa de tinta oscura
+        // 3. Anillo exterior de la cápsula — línea gruesa de tinta oscura
         this.pdf.setDrawColor(20, 20, 20);
         this.pdf.setLineWidth(0.55);
-        this.pdf.circle(cx, cy, r, 'S');
+        this.pdf.roundedRect(capX, capY, capsuleW, capsuleH, cornerR, cornerR, 'S');
 
-        // 4. Anillo interior del sello — línea fina a ~1.2mm hacia adentro
+        // 4. Anillo interior de la cápsula — línea fina hacia adentro
+        const innerInset = 1.2;
         this.pdf.setDrawColor(20, 20, 20);
         this.pdf.setLineWidth(0.2);
-        this.pdf.circle(cx, cy, Math.max(r - 1.2, 1), 'S');
+        this.pdf.roundedRect(
+          capX + innerInset, capY + innerInset,
+          capsuleW - 2 * innerInset, capsuleH - 2 * innerInset,
+          Math.max(cornerR - innerInset, 1), Math.max(cornerR - innerInset, 1),
+          'S'
+        );
 
         // Restablecer color de línea por defecto
         this.pdf.setDrawColor(0, 0, 0);
@@ -952,17 +961,38 @@ export class BasePDFGenerator {
     }
 
     if (data.patientPhoto && typeof data.patientPhoto === 'string' && data.patientPhoto.length > 100) {
-      const thumbSize = Math.min(halfCol - 4, signatureHeight - 8);
-      const thumbX = this.margin + halfCol + (halfCol - thumbSize) / 2;
-      const thumbY = this.currentY + 4 + (signatureHeight - 8 - thumbSize) / 2;
-      // Fondo blanco (papel)
+      // Cápsula vertical — misma forma que en drawSignatureSection
+      const capsuleW = halfCol - 6;
+      const capsuleH = signatureHeight - 5;
+      const cx = this.margin + halfCol + halfCol / 2;
+      const cy = this.currentY + signatureHeight / 2;
+      const capX = cx - capsuleW / 2;
+      const capY = cy - capsuleH / 2;
+      const cornerR = capsuleW / 2;
+
+      // 1. Fondo blanco en forma de cápsula
       this.pdf.setFillColor(255, 255, 255);
-      this.pdf.rect(thumbX, thumbY, thumbSize, thumbSize, 'F');
-      safeImg(data.patientPhoto, thumbX, thumbY, thumbSize, thumbSize, 'fingerprint');
-      // Borde circular efecto tinta
-      this.pdf.setDrawColor(40, 40, 40);
-      this.pdf.setLineWidth(0.3);
-      this.pdf.circle(thumbX + thumbSize / 2, thumbY + thumbSize / 2, thumbSize / 2, 'S');
+      this.pdf.roundedRect(capX - 0.5, capY - 0.5, capsuleW + 1, capsuleH + 1, cornerR, cornerR, 'F');
+
+      // 2. Imagen de la huella
+      safeImg(data.patientPhoto, capX, capY, capsuleW, capsuleH, 'fingerprint');
+
+      // 3. Anillo exterior de la cápsula
+      this.pdf.setDrawColor(20, 20, 20);
+      this.pdf.setLineWidth(0.55);
+      this.pdf.roundedRect(capX, capY, capsuleW, capsuleH, cornerR, cornerR, 'S');
+
+      // 4. Anillo interior de la cápsula
+      const innerInset = 1.2;
+      this.pdf.setDrawColor(20, 20, 20);
+      this.pdf.setLineWidth(0.2);
+      this.pdf.roundedRect(
+        capX + innerInset, capY + innerInset,
+        capsuleW - 2 * innerInset, capsuleH - 2 * innerInset,
+        Math.max(cornerR - innerInset, 1), Math.max(cornerR - innerInset, 1),
+        'S'
+      );
+
       this.pdf.setDrawColor(0, 0, 0);
       this.pdf.setLineWidth(0.2);
     }
