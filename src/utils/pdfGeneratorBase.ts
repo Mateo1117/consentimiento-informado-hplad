@@ -633,16 +633,25 @@ export class BasePDFGenerator {
         );
       }
 
-      // ── Primera columna derecha: Huella dactilar del paciente (cuadrada, centrada)
+      // ── Primera columna derecha: Huella dactilar del paciente (efecto tinta sobre papel)
       if (data.patientPhoto && typeof data.patientPhoto === 'string' && data.patientPhoto.length > 100) {
         const thumbSize = Math.min(halfCol - 4, signatureHeight - 8);
         const thumbX = this.margin + halfCol + (halfCol - thumbSize) / 2;
         const thumbY = this.currentY + 4 + (signatureHeight - 8 - thumbSize) / 2;
+        // Fondo blanco explícito (simula papel)
+        this.pdf.setFillColor(255, 255, 255);
+        this.pdf.rect(thumbX, thumbY, thumbSize, thumbSize, 'F');
         safeAddImage(
           data.patientPhoto,
           thumbX, thumbY, thumbSize, thumbSize,
           'fingerprint'
         );
+        // Borde circular oscuro que refuerza el efecto de sello con tinta
+        this.pdf.setDrawColor(40, 40, 40);
+        this.pdf.setLineWidth(0.3);
+        this.pdf.circle(thumbX + thumbSize / 2, thumbY + thumbSize / 2, thumbSize / 2, 'S');
+        this.pdf.setDrawColor(0, 0, 0);
+        this.pdf.setLineWidth(0.2);
       }
 
       // ── Segunda columna: Firma del representante legal (cuando hay guardianData)
@@ -763,7 +772,16 @@ export class BasePDFGenerator {
       const thumbSize = Math.min(halfCol - 4, signatureHeight - 8);
       const thumbX = this.margin + halfCol + (halfCol - thumbSize) / 2;
       const thumbY = this.currentY + 4 + (signatureHeight - 8 - thumbSize) / 2;
+      // Fondo blanco (papel)
+      this.pdf.setFillColor(255, 255, 255);
+      this.pdf.rect(thumbX, thumbY, thumbSize, thumbSize, 'F');
       safeImg(data.patientPhoto, thumbX, thumbY, thumbSize, thumbSize, 'fingerprint');
+      // Borde circular efecto tinta
+      this.pdf.setDrawColor(40, 40, 40);
+      this.pdf.setLineWidth(0.3);
+      this.pdf.circle(thumbX + thumbSize / 2, thumbY + thumbSize / 2, thumbSize / 2, 'S');
+      this.pdf.setDrawColor(0, 0, 0);
+      this.pdf.setLineWidth(0.2);
     }
 
     if (data.guardianData && data.guardianSignature) {

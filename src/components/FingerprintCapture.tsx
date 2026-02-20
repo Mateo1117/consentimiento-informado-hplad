@@ -33,13 +33,102 @@ const FINGERS = [
 
 type FingerId = typeof FINGERS[number]['id'];
 
+// ─── Ink fingerprint effect ────────────────────────────────────────────────────
+/**
+ * Convierte un ImageData de la yema del dedo a efecto de huella con tinta:
+ * 1. Convierte a escala de grises ponderada (luminancia)
+ * 2. Aumenta el contraste mediante un umbral adaptativo (Otsu simplificado)
+ * 3. Invierte los colores: crestas oscuras sobre fondo blanco (como tinta sobre papel)
+ * 4. Aplica un leve suavizado Gaussian de 1px para eliminar ruido
+ */
+function applyInkEffect(ctx: CanvasRenderingContext2D, size: number): void {
+  const imageData = ctx.getImageData(0, 0, size, size);
+  const d = imageData.data;
+
+  // Paso 1: convertir a escala de grises y calcular histograma para umbral Otsu
+  const gray = new Uint8ClampedArray(size * size);
+  const hist = new Int32Array(256);
+
+  for (let i = 0; i < size * size; i++) {
+    const r = d[i * 4];
+    const g = d[i * 4 + 1];
+    const b = d[i * 4 + 2];
+    // Luminancia ponderada (estándar ITU-R BT.709)
+    const lum = Math.round(0.2126 * r + 0.7152 * g + 0.0722 * b);
+    gray[i] = lum;
+    hist[lum]++;
+  }
+
+  // Paso 2: umbral Otsu para separar fondo (piel) de crestas (surcos)
+  const total = size * size;
+  let sum = 0;
+  for (let t = 0; t < 256; t++) sum += t * hist[t];
+
+  let sumB = 0;
+  let wB = 0;
+  let maxVar = 0;
+  let threshold = 128;
+
+  for (let t = 0; t < 256; t++) {
+    wB += hist[t];
+    if (wB === 0) continue;
+    const wF = total - wB;
+    if (wF === 0) break;
+    sumB += t * hist[t];
+    const mB = sumB / wB;
+    const mF = (sum - sumB) / wF;
+    const varBetween = wB * wF * (mB - mF) * (mB - mF);
+    if (varBetween > maxVar) {
+      maxVar = varBetween;
+      threshold = t;
+    }
+  }
+
+  // Ajuste: desplazar umbral hacia los tonos más oscuros para capturar mejor los surcos
+  threshold = Math.max(60, Math.min(220, threshold - 15));
+
+  // Paso 3: binarizar + invertir (surcos oscuros → tinta negra; piel clara → blanco)
+  for (let i = 0; i < size * size; i++) {
+    // Píxeles fuera del círculo (fondo blanco) → dejar blancos
+    const x = i % size;
+    const y = Math.floor(i / size);
+    const dx = x - size / 2;
+    const dy = y - size / 2;
+    const inCircle = dx * dx + dy * dy <= (size / 2) * (size / 2);
+
+    let val: number;
+    if (!inCircle) {
+      val = 255; // fuera del círculo: blanco
+    } else if (gray[i] < threshold) {
+      // Surco (zona oscura) → tinta negra
+      val = 0;
+    } else {
+      // Cresta / piel → blanco (papel)
+      val = 255;
+    }
+
+    d[i * 4]     = val;
+    d[i * 4 + 1] = val;
+    d[i * 4 + 2] = val;
+    d[i * 4 + 3] = 255;
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+
+  // Paso 4: suavizado suave para eliminar ruido pixelado
+  ctx.filter = 'blur(0.4px)';
+  ctx.drawImage(ctx.canvas, 0, 0);
+  ctx.filter = 'none';
+}
+
 // ─── Crop helper ──────────────────────────────────────────────────────────────
 function cropCircularRegion(
   imgDataUrl: string,
   normX: number,
   normY: number,
-  radiusFraction = 0.18, // increased from 0.14 for better coverage
+  radiusFraction = 0.18,
   outSize = 480,
+  applyInk = false,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -71,7 +160,12 @@ function cropCircularRegion(
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outSize, outSize);
       ctx.restore();
 
-      resolve(canvas.toDataURL('image/jpeg', 0.95));
+      // Aplicar efecto de tinta si se solicita
+      if (applyInk) {
+        applyInkEffect(ctx, outSize);
+      }
+
+      resolve(canvas.toDataURL('image/png', 1.0));
     };
     img.onerror = reject;
     img.src = imgDataUrl;
@@ -274,7 +368,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     // Generate live crop preview
     setCropPreview(null);
     try {
-      const preview = await cropCircularRegion(palmImage, normX, normY, 0.18, 120);
+      const preview = await cropCircularRegion(palmImage, normX, normY, 0.18, 120, true);
       setCropPreview(preview);
     } catch {
       // ignore preview error
@@ -295,7 +389,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     }
     setCropping(true);
     try {
-      const cropped = await cropCircularRegion(palmImage, tapPoint.x, tapPoint.y, 0.18, 480);
+      const cropped = await cropCircularRegion(palmImage, tapPoint.x, tapPoint.y, 0.18, 480, true);
       console.log('[FingerprintCapture] Huella capturada — tamaño data URL:', cropped.length, 'chars');
       setCapturedImage(cropped);
       setStep('captured');
