@@ -1052,10 +1052,10 @@ function ConsentDetails({ consent }: { consent: ConsentForm }) {
 
       <Separator />
 
-      {/* Firmas y Fotos */}
+      {/* Firmas y Huellas */}
       <div>
         <h3 className="font-semibold text-medical-blue mb-3">
-          Firmas y Fotografías
+          Firmas y Huellas
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Paciente */}
@@ -1079,20 +1079,20 @@ function ConsentDetails({ consent }: { consent: ConsentForm }) {
                   </div>
                 )}
               </div>
-              {/* Foto */}
+              {/* Huella */}
               <div>
-                <Label className="text-xs text-gray-600">Foto</Label>
+                <Label className="text-xs text-gray-600">Huella</Label>
                 {consent.patient_photo_url ? (
                   <div className="border rounded-lg p-2 bg-gray-50">
                     <img 
                       src={consent.patient_photo_url} 
-                      alt="Foto del paciente" 
+                      alt="Huella dactilar del paciente" 
                       className="max-w-full max-h-24 object-cover rounded"
                     />
                   </div>
                 ) : (
                   <div className="border rounded-lg p-2 bg-gray-50 text-xs text-gray-500 text-center">
-                    Sin foto registrada
+                    Sin huella registrada
                   </div>
                 )}
               </div>
