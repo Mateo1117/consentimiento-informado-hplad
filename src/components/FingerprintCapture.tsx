@@ -1,9 +1,9 @@
 import React, {
-  useRef, useState, useCallback, forwardRef, useImperativeHandle,
+  useRef, useState, useCallback, forwardRef, useImperativeHandle, useEffect,
 } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Hand } from 'lucide-react';
+import { Fingerprint, Camera, RotateCcw, Check, Lightbulb } from 'lucide-react';
 import { toast } from 'sonner';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
@@ -24,21 +24,21 @@ interface FingerprintCaptureProps {
 type CaptureStep = 'idle' | 'preview' | 'select-finger' | 'captured';
 
 const FINGERS = [
-  { id: 'pulgar',   label: 'Pulgar' },
-  { id: 'indice',   label: 'Índice' },
-  { id: 'medio',    label: 'Medio' },
-  { id: 'anular',   label: 'Anular' },
-  { id: 'menique',  label: 'Meñique' },
+  { id: 'pulgar',   label: 'Pulgar',  short: 'P' },
+  { id: 'indice',   label: 'Índice',  short: 'I' },
+  { id: 'medio',    label: 'Medio',   short: 'M' },
+  { id: 'anular',   label: 'Anular',  short: 'A' },
+  { id: 'menique',  label: 'Meñique', short: 'M' },
 ] as const;
 
 type FingerId = typeof FINGERS[number]['id'];
 
-// ─── Crop helper (runs async off the main thread logic) ───────────────────────
+// ─── Crop helper ──────────────────────────────────────────────────────────────
 function cropCircularRegion(
   imgDataUrl: string,
   normX: number,
   normY: number,
-  radiusFraction = 0.14, // fraction of min(w,h)
+  radiusFraction = 0.18, // increased from 0.14 for better coverage
   outSize = 480,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -71,12 +71,49 @@ function cropCircularRegion(
       ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outSize, outSize);
       ctx.restore();
 
-      resolve(canvas.toDataURL('image/jpeg', 0.93));
+      resolve(canvas.toDataURL('image/jpeg', 0.95));
     };
     img.onerror = reject;
     img.src = imgDataUrl;
   });
 }
+
+// ─── SVG Palm Guide Overlay ───────────────────────────────────────────────────
+const PalmGuideOverlay: React.FC = () => (
+  <svg
+    viewBox="0 0 200 260"
+    className="absolute inset-0 w-full h-full pointer-events-none"
+    style={{ opacity: 0.75 }}
+  >
+    {/* Palm base */}
+    <ellipse cx="100" cy="195" rx="55" ry="40" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.5" strokeDasharray="4 2" />
+
+    {/* Thumb */}
+    <rect x="28" y="130" width="22" height="62" rx="11" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.2" transform="rotate(-18 39 161)" />
+    {/* Index */}
+    <rect x="56" y="75" width="22" height="75" rx="11" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.2" />
+    {/* Middle */}
+    <rect x="82" y="60" width="22" height="85" rx="11" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.2" />
+    {/* Ring */}
+    <rect x="108" y="68" width="22" height="80" rx="11" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.2" />
+    {/* Pinky */}
+    <rect x="134" y="88" width="20" height="65" rx="10" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.2" />
+
+    {/* Fingertip highlight circles */}
+    <circle cx="39"  cy="118" r="8" fill="hsl(var(--primary))" fillOpacity="0.25" stroke="hsl(var(--primary))" strokeWidth="1.5" />
+    <circle cx="67"  cy="80"  r="8" fill="hsl(var(--primary))" fillOpacity="0.25" stroke="hsl(var(--primary))" strokeWidth="1.5" />
+    <circle cx="93"  cy="65"  r="8" fill="hsl(var(--primary))" fillOpacity="0.25" stroke="hsl(var(--primary))" strokeWidth="1.5" />
+    <circle cx="119" cy="73"  r="8" fill="hsl(var(--primary))" fillOpacity="0.25" stroke="hsl(var(--primary))" strokeWidth="1.5" />
+    <circle cx="144" cy="93"  r="8" fill="hsl(var(--primary))" fillOpacity="0.25" stroke="hsl(var(--primary))" strokeWidth="1.5" />
+
+    {/* Finger labels */}
+    <text x="39"  y="121" textAnchor="middle" fontSize="6" fill="hsl(var(--primary))" fontWeight="bold">P</text>
+    <text x="67"  y="83"  textAnchor="middle" fontSize="6" fill="hsl(var(--primary))" fontWeight="bold">I</text>
+    <text x="93"  y="68"  textAnchor="middle" fontSize="6" fill="hsl(var(--primary))" fontWeight="bold">M</text>
+    <text x="119" y="76"  textAnchor="middle" fontSize="6" fill="hsl(var(--primary))" fontWeight="bold">A</text>
+    <text x="144" y="96"  textAnchor="middle" fontSize="6" fill="hsl(var(--primary))" fontWeight="bold">M</text>
+  </svg>
+);
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintCaptureProps>(({
@@ -89,15 +126,19 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   const videoRef    = useRef<HTMLVideoElement>(null);
   const canvasRef   = useRef<HTMLCanvasElement>(null);
   const streamRef   = useRef<MediaStream | null>(null);
-  const palmImgRef  = useRef<HTMLImageElement>(null);
+  const imgContRef  = useRef<HTMLDivElement>(null);  // container div for the palm image
 
   const [step,           setStep]           = useState<CaptureStep>('idle');
-  const [palmImage,      setPalmImage]      = useState<string | null>(null);   // full palm
-  const [capturedImage,  setCapturedImage]  = useState<string | null>(null);   // cropped finger
+  const [palmImage,      setPalmImage]      = useState<string | null>(null);
+  const [capturedImage,  setCapturedImage]  = useState<string | null>(null);
   const [selectedFinger, setSelectedFinger] = useState<FingerId | null>(null);
   const [tapPoint,       setTapPoint]       = useState<{ x: number; y: number } | null>(null);
+  // Screen coords of tap dot (corrected for letterboxing)
+  const [dotPos,         setDotPos]         = useState<{ x: number; y: number } | null>(null);
+  const [naturalSize,    setNaturalSize]    = useState<{ w: number; h: number } | null>(null);
   const [cameraError,    setCameraError]    = useState<string | null>(null);
   const [cropping,       setCropping]       = useState(false);
+  const [cropPreview,    setCropPreview]    = useState<string | null>(null);
 
   // ── Camera helpers ──────────────────────────────────────────────────────────
   const stopCamera = useCallback(() => {
@@ -107,10 +148,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
 
   const startCamera = useCallback(async () => {
     setCameraError(null);
-    // Move to preview step FIRST so the <video> element is mounted in the DOM
     setStep('preview');
-
-    // Small delay to ensure the video element is rendered before we assign srcObject
     await new Promise(resolve => setTimeout(resolve, 100));
 
     try {
@@ -126,15 +164,8 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
       const video = videoRef.current;
       if (video) {
         video.srcObject = stream;
-        // Wait for metadata so videoWidth/videoHeight are ready
-        await new Promise<void>((res) => {
-          video.onloadedmetadata = () => res();
-        });
-        try {
-          await video.play();
-        } catch {
-          // Some browsers auto-play without needing explicit play()
-        }
+        await new Promise<void>((res) => { video.onloadedmetadata = () => res(); });
+        try { await video.play(); } catch { /* auto-play */ }
       }
     } catch (err: any) {
       const msg = err?.name === 'NotAllowedError'
@@ -158,19 +189,72 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     if (!ctx) return;
 
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.95);
 
     stopCamera();
     setPalmImage(dataUrl);
     setTapPoint(null);
+    setDotPos(null);
+    setCropPreview(null);
     setSelectedFinger(null);
+    setNaturalSize(null);
     setStep('select-finger');
   }, [stopCamera]);
 
-  // ── Tap on palm image → store normalised point ──────────────────────────────
-  const handlePalmTap = useCallback((e: React.MouseEvent<HTMLImageElement> | React.TouchEvent<HTMLImageElement>) => {
-    const el = e.currentTarget;
+  // ── Compute letterbox-corrected tap point ─────────────────────────────────
+  const computeLetterboxedCoords = useCallback((
+    clientX: number,
+    clientY: number,
+    el: HTMLElement,
+    natW: number,
+    natH: number,
+  ): { normX: number; normY: number; dotX: number; dotY: number } | null => {
     const rect = el.getBoundingClientRect();
+    const elemW = rect.width;
+    const elemH = rect.height;
+
+    const imgAR = natW / natH;
+    const elemAR = elemW / elemH;
+
+    let imgRenderW: number, imgRenderH: number, imgOffX: number, imgOffY: number;
+
+    if (imgAR > elemAR) {
+      // Image is wider → fills width, letterboxed top/bottom
+      imgRenderW = elemW;
+      imgRenderH = elemW / imgAR;
+      imgOffX = 0;
+      imgOffY = (elemH - imgRenderH) / 2;
+    } else {
+      // Image is taller → fills height, pillarboxed left/right
+      imgRenderH = elemH;
+      imgRenderW = elemH * imgAR;
+      imgOffX = (elemW - imgRenderW) / 2;
+      imgOffY = 0;
+    }
+
+    const tapInImgX = clientX - rect.left - imgOffX;
+    const tapInImgY = clientY - rect.top  - imgOffY;
+
+    // Outside the actual image → ignore
+    if (tapInImgX < 0 || tapInImgX > imgRenderW || tapInImgY < 0 || tapInImgY > imgRenderH) return null;
+
+    const normX = tapInImgX / imgRenderW;
+    const normY = tapInImgY / imgRenderH;
+
+    // Screen position of dot (relative to container element), for CSS positioning
+    const dotX = (imgOffX + normX * imgRenderW) / elemW;
+    const dotY = (imgOffY + normY * imgRenderH) / elemH;
+
+    return { normX, normY, dotX, dotY };
+  }, []);
+
+  // ── Handle tap on palm image ─────────────────────────────────────────────
+  const handlePalmTap = useCallback(async (
+    e: React.MouseEvent<HTMLElement> | React.TouchEvent<HTMLElement>
+  ) => {
+    if (!naturalSize || !palmImage) return;
+
+    const el = e.currentTarget as HTMLElement;
     let clientX: number, clientY: number;
     if ('touches' in e) {
       clientX = e.touches[0].clientX;
@@ -179,13 +263,31 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
       clientX = (e as React.MouseEvent).clientX;
       clientY = (e as React.MouseEvent).clientY;
     }
-    setTapPoint({
-      x: (clientX - rect.left)  / rect.width,
-      y: (clientY - rect.top)   / rect.height,
-    });
+
+    const result = computeLetterboxedCoords(clientX, clientY, el, naturalSize.w, naturalSize.h);
+    if (!result) return;
+
+    const { normX, normY, dotX, dotY } = result;
+    setTapPoint({ x: normX, y: normY });
+    setDotPos({ x: dotX, y: dotY });
+
+    // Generate live crop preview
+    setCropPreview(null);
+    try {
+      const preview = await cropCircularRegion(palmImage, normX, normY, 0.18, 120);
+      setCropPreview(preview);
+    } catch {
+      // ignore preview error
+    }
+  }, [naturalSize, palmImage, computeLetterboxedCoords]);
+
+  // ── When palm image loads, record its natural dimensions ─────────────────
+  const handleImgLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
   }, []);
 
-  // ── Confirm: crop the selected finger region ─────────────────────────────────
+  // ── Confirm: crop the selected finger region ─────────────────────────────
   const confirmFinger = useCallback(async () => {
     if (!palmImage || !tapPoint || !selectedFinger) {
       toast.error('Toque un dedo en la imagen y seleccione cuál es');
@@ -193,7 +295,8 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     }
     setCropping(true);
     try {
-      const cropped = await cropCircularRegion(palmImage, tapPoint.x, tapPoint.y);
+      const cropped = await cropCircularRegion(palmImage, tapPoint.x, tapPoint.y, 0.18, 480);
+      console.log('[FingerprintCapture] Huella capturada — tamaño data URL:', cropped.length, 'chars');
       setCapturedImage(cropped);
       setStep('captured');
       onFingerprintChange?.(cropped);
@@ -205,25 +308,28 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     }
   }, [palmImage, tapPoint, selectedFinger, onFingerprintChange]);
 
-  // ── Retake ───────────────────────────────────────────────────────────────────
+  // ── Retake ───────────────────────────────────────────────────────────────
   const handleRetake = useCallback(() => {
     stopCamera();
     setPalmImage(null);
     setCapturedImage(null);
     setSelectedFinger(null);
     setTapPoint(null);
+    setDotPos(null);
+    setCropPreview(null);
+    setNaturalSize(null);
     setStep('idle');
     onFingerprintChange?.(null);
   }, [stopCamera, onFingerprintChange]);
 
-  // ── Imperative handle ────────────────────────────────────────────────────────
+  // ── Imperative handle ─────────────────────────────────────────────────────
   useImperativeHandle(ref, () => ({
     getFingerprintData: () => capturedImage,
     clear: handleRetake,
     isEmpty: () => !capturedImage,
   }), [capturedImage, handleRetake]);
 
-  React.useEffect(() => () => stopCamera(), [stopCamera]);
+  useEffect(() => () => stopCamera(), [stopCamera]);
 
   const fingerLabel = selectedFinger
     ? FINGERS.find(f => f.id === selectedFinger)?.label
@@ -254,7 +360,8 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                 {[
                   'Solicite al paciente que extienda la mano abierta frente a la cámara.',
                   'Encuadre toda la palma con los 5 dedos visibles y enfocados.',
-                  'Presione "Capturar palma" y luego toque el dedo deseado en la foto.',
+                  'Presione "Capturar palma" cuando la imagen esté nítida.',
+                  'Toque la YEMA (punta) del dedo deseado en la fotografía.',
                   'Seleccione el nombre del dedo y confirme para guardar la huella.',
                 ].map((txt, i) => (
                   <li key={i} className="flex items-start gap-2">
@@ -296,11 +403,16 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                   if (v.paused) v.play().catch(() => {});
                 }}
               />
-              {/* Hand-shape guide overlay */}
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none gap-2">
-                <Hand className="h-24 w-24 text-primary/60 stroke-1 drop-shadow-lg" />
-                <span className="text-xs font-semibold bg-black/60 text-primary px-2 py-1 rounded whitespace-nowrap">
-                  Muestre la palma completa con los 5 dedos
+              {/* SVG Palm silhouette guide */}
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <div style={{ width: '55%', maxWidth: '220px' }}>
+                  <PalmGuideOverlay />
+                </div>
+              </div>
+              {/* Instruction label */}
+              <div className="absolute bottom-3 left-0 right-0 flex justify-center pointer-events-none">
+                <span className="text-xs font-semibold bg-black/70 text-primary px-3 py-1.5 rounded-full whitespace-nowrap">
+                  Muestre la palma completa — 5 dedos visibles
                 </span>
               </div>
             </div>
@@ -325,40 +437,76 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
         {/* ── select-finger ────────────────────────────────────────────────── */}
         {step === 'select-finger' && palmImage && (
           <div className="space-y-4">
-            <p className="text-sm text-foreground font-medium text-center">
-              Toque el dedo cuya huella desea usar para la firma
-            </p>
+            {/* Instruction */}
+            <div className="bg-primary/10 border border-primary/30 rounded-lg p-3 text-center">
+              <p className="text-sm font-semibold text-primary">
+                👆 Toque la YEMA del dedo (la punta), no el nudillo
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Luego seleccione qué dedo es y presione Confirmar
+              </p>
+            </div>
 
-            {/* Palm image with tap-to-select + dot indicator */}
-            <div className="relative rounded-xl overflow-hidden border-2 border-primary select-none">
+            {/* Palm image with tap-to-select + corrected dot indicator */}
+            <div
+              ref={imgContRef}
+              className="relative rounded-xl overflow-hidden border-2 border-primary select-none cursor-crosshair"
+              onClick={handlePalmTap}
+              onTouchStart={handlePalmTap}
+            >
               <img
-                ref={palmImgRef}
                 src={palmImage}
                 alt="Palma del paciente"
-                className="w-full object-contain max-h-64 cursor-crosshair"
-                onClick={handlePalmTap}
-                onTouchStart={handlePalmTap}
+                className="w-full object-contain max-h-72"
+                onLoad={handleImgLoad}
                 draggable={false}
               />
-              {/* Tap point indicator */}
-              {tapPoint && (
+
+              {/* Corrected tap dot — position is relative to element (includes letterbox) */}
+              {dotPos && (
                 <div
                   className="absolute pointer-events-none"
                   style={{
-                    left:  `calc(${tapPoint.x * 100}% - 14px)`,
-                    top:   `calc(${tapPoint.y * 100}% - 14px)`,
+                    left: `calc(${dotPos.x * 100}% - 14px)`,
+                    top:  `calc(${dotPos.y * 100}% - 14px)`,
                   }}
                 >
                   <div className="w-7 h-7 rounded-full border-4 border-accent bg-accent/30 shadow-lg animate-ping absolute" />
                   <div className="w-7 h-7 rounded-full border-4 border-accent bg-accent/50 shadow-lg" />
                 </div>
               )}
+
+              {/* Finger zone hint labels overlaid on image */}
+              {!tapPoint && naturalSize && (
+                <div className="absolute inset-0 pointer-events-none flex items-end justify-center pb-3">
+                  <span className="text-[10px] font-bold bg-black/60 text-white px-2 py-1 rounded">
+                    Toque la yema de un dedo ↑
+                  </span>
+                </div>
+              )}
             </div>
 
             {tapPoint && (
               <p className="text-xs text-center text-accent font-medium">
-                ✅ Punto seleccionado — ahora indique qué dedo es
+                ✅ Punto seleccionado — seleccione el nombre del dedo
               </p>
+            )}
+
+            {/* Live crop preview */}
+            {cropPreview && (
+              <div className="flex items-center gap-3 bg-muted/40 rounded-lg p-3 border border-border">
+                <img
+                  src={cropPreview}
+                  alt="Vista previa de huella"
+                  className="w-16 h-16 rounded-full object-cover border-2 border-primary shadow"
+                />
+                <div>
+                  <p className="text-xs font-semibold text-foreground">Vista previa del recorte</p>
+                  <p className="text-xs text-muted-foreground">
+                    ¿Se ve la yema del dedo? Si no, toque otra zona.
+                  </p>
+                </div>
+              </div>
             )}
 
             {/* Finger name pills */}
@@ -437,7 +585,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
           </div>
         )}
 
-        {/* Tip footer (not shown during camera preview or after capture) */}
+        {/* Tip footer */}
         {(step === 'idle' || step === 'select-finger') && (
           <div className="bg-muted/40 rounded-lg p-3 flex items-start gap-2">
             <Fingerprint className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
