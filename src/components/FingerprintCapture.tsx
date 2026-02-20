@@ -482,7 +482,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     // Generate live crop preview
     setCropPreview(null);
     try {
-      const preview = await cropCircularRegion(palmImage, normX, normY, 0.20, 120, true);
+      const preview = await cropCircularRegion(palmImage, normX, normY, 0.32, 160, true);
       setCropPreview(preview);
     } catch {
       // ignore preview error
@@ -503,7 +503,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     }
     setCropping(true);
     try {
-      const cropped = await cropCircularRegion(palmImage, tapPoint.x, tapPoint.y, 0.20, 600, true);
+      const cropped = await cropCircularRegion(palmImage, tapPoint.x, tapPoint.y, 0.32, 700, true);
       console.log('[FingerprintCapture] Huella capturada — tamaño data URL:', cropped.length, 'chars');
       setCapturedImage(cropped);
       setStep('captured');
@@ -675,12 +675,12 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                 <div
                   className="absolute pointer-events-none"
                   style={{
-                    left: `calc(${dotPos.x * 100}% - 14px)`,
-                    top:  `calc(${dotPos.y * 100}% - 14px)`,
+                    left: `calc(${dotPos.x * 100}% - 36px)`,
+                    top:  `calc(${dotPos.y * 100}% - 36px)`,
                   }}
                 >
-                  <div className="w-7 h-7 rounded-full border-4 border-accent bg-accent/30 shadow-lg animate-ping absolute" />
-                  <div className="w-7 h-7 rounded-full border-4 border-accent bg-accent/50 shadow-lg" />
+                  <div className="w-[72px] h-[72px] rounded-full border-4 border-accent bg-accent/20 shadow-lg animate-ping absolute" />
+                  <div className="w-[72px] h-[72px] rounded-full border-[3px] border-accent bg-accent/30 shadow-lg" />
                 </div>
               )}
 
@@ -706,7 +706,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                 <img
                   src={cropPreview}
                   alt="Vista previa de huella"
-                  className="w-16 h-16 rounded-full object-cover border-2 border-primary shadow"
+                  className="w-24 h-24 rounded-full object-cover border-2 border-primary shadow"
                 />
                 <div>
                   <p className="text-xs font-semibold text-foreground">Vista previa del recorte</p>
