@@ -144,22 +144,26 @@ export class BasePDFGenerator {
   }
 
   /**
-   * Procesa la imagen de la huella dactilar para que luzca como un sello con tinta sobre papel:
-   * 1. Dibuja la imagen en un canvas circular (480×480)
-   * 2. Aplica binarización Otsu de alto contraste (surcos = negro puro, piel = blanco puro)
-   * 3. Devuelve PNG lossless para máxima nitidez en el PDF
+   * Pipeline dactilar completo para el PDF:
+   * 1. Escala de grises BT.709
+   * 2. CLAHE (ecualización local, bloques 32×32, clipLimit 3.0)
+   * 3. DoG (σ1=1, σ2=3) para resaltar crestas
+   * 4. Combinación 70% CLAHE + 30% DoG
+   * 5. Umbral adaptativo local Niblack (ventana 15×15, k=-0.2)
+   * 6. Render final: crestas = negro (tinta), fondo/surcos = blanco (papel)
+   * 7. Suavizado mínimo 0.3px para eliminar jaggies
    */
   protected applyInkStampEffect(dataUrl: string): Promise<string> {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const SIZE = 480;
+        const SIZE = 600; // mayor resolución para el PDF
         const canvas = document.createElement('canvas');
         canvas.width  = SIZE;
         canvas.height = SIZE;
         const ctx = canvas.getContext('2d')!;
 
-        // Fondo blanco (simula papel)
+        // Fondo blanco (papel)
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, SIZE, SIZE);
 
@@ -171,58 +175,126 @@ export class BasePDFGenerator {
         ctx.drawImage(img, 0, 0, SIZE, SIZE);
         ctx.restore();
 
-        // Leer píxeles y calcular umbral Otsu
+        // ── Leer píxeles ────────────────────────────────────────────────────
         const imageData = ctx.getImageData(0, 0, SIZE, SIZE);
         const d = imageData.data;
-        const total = SIZE * SIZE;
-        const gray = new Uint8ClampedArray(total);
-        const hist = new Int32Array(256);
+        const n = SIZE * SIZE;
 
-        for (let i = 0; i < total; i++) {
-          const lum = Math.round(0.2126 * d[i * 4] + 0.7152 * d[i * 4 + 1] + 0.0722 * d[i * 4 + 2]);
-          gray[i] = lum;
-          hist[lum]++;
+        // ── 1. Escala de grises BT.709 ────────────────────────────────────
+        const gray = new Float32Array(n);
+        for (let i = 0; i < n; i++) {
+          gray[i] = 0.2126 * d[i * 4] + 0.7152 * d[i * 4 + 1] + 0.0722 * d[i * 4 + 2];
         }
 
-        let sum = 0;
-        for (let t = 0; t < 256; t++) sum += t * hist[t];
-        let sumB = 0, wB = 0, maxVar = 0, threshold = 128;
-        for (let t = 0; t < 256; t++) {
-          wB += hist[t];
-          if (!wB) continue;
-          const wF = total - wB;
-          if (!wF) break;
-          sumB += t * hist[t];
-          const mB = sumB / wB;
-          const mF = (sum - sumB) / wF;
-          const v = wB * wF * (mB - mF) ** 2;
-          if (v > maxVar) { maxVar = v; threshold = t; }
-        }
-        // Desplazar umbral hacia tonos más oscuros para enfatizar surcos
-        threshold = Math.max(50, Math.min(210, threshold - 20));
+        // ── 2. CLAHE local (bloques 32×32) ────────────────────────────────
+        const blockSize = 32;
+        const clipLimit = 3.0;
+        const enhanced = new Float32Array(n);
+        const bw = Math.ceil(SIZE / blockSize);
+        const bh = Math.ceil(SIZE / blockSize);
 
+        for (let by = 0; by < bh; by++) {
+          for (let bx = 0; bx < bw; bx++) {
+            const x0 = bx * blockSize, y0 = by * blockSize;
+            const x1 = Math.min(x0 + blockSize, SIZE);
+            const y1 = Math.min(y0 + blockSize, SIZE);
+            const hist = new Float32Array(256);
+            let count = 0;
+            for (let y = y0; y < y1; y++) {
+              for (let x = x0; x < x1; x++) { hist[Math.round(gray[y * SIZE + x])]++; count++; }
+            }
+            const clip = clipLimit * (count / 256);
+            let excess = 0;
+            for (let i = 0; i < 256; i++) { if (hist[i] > clip) { excess += hist[i] - clip; hist[i] = clip; } }
+            const add = excess / 256;
+            for (let i = 0; i < 256; i++) hist[i] += add;
+            const lut = new Float32Array(256);
+            let cdf = 0;
+            for (let i = 0; i < 256; i++) { cdf += hist[i]; lut[i] = (cdf / count) * 255; }
+            for (let y = y0; y < y1; y++) {
+              for (let x = x0; x < x1; x++) {
+                enhanced[y * SIZE + x] = lut[Math.round(gray[y * SIZE + x])];
+              }
+            }
+          }
+        }
+
+        // ── 3. DoG — Diferencia de Gaussianas (σ1=1, σ2=3) ───────────────
+        const gaussBlur = (src: Float32Array, sigma: number): Float32Array => {
+          const r = Math.ceil(sigma * 2);
+          const ks = 2 * r + 1;
+          const ker = new Float32Array(ks);
+          let ks_ = 0;
+          for (let i = 0; i < ks; i++) { const x = i - r; ker[i] = Math.exp(-(x*x)/(2*sigma*sigma)); ks_ += ker[i]; }
+          for (let i = 0; i < ks; i++) ker[i] /= ks_;
+          const tmp = new Float32Array(n);
+          for (let y = 0; y < SIZE; y++) {
+            for (let x = 0; x < SIZE; x++) {
+              let v = 0;
+              for (let k = -r; k <= r; k++) { const xi = Math.max(0, Math.min(SIZE-1, x+k)); v += src[y*SIZE+xi]*ker[k+r]; }
+              tmp[y*SIZE+x] = v;
+            }
+          }
+          const dst = new Float32Array(n);
+          for (let y = 0; y < SIZE; y++) {
+            for (let x = 0; x < SIZE; x++) {
+              let v = 0;
+              for (let k = -r; k <= r; k++) { const yi = Math.max(0, Math.min(SIZE-1, y+k)); v += tmp[yi*SIZE+x]*ker[k+r]; }
+              dst[y*SIZE+x] = v;
+            }
+          }
+          return dst;
+        };
+
+        const blur1 = gaussBlur(enhanced, 1.0);
+        const blur2 = gaussBlur(enhanced, 3.0);
+        let dogMin = Infinity, dogMax = -Infinity;
+        const dog = new Float32Array(n);
+        for (let i = 0; i < n; i++) { dog[i] = blur1[i] - blur2[i]; if (dog[i]<dogMin) dogMin=dog[i]; if (dog[i]>dogMax) dogMax=dog[i]; }
+        const dogRange = dogMax - dogMin || 1;
+        const combined = new Float32Array(n);
+        for (let i = 0; i < n; i++) {
+          const dogN = ((dog[i] - dogMin) / dogRange) * 255;
+          combined[i] = Math.min(255, Math.max(0, 0.7 * enhanced[i] + 0.3 * dogN));
+        }
+
+        // ── 4. Umbral adaptativo local Niblack (ventana 15×15, k=-0.2) ────
         const halfSize = SIZE / 2;
-        for (let i = 0; i < total; i++) {
-          const x = i % SIZE;
-          const y = Math.floor(i / SIZE);
-          const dx = x - halfSize;
-          const dy = y - halfSize;
-          const inCircle = dx * dx + dy * dy <= (halfSize - 2) * (halfSize - 2);
-          // Surco oscuro dentro del círculo → negro; todo lo demás → blanco
-          const val = (inCircle && gray[i] < threshold) ? 0 : 255;
-          d[i * 4]     = val;
-          d[i * 4 + 1] = val;
-          d[i * 4 + 2] = val;
-          d[i * 4 + 3] = 255;
+        const halfW = 7;
+        const result = new Uint8ClampedArray(n);
+
+        for (let py = 0; py < SIZE; py++) {
+          for (let px = 0; px < SIZE; px++) {
+            const idx = py * SIZE + px;
+            const dx = px - halfSize, dy = py - halfSize;
+            if (dx*dx + dy*dy > (halfSize-2)*(halfSize-2)) { result[idx] = 255; continue; }
+
+            let sum = 0, sumSq = 0, cnt = 0;
+            for (let ky = Math.max(0, py-halfW); ky <= Math.min(SIZE-1, py+halfW); ky++) {
+              for (let kx = Math.max(0, px-halfW); kx <= Math.min(SIZE-1, px+halfW); kx++) {
+                const v = combined[ky*SIZE+kx]; sum += v; sumSq += v*v; cnt++;
+              }
+            }
+            const mean = sum / cnt;
+            const stddev = Math.sqrt(Math.max(0, sumSq/cnt - mean*mean));
+            const localThreshold = mean - 0.2 * stddev;
+            result[idx] = combined[idx] < localThreshold ? 0 : 255;
+          }
+        }
+
+        // ── 5. Escribir al canvas ─────────────────────────────────────────
+        for (let i = 0; i < n; i++) {
+          d[i*4] = d[i*4+1] = d[i*4+2] = result[i];
+          d[i*4+3] = 255;
         }
         ctx.putImageData(imageData, 0, 0);
 
-        // Suavizado mínimo para eliminar píxeles sueltos
+        // Suavizado mínimo para eliminar jaggies
         ctx.filter = 'blur(0.3px)';
         ctx.drawImage(canvas, 0, 0);
         ctx.filter = 'none';
 
-        console.log('[PDF] applyInkStampEffect completado — threshold:', threshold);
+        console.log('[PDF] applyInkStampEffect (Niblack+CLAHE+DoG) completado');
         resolve(canvas.toDataURL('image/png', 1.0));
       };
       img.onerror = () => {
