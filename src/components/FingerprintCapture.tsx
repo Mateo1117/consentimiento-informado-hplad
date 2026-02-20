@@ -163,16 +163,13 @@ function applyInkEffect(ctx: CanvasRenderingContext2D, size: number): void {
   const n = size * size;
   const halfSize = size / 2;
 
-  // ── 1. Grayscale BT.709 ──────────────────────────────────────────────────
   const gray = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     gray[i] = 0.2126 * d[i*4] + 0.7152 * d[i*4+1] + 0.0722 * d[i*4+2];
   }
 
-  // ── 2. CLAHE ─────────────────────────────────────────────────────────────
   const clahe = applyCLAHE(gray, size, size, 24, 2.5);
 
-  // ── 3. DoG ridge filter (σ1=0.8, σ2=2.5) ────────────────────────────────
   const g1 = gaussianBlur(clahe, size, size, 0.8);
   const g2 = gaussianBlur(clahe, size, size, 2.5);
   const dogRaw = new Float32Array(n);
@@ -186,30 +183,25 @@ function applyInkEffect(ctx: CanvasRenderingContext2D, size: number): void {
   const dogN = new Float32Array(n);
   for (let i = 0; i < n; i++) dogN[i] = ((dogRaw[i] - dMin) / dRange) * 255;
 
-  // ── 4. Sobel gradient magnitude ───────────────────────────────────────────
   const sobel = sobelMagnitude(clahe, size, size);
 
-  // ── 5. Fusion ─────────────────────────────────────────────────────────────
   const fused = new Float32Array(n);
   for (let i = 0; i < n; i++) {
     fused[i] = Math.min(255, Math.max(0, 0.55 * clahe[i] + 0.30 * dogN[i] + 0.15 * sobel[i]));
   }
 
-  // ── 6. Adaptive Niblack threshold ────────────────────────────────────────
-  const halfW = 7; // 15×15 window
-  const k = -0.12; // negative → threshold slightly below mean → more ridges captured
+  const halfW = 7;
+  const k = -0.12;
   const result = new Uint8ClampedArray(n);
 
   for (let py = 0; py < size; py++) {
     for (let px = 0; px < size; px++) {
       const idx = py * size + px;
       const dx = px - halfSize, dy = py - halfSize;
-
       if (dx*dx + dy*dy > (halfSize - 1) * (halfSize - 1)) {
-        result[idx] = 255; // outside circle → white
+        result[idx] = 255;
         continue;
       }
-
       let sum = 0, sumSq = 0, cnt = 0;
       for (let ky = Math.max(0, py - halfW); ky <= Math.min(size - 1, py + halfW); ky++) {
         for (let kx = Math.max(0, px - halfW); kx <= Math.min(size - 1, px + halfW); kx++) {
@@ -219,12 +211,10 @@ function applyInkEffect(ctx: CanvasRenderingContext2D, size: number): void {
       }
       const mean = sum / cnt;
       const stddev = Math.sqrt(Math.max(0, sumSq / cnt - mean * mean));
-      // pixel < (mean + k·σ) → ridge → black ink
       result[idx] = fused[idx] < mean + k * stddev ? 0 : 255;
     }
   }
 
-  // ── 7. Write back + anti-jaggies ─────────────────────────────────────────
   for (let i = 0; i < n; i++) {
     d[i*4] = d[i*4+1] = d[i*4+2] = result[i];
     d[i*4+3] = 255;
@@ -235,13 +225,107 @@ function applyInkEffect(ctx: CanvasRenderingContext2D, size: number): void {
   ctx.filter = 'none';
 }
 
-// ─── Crop helper ──────────────────────────────────────────────────────────────
-function cropCircularRegion(
+/**
+ * Same ink pipeline but for a capsule (W × H) canvas.
+ * Pixels outside the capsule shape are forced to white.
+ */
+function applyInkEffectCapsule(ctx: CanvasRenderingContext2D, outW: number, outH: number): void {
+  const imageData = ctx.getImageData(0, 0, outW, outH);
+  const d = imageData.data;
+  const n = outW * outH;
+
+  const gray = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    gray[i] = 0.2126 * d[i*4] + 0.7152 * d[i*4+1] + 0.0722 * d[i*4+2];
+  }
+
+  const clahe = applyCLAHE(gray, outW, outH, 24, 2.5);
+  const g1 = gaussianBlur(clahe, outW, outH, 0.8);
+  const g2 = gaussianBlur(clahe, outW, outH, 2.5);
+  const dogRaw = new Float32Array(n);
+  let dMin = Infinity, dMax = -Infinity;
+  for (let i = 0; i < n; i++) {
+    dogRaw[i] = g1[i] - g2[i];
+    if (dogRaw[i] < dMin) dMin = dogRaw[i];
+    if (dogRaw[i] > dMax) dMax = dogRaw[i];
+  }
+  const dRange = dMax - dMin || 1;
+  const dogN = new Float32Array(n);
+  for (let i = 0; i < n; i++) dogN[i] = ((dogRaw[i] - dMin) / dRange) * 255;
+
+  const sobel = sobelMagnitude(clahe, outW, outH);
+  const fused = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    fused[i] = Math.min(255, Math.max(0, 0.55 * clahe[i] + 0.30 * dogN[i] + 0.15 * sobel[i]));
+  }
+
+  const halfW = 7;
+  const k = -0.12;
+  const capR = outW / 2; // radius of rounded caps
+  const result = new Uint8ClampedArray(n);
+
+  const insideCapsule = (px: number, py: number): boolean => {
+    // Horizontal bounds
+    if (px < 0 || px >= outW || py < 0 || py >= outH) return false;
+    // Rectangular body (between the two caps)
+    if (py >= capR && py <= outH - capR) return true;
+    // Top cap
+    if (py < capR) {
+      const dx = px - capR, dy = py - capR;
+      return dx*dx + dy*dy <= capR * capR;
+    }
+    // Bottom cap
+    const dx = px - capR, dy = py - (outH - capR);
+    return dx*dx + dy*dy <= capR * capR;
+  };
+
+  for (let py = 0; py < outH; py++) {
+    for (let px = 0; px < outW; px++) {
+      const idx = py * outW + px;
+      if (!insideCapsule(px, py)) {
+        result[idx] = 255;
+        continue;
+      }
+      let sum = 0, sumSq = 0, cnt = 0;
+      for (let ky = Math.max(0, py - halfW); ky <= Math.min(outH - 1, py + halfW); ky++) {
+        for (let kx = Math.max(0, px - halfW); kx <= Math.min(outW - 1, px + halfW); kx++) {
+          const v = fused[ky * outW + kx];
+          sum += v; sumSq += v * v; cnt++;
+        }
+      }
+      const mean = sum / cnt;
+      const stddev = Math.sqrt(Math.max(0, sumSq / cnt - mean * mean));
+      result[idx] = fused[idx] < mean + k * stddev ? 0 : 255;
+    }
+  }
+
+  for (let i = 0; i < n; i++) {
+    d[i*4] = d[i*4+1] = d[i*4+2] = result[i];
+    d[i*4+3] = 255;
+  }
+  ctx.putImageData(imageData, 0, 0);
+  ctx.filter = 'blur(0.25px)';
+  ctx.drawImage(ctx.canvas, 0, 0);
+  ctx.filter = 'none';
+}
+
+// ─── Crop helper — capsule/phalanx shape ──────────────────────────────────────
+/**
+ * Crops the image in a capsule (rounded-rectangle) shape that mirrors the
+ * natural form of a finger phalanx: taller than it is wide, with fully
+ * rounded top and bottom ends.
+ *
+ * widthFraction  — half-width of capsule as fraction of min(W,H)
+ * heightFraction — half-height of capsule as fraction of min(W,H)
+ */
+function cropCapsuleRegion(
   imgDataUrl: string,
   normX: number,
   normY: number,
-  radiusFraction = 0.20,   // mayor radio para capturar yema completa
-  outSize = 600,            // mayor resolución para mejor detalle
+  widthFraction  = 0.22,   // narrower than the old circle radius
+  heightFraction = 0.38,   // taller — covers full phalanx segment
+  outW  = 560,
+  outH  = 900,
   applyInk = false,
 ): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -249,34 +333,51 @@ function cropCircularRegion(
     img.onload = () => {
       const W = img.naturalWidth;
       const H = img.naturalHeight;
-      const radius = Math.min(W, H) * radiusFraction;
+      const base = Math.min(W, H);
+
+      const rW = base * widthFraction;   // half-width in source pixels
+      const rH = base * heightFraction;  // half-height in source pixels
 
       const cx = normX * W;
       const cy = normY * H;
 
-      const sx = Math.max(0, cx - radius);
-      const sy = Math.max(0, cy - radius);
-      const sw = Math.min(radius * 2, W - sx);
-      const sh = Math.min(radius * 2, H - sy);
+      const sx = Math.max(0, cx - rW);
+      const sy = Math.max(0, cy - rH);
+      const sw = Math.min(rW * 2, W - sx);
+      const sh = Math.min(rH * 2, H - sy);
 
       const canvas = document.createElement('canvas');
-      canvas.width  = outSize;
-      canvas.height = outSize;
+      canvas.width  = outW;
+      canvas.height = outH;
       const ctx = canvas.getContext('2d')!;
 
-      // White background + circular clip
+      // White background
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, outSize, outSize);
+      ctx.fillRect(0, 0, outW, outH);
+
+      // Capsule clip path
       ctx.save();
       ctx.beginPath();
-      ctx.arc(outSize / 2, outSize / 2, outSize / 2, 0, Math.PI * 2);
+      const r = outW / 2;  // radius for the rounded caps = half of width
+      const x0 = 0, y0 = 0;
+      // Top-left arc start → top-right → bottom-right → bottom-left → back
+      ctx.moveTo(x0 + r, y0);
+      ctx.lineTo(outW - r, y0);
+      ctx.arcTo(outW, y0,      outW, y0 + r,       r);
+      ctx.lineTo(outW, outH - r);
+      ctx.arcTo(outW, outH,    outW - r, outH,     r);
+      ctx.lineTo(x0 + r, outH);
+      ctx.arcTo(x0,  outH,    x0, outH - r,        r);
+      ctx.lineTo(x0, y0 + r);
+      ctx.arcTo(x0,  y0,      x0 + r, y0,          r);
+      ctx.closePath();
       ctx.clip();
-      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outSize, outSize);
+
+      ctx.drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
       ctx.restore();
 
-      // Aplicar efecto de tinta si se solicita
       if (applyInk) {
-        applyInkEffect(ctx, outSize);
+        applyInkEffectCapsule(ctx, outW, outH);
       }
 
       resolve(canvas.toDataURL('image/png', 1.0));
@@ -479,10 +580,10 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     setTapPoint({ x: normX, y: normY });
     setDotPos({ x: dotX, y: dotY });
 
-    // Generate live crop preview
+    // Generate live crop preview (capsule shape, small preview size)
     setCropPreview(null);
     try {
-      const preview = await cropCircularRegion(palmImage, normX, normY, 0.32, 160, true);
+      const preview = await cropCapsuleRegion(palmImage, normX, normY, 0.22, 0.38, 96, 154, true);
       setCropPreview(preview);
     } catch {
       // ignore preview error
@@ -503,7 +604,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     }
     setCropping(true);
     try {
-      const cropped = await cropCircularRegion(palmImage, tapPoint.x, tapPoint.y, 0.32, 700, true);
+      const cropped = await cropCapsuleRegion(palmImage, tapPoint.x, tapPoint.y, 0.22, 0.38, 560, 900, true);
       console.log('[FingerprintCapture] Huella capturada — tamaño data URL:', cropped.length, 'chars');
       setCapturedImage(cropped);
       setStep('captured');
@@ -670,17 +771,36 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                 draggable={false}
               />
 
-              {/* Corrected tap dot — position is relative to element (includes letterbox) */}
+              {/* Capsule selector — shaped like a finger phalanx (taller than wide) */}
               {dotPos && (
                 <div
                   className="absolute pointer-events-none"
                   style={{
                     left: `calc(${dotPos.x * 100}% - 36px)`,
-                    top:  `calc(${dotPos.y * 100}% - 36px)`,
+                    top:  `calc(${dotPos.y * 100}% - 58px)`,
                   }}
                 >
-                  <div className="w-[72px] h-[72px] rounded-full border-4 border-accent bg-accent/20 shadow-lg animate-ping absolute" />
-                  <div className="w-[72px] h-[72px] rounded-full border-[3px] border-accent bg-accent/30 shadow-lg" />
+                  {/* Outer pulsing capsule */}
+                  <div
+                    className="absolute animate-ping"
+                    style={{
+                      width: '72px', height: '116px',
+                      borderRadius: '36px',
+                      border: '4px solid hsl(var(--accent))',
+                      background: 'hsla(var(--accent) / 0.15)',
+                      boxShadow: '0 0 16px 4px hsla(var(--accent) / 0.4)',
+                    }}
+                  />
+                  {/* Inner solid capsule */}
+                  <div
+                    style={{
+                      width: '72px', height: '116px',
+                      borderRadius: '36px',
+                      border: '3px solid hsl(var(--accent))',
+                      background: 'hsla(var(--accent) / 0.25)',
+                      boxShadow: '0 0 10px 2px hsla(var(--accent) / 0.5)',
+                    }}
+                  />
                 </div>
               )}
 
@@ -700,13 +820,13 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
               </p>
             )}
 
-            {/* Live crop preview */}
+            {/* Live crop preview — capsule shaped */}
             {cropPreview && (
               <div className="flex items-center gap-3 bg-muted/40 rounded-lg p-3 border border-border">
                 <img
                   src={cropPreview}
                   alt="Vista previa de huella"
-                  className="w-24 h-24 rounded-full object-cover border-2 border-primary shadow"
+                  style={{ width: '54px', height: '86px', borderRadius: '27px', objectFit: 'cover', border: '2px solid hsl(var(--primary))', boxShadow: '0 2px 8px rgba(0,0,0,0.15)' }}
                 />
                 <div>
                   <p className="text-xs font-semibold text-foreground">Vista previa del recorte</p>
@@ -759,23 +879,35 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
         {/* ── captured ─────────────────────────────────────────────────────── */}
         {step === 'captured' && capturedImage && (
           <div className="flex items-center gap-4 bg-muted/30 rounded-xl p-4 border border-border">
-            {/* Huella estilo sello de tinta — doble anillo */}
+            {/* Huella estilo sello de tinta — doble anillo cápsula/falange */}
             <div className="relative shrink-0">
-              {/* Anillo exterior del sello */}
+              {/* Marco exterior tipo sello — forma de falange */}
               <div
-                className="w-24 h-24 rounded-full flex items-center justify-center shadow-md"
-                style={{ border: '2.5px solid #141414', padding: '2px', background: '#fff' }}
+                style={{
+                  width: '64px', height: '102px',
+                  borderRadius: '32px',
+                  border: '2.5px solid #141414',
+                  padding: '2px',
+                  background: '#fff',
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
               >
-                {/* Anillo interior del sello */}
+                {/* Marco interior */}
                 <div
-                  className="w-full h-full rounded-full overflow-hidden flex items-center justify-center"
-                  style={{ border: '1px solid #141414', background: '#fff' }}
+                  style={{
+                    width: '100%', height: '100%',
+                    borderRadius: '29px',
+                    border: '1px solid #141414',
+                    background: '#fff',
+                    overflow: 'hidden',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  }}
                 >
                   <img
                     src={capturedImage}
                     alt="Huella dactilar capturada"
-                    className="w-full h-full object-cover"
-                    style={{ filter: 'grayscale(100%) contrast(160%)' }}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'grayscale(100%) contrast(160%)' }}
                   />
                 </div>
               </div>
