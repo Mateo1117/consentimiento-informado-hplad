@@ -33,104 +33,90 @@ const FINGERS = [
 
 type FingerId = typeof FINGERS[number]['id'];
 
-// ─── Fingerprint ink effect — pipeline dactiloscópico ─────────────────────────
-/**
- * Pipeline completo para convertir una foto del dedo en una impresión dactilar
- * tipo tinta sobre papel:
- *
- * 1. Escala de grises ponderada (luminancia BT.709)
- * 2. CLAHE simplificado: ecualización local de histograma por bloques 8×8
- *    → aumenta el contraste local de crestas y surcos uniformemente
- * 3. Filtro DoG (Diferencia de Gaussianas): σ1=1, σ2=3
- *    → resalta los bordes de las crestas, suprime fondos planos
- * 4. Umbral adaptativo local (ventana 15×15) — Niblack modificado
- *    → binariza sin perder detalle en zonas de baja iluminación
- * 5. Las crestas (zonas oscuras en la foto = piel elevada que presiona el papel)
- *    se pintan en NEGRO; los surcos y fondo en BLANCO — igual que tinta real
- * 6. Suavizado muy ligero (0.3px) para eliminar jaggies sin perder nitidez
- */
+// ─── Shared fingerprint DSP utilities ─────────────────────────────────────────
 
-/** Aplica un desenfoque gaussiano simplificado sobre un array de grises */
+/** Separable Gaussian blur — sigma can be fractional */
 function gaussianBlur(src: Float32Array, w: number, h: number, sigma: number): Float32Array {
-  const radius = Math.ceil(sigma * 2);
-  const kernelSize = 2 * radius + 1;
-  const kernel = new Float32Array(kernelSize);
-  let kernelSum = 0;
-  for (let i = 0; i < kernelSize; i++) {
+  const radius = Math.ceil(sigma * 3); // 3σ coverage
+  const ks = 2 * radius + 1;
+  const ker = new Float32Array(ks);
+  let ksum = 0;
+  for (let i = 0; i < ks; i++) {
     const x = i - radius;
-    kernel[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
-    kernelSum += kernel[i];
+    ker[i] = Math.exp(-(x * x) / (2 * sigma * sigma));
+    ksum += ker[i];
   }
-  for (let i = 0; i < kernelSize; i++) kernel[i] /= kernelSum;
+  for (let i = 0; i < ks; i++) ker[i] /= ksum;
 
   const tmp = new Float32Array(w * h);
-  // Horizontal pass
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      let val = 0;
+      let v = 0;
       for (let k = -radius; k <= radius; k++) {
         const xi = Math.max(0, Math.min(w - 1, x + k));
-        val += src[y * w + xi] * kernel[k + radius];
+        v += src[y * w + xi] * ker[k + radius];
       }
-      tmp[y * w + x] = val;
+      tmp[y * w + x] = v;
     }
   }
   const dst = new Float32Array(w * h);
-  // Vertical pass
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
-      let val = 0;
+      let v = 0;
       for (let k = -radius; k <= radius; k++) {
         const yi = Math.max(0, Math.min(h - 1, y + k));
-        val += tmp[yi * w + x] * kernel[k + radius];
+        v += tmp[yi * w + x] * ker[k + radius];
       }
-      dst[y * w + x] = val;
+      dst[y * w + x] = v;
     }
   }
   return dst;
 }
 
-/** CLAHE simplificado: ecualización local de histograma por bloques */
-function applyCLAHE(gray: Float32Array, w: number, h: number, blockSize = 32, clipLimit = 3.0): Float32Array {
+/**
+ * CLAHE — Contrast Limited Adaptive Histogram Equalization
+ * blockSize: tile size in pixels; clipLimit: histogram clip multiplier (2–4 typical)
+ */
+function applyCLAHE(
+  gray: Float32Array, w: number, h: number,
+  blockSize = 24, clipLimit = 2.5,
+): Float32Array {
   const out = new Float32Array(w * h);
   const bw = Math.ceil(w / blockSize);
   const bh = Math.ceil(h / blockSize);
 
   for (let by = 0; by < bh; by++) {
     for (let bx = 0; bx < bw; bx++) {
-      const x0 = bx * blockSize;
-      const y0 = by * blockSize;
+      const x0 = bx * blockSize, y0 = by * blockSize;
       const x1 = Math.min(x0 + blockSize, w);
       const y1 = Math.min(y0 + blockSize, h);
 
-      // Histograma del bloque
       const hist = new Float32Array(256);
       let count = 0;
       for (let y = y0; y < y1; y++) {
         for (let x = x0; x < x1; x++) {
-          hist[Math.round(gray[y * w + x])]++;
+          hist[Math.round(Math.min(255, Math.max(0, gray[y * w + x])))]++;
           count++;
         }
       }
 
-      // Clip + redistribución uniforme (CLAHE)
+      // Clip histogram and redistribute excess uniformly
       const clip = clipLimit * (count / 256);
       let excess = 0;
       for (let i = 0; i < 256; i++) {
         if (hist[i] > clip) { excess += hist[i] - clip; hist[i] = clip; }
       }
       const add = excess / 256;
-      for (let i = 0; i < 256; i++) hist[i] += add;
+      for (let i = 0; i < 256; i++) hist[i] = Math.min(clip, hist[i] + add);
 
-      // CDF para lookup table
+      // Build CDF → LUT
       const lut = new Float32Array(256);
       let cdf = 0;
       for (let i = 0; i < 256; i++) { cdf += hist[i]; lut[i] = (cdf / count) * 255; }
 
-      // Aplicar LUT al bloque
       for (let y = y0; y < y1; y++) {
         for (let x = x0; x < x1; x++) {
-          out[y * w + x] = lut[Math.round(gray[y * w + x])];
+          out[y * w + x] = lut[Math.round(Math.min(255, Math.max(0, gray[y * w + x])))];
         }
       }
     }
@@ -138,95 +124,113 @@ function applyCLAHE(gray: Float32Array, w: number, h: number, blockSize = 32, cl
   return out;
 }
 
+/**
+ * Gradient-magnitude map — Sobel 3×3.
+ * Returns magnitude normalised to [0,255].
+ */
+function sobelMagnitude(src: Float32Array, w: number, h: number): Float32Array {
+  const mag = new Float32Array(w * h);
+  let maxMag = 0;
+  for (let y = 1; y < h - 1; y++) {
+    for (let x = 1; x < w - 1; x++) {
+      const p = (r: number, c: number) => src[(y + r) * w + (x + c)];
+      const gx = -p(-1,-1) - 2*p(0,-1) - p(1,-1) + p(-1,1) + 2*p(0,1) + p(1,1);
+      const gy = -p(-1,-1) - 2*p(-1,0) - p(-1,1) + p(1,-1) + 2*p(1,0) + p(1,1);
+      const m = Math.sqrt(gx*gx + gy*gy);
+      mag[y * w + x] = m;
+      if (m > maxMag) maxMag = m;
+    }
+  }
+  if (maxMag > 0) for (let i = 0; i < mag.length; i++) mag[i] = (mag[i] / maxMag) * 255;
+  return mag;
+}
+
+/**
+ * Full dactyloscopic ink-print pipeline applied to an already-drawn canvas:
+ *  1. BT.709 grayscale
+ *  2. CLAHE (24px tiles, clip=2.5) — normalize local contrast across the fingertip
+ *  3. DoG (σ1=0.8, σ2=2.5) — ridge band-pass: keeps only ridge-width frequencies
+ *  4. Sobel gradient magnitude — emphasises ridge edges
+ *  5. Fusion: 55% CLAHE + 30% DoG + 15% Sobel
+ *  6. Adaptive Niblack threshold (15×15 window, k=-0.12)
+ *     dark pixels (ridges touching paper) → 0 (black ink)
+ *     light pixels (furrows, background) → 255 (white paper)
+ *  7. 0.25px Gaussian to remove jaggies while preserving ridge sharpness
+ */
 function applyInkEffect(ctx: CanvasRenderingContext2D, size: number): void {
   const imageData = ctx.getImageData(0, 0, size, size);
   const d = imageData.data;
   const n = size * size;
+  const halfSize = size / 2;
 
-  // ── 1. Escala de grises ponderada ─────────────────────────────────────────
+  // ── 1. Grayscale BT.709 ──────────────────────────────────────────────────
   const gray = new Float32Array(n);
   for (let i = 0; i < n; i++) {
-    gray[i] = 0.2126 * d[i * 4] + 0.7152 * d[i * 4 + 1] + 0.0722 * d[i * 4 + 2];
+    gray[i] = 0.2126 * d[i*4] + 0.7152 * d[i*4+1] + 0.0722 * d[i*4+2];
   }
 
-  // ── 2. CLAHE — mejora contraste local ─────────────────────────────────────
-  const enhanced = applyCLAHE(gray, size, size, 32, 3.0);
+  // ── 2. CLAHE ─────────────────────────────────────────────────────────────
+  const clahe = applyCLAHE(gray, size, size, 24, 2.5);
 
-  // ── 3. DoG (Diferencia de Gaussianas) — realza crestas ───────────────────
-  const blur1 = gaussianBlur(enhanced, size, size, 1.0);  // fino
-  const blur2 = gaussianBlur(enhanced, size, size, 3.0);  // grueso
-  const dog = new Float32Array(n);
-  let dogMin = Infinity, dogMax = -Infinity;
+  // ── 3. DoG ridge filter (σ1=0.8, σ2=2.5) ────────────────────────────────
+  const g1 = gaussianBlur(clahe, size, size, 0.8);
+  const g2 = gaussianBlur(clahe, size, size, 2.5);
+  const dogRaw = new Float32Array(n);
+  let dMin = Infinity, dMax = -Infinity;
   for (let i = 0; i < n; i++) {
-    dog[i] = blur1[i] - blur2[i];
-    if (dog[i] < dogMin) dogMin = dog[i];
-    if (dog[i] > dogMax) dogMax = dog[i];
+    dogRaw[i] = g1[i] - g2[i];
+    if (dogRaw[i] < dMin) dMin = dogRaw[i];
+    if (dogRaw[i] > dMax) dMax = dogRaw[i];
   }
-  // Normalizar DoG a [0,255]
-  const dogRange = dogMax - dogMin || 1;
-  const dogNorm = new Float32Array(n);
+  const dRange = dMax - dMin || 1;
+  const dogN = new Float32Array(n);
+  for (let i = 0; i < n; i++) dogN[i] = ((dogRaw[i] - dMin) / dRange) * 255;
+
+  // ── 4. Sobel gradient magnitude ───────────────────────────────────────────
+  const sobel = sobelMagnitude(clahe, size, size);
+
+  // ── 5. Fusion ─────────────────────────────────────────────────────────────
+  const fused = new Float32Array(n);
   for (let i = 0; i < n; i++) {
-    dogNorm[i] = ((dog[i] - dogMin) / dogRange) * 255;
+    fused[i] = Math.min(255, Math.max(0, 0.55 * clahe[i] + 0.30 * dogN[i] + 0.15 * sobel[i]));
   }
 
-  // ── 4. Combinar CLAHE + DoG con pesos ────────────────────────────────────
-  // 70% CLAHE (estructura global) + 30% DoG (detalle de bordes)
-  const combined = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    combined[i] = Math.min(255, Math.max(0, 0.7 * enhanced[i] + 0.3 * dogNorm[i]));
-  }
-
-  // ── 5. Umbral adaptativo local (Niblack modificado, ventana 15×15) ────────
-  const halfW = 7;
-  const result = new Uint8ClampedArray(n); // 0 = negro (cresta/tinta), 255 = blanco (papel)
-  const halfSize = size / 2;
+  // ── 6. Adaptive Niblack threshold ────────────────────────────────────────
+  const halfW = 7; // 15×15 window
+  const k = -0.12; // negative → threshold slightly below mean → more ridges captured
+  const result = new Uint8ClampedArray(n);
 
   for (let py = 0; py < size; py++) {
     for (let px = 0; px < size; px++) {
       const idx = py * size + px;
+      const dx = px - halfSize, dy = py - halfSize;
 
-      // Fuera del círculo → blanco
-      const dx = px - halfSize;
-      const dy = py - halfSize;
-      if (dx * dx + dy * dy > (halfSize - 1) * (halfSize - 1)) {
-        result[idx] = 255;
+      if (dx*dx + dy*dy > (halfSize - 1) * (halfSize - 1)) {
+        result[idx] = 255; // outside circle → white
         continue;
       }
 
-      // Media local en ventana
       let sum = 0, sumSq = 0, cnt = 0;
       for (let ky = Math.max(0, py - halfW); ky <= Math.min(size - 1, py + halfW); ky++) {
         for (let kx = Math.max(0, px - halfW); kx <= Math.min(size - 1, px + halfW); kx++) {
-          const v = combined[ky * size + kx];
-          sum += v;
-          sumSq += v * v;
-          cnt++;
+          const v = fused[ky * size + kx];
+          sum += v; sumSq += v * v; cnt++;
         }
       }
       const mean = sum / cnt;
-      const variance = sumSq / cnt - mean * mean;
-      const stddev = Math.sqrt(Math.max(0, variance));
-
-      // Niblack: threshold = mean + k * stddev  (k=-0.2 para huellas)
-      const localThreshold = mean - 0.2 * stddev;
-
-      // Pixel < umbral local → cresta (oscuro) → tinta negra
-      // Pixel >= umbral → surco / fondo → papel blanco
-      result[idx] = combined[idx] < localThreshold ? 0 : 255;
+      const stddev = Math.sqrt(Math.max(0, sumSq / cnt - mean * mean));
+      // pixel < (mean + k·σ) → ridge → black ink
+      result[idx] = fused[idx] < mean + k * stddev ? 0 : 255;
     }
   }
 
-  // ── 6. Escribir resultado al canvas ──────────────────────────────────────
+  // ── 7. Write back + anti-jaggies ─────────────────────────────────────────
   for (let i = 0; i < n; i++) {
-    d[i * 4]     = result[i];
-    d[i * 4 + 1] = result[i];
-    d[i * 4 + 2] = result[i];
-    d[i * 4 + 3] = 255;
+    d[i*4] = d[i*4+1] = d[i*4+2] = result[i];
+    d[i*4+3] = 255;
   }
   ctx.putImageData(imageData, 0, 0);
-
-  // Suavizado mínimo para eliminar jaggies sin perder nitidez
-  ctx.filter = 'blur(0.3px)';
+  ctx.filter = 'blur(0.25px)';
   ctx.drawImage(ctx.canvas, 0, 0);
   ctx.filter = 'none';
 }
