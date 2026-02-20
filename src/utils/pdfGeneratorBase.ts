@@ -92,8 +92,48 @@ export class BasePDFGenerator {
     }
   }
 
+  /**
+   * Convierte una URL HTTP o una cadena base64 en base64 puro.
+   * jsPDF no puede cargar imágenes desde URLs HTTP directamente.
+   */
+  protected async toBase64(src: string | undefined | null): Promise<string | null> {
+    if (!src) return null;
+    // Ya es base64 (data URL)
+    if (src.startsWith('data:image')) return src;
+    // Es una URL HTTP → fetch y convertir
+    if (src.startsWith('http')) {
+      try {
+        const response = await fetch(src);
+        const blob = await response.blob();
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onloadend = () => resolve(reader.result as string);
+          reader.onerror = reject;
+          reader.readAsDataURL(blob);
+        });
+      } catch (err) {
+        console.error('Error convirtiendo imagen a base64:', err);
+        return null;
+      }
+    }
+    return null;
+  }
+
   async generate(data: BasePDFData): Promise<jsPDF> {
     await this.loadLogo();
+
+    // Normalizar todas las imágenes a base64 para que jsPDF pueda renderizarlas
+    const normalizedData: BasePDFData = {
+      ...data,
+      patientSignature:  (await this.toBase64(data.patientSignature))  ?? data.patientSignature,
+      guardianSignature: (await this.toBase64(data.guardianSignature)) ?? data.guardianSignature,
+      patientPhoto:      (await this.toBase64(data.patientPhoto))      ?? data.patientPhoto,
+      professionalData: {
+        ...data.professionalData,
+        firma: (await this.toBase64(data.professionalData?.firma)) ?? data.professionalData?.firma,
+      },
+    };
+    data = normalizedData;
     
     // Page 1 - Consent form
     this.drawHeader(data.documentMeta);

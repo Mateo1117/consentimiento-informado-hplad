@@ -101,7 +101,7 @@ export const ConsentFormHemocomponentes = ({
     }
 
     try {
-      const capturedPhoto = cameraCaptureRef.current?.getFingerprintData();
+      const capturedPhoto = cameraCaptureRef.current?.getFingerprintData() ?? patientPhoto ?? undefined;
       const patientSignatureData = patientSignatureRef.current?.getSignatureData();
       const guardianSignatureData = guardianSignatureRef.current?.getSignatureData();
       const professionalSignatureData = professionalSignatureRef.current?.getSignatureData();
