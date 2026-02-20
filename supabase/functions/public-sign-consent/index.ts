@@ -269,11 +269,31 @@ serve(async (req: Request) => {
       console.error("❌ Webhook error:", webhookResp.status, webhookText);
     }
 
+    // Devolver datos completos del consentimiento para que el cliente genere el PDF
+    const consentForClient = {
+      id: consent.id,
+      consent_type: consent.consent_type,
+      patient_name: consent.patient_name,
+      patient_document_type: consent.patient_document_type,
+      patient_document_number: consent.patient_document_number,
+      patient_email: consent.patient_email,
+      patient_phone: consent.patient_phone,
+      patient_photo_url: patientPhotoUrl || consent.patient_photo_url,
+      professional_name: consent.professional_name,
+      professional_document: consent.professional_document,
+      professional_signature_data: professionalSignature,
+      signed_at: new Date().toISOString(),
+      signed_by_name: signedByName,
+      status: "signed",
+      payload: consent.payload,
+    };
+
     return new Response(
       JSON.stringify({
         success: true,
         signed: signData?.[0] ?? null,
         patientPhotoUrl,
+        consentData: consentForClient,
         webhook: {
           ok: webhookOk,
           status: webhookResp.status,
