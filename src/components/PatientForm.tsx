@@ -15,9 +15,12 @@ import { patientApiService, type PatientData, type PatientSearchResult } from "@
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
+import { PendingConsentsPanel } from "@/components/PendingConsentsPanel";
 
 interface PatientFormProps {
   onPatientSelect: (patient: PatientData & { hasDisability?: boolean }) => void;
+  /** Callback para abrir la firma de un consentimiento pendiente directamente en la plataforma */
+  onSignPendingConsent?: (token: string) => void;
 }
 
 // Función para obtener el icono según el tipo de error
@@ -60,7 +63,7 @@ const getErrorColor = (errorType?: string) => {
   }
 };
 
-export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
+export const PatientForm = ({ onPatientSelect, onSignPendingConsent }: PatientFormProps) => {
   const [searchDocument, setSearchDocument] = useState("");
   const [documentType, setDocumentType] = useState<string>("");
   const [birthDate, setBirthDate] = useState<Date | undefined>();
@@ -472,13 +475,21 @@ export const PatientForm = ({ onPatientSelect }: PatientFormProps) => {
                 </div>
               </div>
               
-              <div className="pt-4">
+              <div className="pt-4 space-y-4">
+                {/* Panel de consentimientos pendientes de firma */}
+                {patientData.numeroDocumento && onSignPendingConsent && (
+                  <PendingConsentsPanel
+                    patientDocumentNumber={patientData.numeroDocumento}
+                    onSignInPlatform={onSignPendingConsent}
+                  />
+                )}
+
                 <Button 
                   onClick={handleConfirmPatient}
                   disabled={!editableAge || editableAge <= 0}
                   className="w-full bg-accent hover:bg-accent/90 text-accent-foreground font-medium py-3"
                 >
-                  Continuar con Consentimiento Informado
+                  Continuar con Nuevo Consentimiento
                 </Button>
               </div>
             </div>
