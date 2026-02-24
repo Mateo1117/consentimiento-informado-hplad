@@ -387,47 +387,26 @@ function cropCapsuleRegion(
   });
 }
 
-// ─── SVG Palm Guide Overlay ───────────────────────────────────────────────────
-const PalmGuideOverlay: React.FC = () => (
+// ─── SVG Finger Guide Overlay ─────────────────────────────────────────────────
+const FingerGuideOverlay: React.FC = () => (
   <svg
-    viewBox="0 0 200 260"
+    viewBox="0 0 100 200"
     className="absolute inset-0 w-full h-full pointer-events-none"
     style={{ opacity: 0.75 }}
   >
-    {/* Palm base */}
-    <ellipse cx="100" cy="195" rx="55" ry="40" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.5" strokeDasharray="4 2" />
-
-    {/* Thumb */}
-    <rect x="28" y="130" width="22" height="62" rx="11" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.2" transform="rotate(-18 39 161)" />
-    {/* Index */}
-    <rect x="56" y="75" width="22" height="75" rx="11" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.2" />
-    {/* Middle */}
-    <rect x="82" y="60" width="22" height="85" rx="11" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.2" />
-    {/* Ring */}
-    <rect x="108" y="68" width="22" height="80" rx="11" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.2" />
-    {/* Pinky */}
-    <rect x="134" y="88" width="20" height="65" rx="10" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.2" />
-
-    {/* Fingertip highlight circles */}
-    <circle cx="39"  cy="118" r="8" fill="hsl(var(--primary))" fillOpacity="0.25" stroke="hsl(var(--primary))" strokeWidth="1.5" />
-    <circle cx="67"  cy="80"  r="8" fill="hsl(var(--primary))" fillOpacity="0.25" stroke="hsl(var(--primary))" strokeWidth="1.5" />
-    <circle cx="93"  cy="65"  r="8" fill="hsl(var(--primary))" fillOpacity="0.25" stroke="hsl(var(--primary))" strokeWidth="1.5" />
-    <circle cx="119" cy="73"  r="8" fill="hsl(var(--primary))" fillOpacity="0.25" stroke="hsl(var(--primary))" strokeWidth="1.5" />
-    <circle cx="144" cy="93"  r="8" fill="hsl(var(--primary))" fillOpacity="0.25" stroke="hsl(var(--primary))" strokeWidth="1.5" />
-
-    {/* Finger labels */}
-    <text x="39"  y="121" textAnchor="middle" fontSize="6" fill="hsl(var(--primary))" fontWeight="bold">P</text>
-    <text x="67"  y="83"  textAnchor="middle" fontSize="6" fill="hsl(var(--primary))" fontWeight="bold">I</text>
-    <text x="93"  y="68"  textAnchor="middle" fontSize="6" fill="hsl(var(--primary))" fontWeight="bold">M</text>
-    <text x="119" y="76"  textAnchor="middle" fontSize="6" fill="hsl(var(--primary))" fontWeight="bold">A</text>
-    <text x="144" y="96"  textAnchor="middle" fontSize="6" fill="hsl(var(--primary))" fontWeight="bold">M</text>
+    {/* Single finger outline — capsule shape */}
+    <rect x="15" y="20" width="70" height="160" rx="35" fill="none" stroke="hsl(var(--primary))" strokeWidth="2.5" strokeDasharray="5 3" />
+    {/* Fingertip highlight */}
+    <circle cx="50" cy="55" r="18" fill="hsl(var(--primary))" fillOpacity="0.2" stroke="hsl(var(--primary))" strokeWidth="1.5" />
+    {/* Yema label */}
+    <text x="50" y="59" textAnchor="middle" fontSize="10" fill="hsl(var(--primary))" fontWeight="bold">Yema</text>
   </svg>
 );
 
 // ─── Component ────────────────────────────────────────────────────────────────
 export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintCaptureProps>(({
   title    = 'Huella Dactilar',
-  subtitle = 'Fotografíe la palma completa del paciente y seleccione el dedo para la firma',
+  subtitle = 'Fotografíe la yema del dedo del paciente para capturar la huella',
   required = false,
   onFingerprintChange,
 }, ref) => {
@@ -667,10 +646,10 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
               </p>
               <ol className="space-y-2 text-sm text-muted-foreground list-none">
                 {[
-                  'Solicite al paciente que extienda la mano abierta frente a la cámara.',
-                  'Encuadre toda la palma con los 5 dedos visibles y enfocados.',
-                  'Presione "Capturar palma" cuando la imagen esté nítida.',
-                  'Toque la YEMA (punta) del dedo deseado en la fotografía.',
+                  'Solicite al paciente que coloque la yema del dedo frente a la cámara.',
+                  'Encuadre la yema del dedo dentro de la guía en pantalla.',
+                  'Presione "Capturar dedo" cuando la imagen esté nítida.',
+                  'Toque la zona de la yema en la fotografía para ajustar el recorte.',
                   'Seleccione el nombre del dedo y confirme para guardar la huella.',
                 ].map((txt, i) => (
                   <li key={i} className="flex items-start gap-2">
@@ -691,7 +670,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
 
             <Button onClick={startCamera} className="w-full" size="lg">
               <Camera className="h-5 w-5 mr-2" />
-              Abrir Cámara para Fotografiar la Palma
+              Abrir Cámara para Capturar Huella
             </Button>
           </div>
         )}
@@ -712,16 +691,16 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                   if (v.paused) v.play().catch(() => {});
                 }}
               />
-              {/* SVG Palm silhouette guide */}
+              {/* SVG Finger silhouette guide */}
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div style={{ width: '55%', maxWidth: '220px' }}>
-                  <PalmGuideOverlay />
+                <div style={{ width: '30%', maxWidth: '120px' }}>
+                  <FingerGuideOverlay />
                 </div>
               </div>
               {/* Instruction label */}
               <div className="absolute bottom-3 left-0 right-0 flex justify-center pointer-events-none">
                 <span className="text-xs font-semibold bg-black/70 text-primary px-3 py-1.5 rounded-full whitespace-nowrap">
-                  Muestre la palma completa — 5 dedos visibles
+                  Enfoque la yema del dedo del paciente
                 </span>
               </div>
             </div>
@@ -733,12 +712,12 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                 <RotateCcw className="h-4 w-4 mr-2" /> Cancelar
               </Button>
               <Button onClick={capturePalm} className="flex-1" size="lg">
-                <Camera className="h-5 w-5 mr-2" /> Capturar Palma
+                <Camera className="h-5 w-5 mr-2" /> Capturar Dedo
               </Button>
             </div>
 
             <p className="text-xs text-center text-muted-foreground">
-              Mantenga la mano quieta y asegúrese de que todos los dedos sean visibles.
+              Mantenga el dedo quieto y bien enfocado dentro de la guía.
             </p>
           </div>
         )}
@@ -944,7 +923,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
             <Fingerprint className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
             <p className="text-xs text-muted-foreground">
               <strong>Tip:</strong> Use la cámara trasera de la tablet con buena iluminación.
-              La foto de la palma permite elegir cualquiera de los cinco dedos para la firma.
+              Enfoque directamente la yema del dedo para obtener la mejor calidad de huella.
             </p>
           </div>
         )}
