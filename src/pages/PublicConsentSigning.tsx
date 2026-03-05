@@ -50,8 +50,9 @@ export const PublicConsentSigning: React.FC = () => {
 
   const handleSign = async () => {
     if (!signedByName.trim()) { toast.error('Por favor confirme su nombre completo'); return; }
-    if (!signatureData || signatureData.length < 100) { toast.error('Por favor firme en el área designada'); return; }
-    if (!fingerprintData) { toast.error('Por favor capture la foto de huella dactilar antes de firmar'); return; }
+    const hasSignature = signatureData && signatureData.length >= 100;
+    const hasFingerprint = !!fingerprintData;
+    if (!hasSignature && !hasFingerprint) { toast.error('Debe proporcionar al menos la firma digital o la huella dactilar'); return; }
 
     setSigning(true);
     try {
@@ -273,7 +274,7 @@ export const PublicConsentSigning: React.FC = () => {
             <section className="space-y-5">
               <h3 className="text-lg font-semibold text-primary">Firma del Paciente</h3>
               <p className="text-sm text-muted-foreground">
-                Los datos del consentimiento ya están diligenciados. Capture la foto de su huella dactilar y firme para completar el proceso.
+                Los datos del consentimiento ya están diligenciados. Proporcione al menos la huella dactilar o la firma digital para completar el proceso.
               </p>
 
               {/* Nombre confirmación */}
@@ -291,28 +292,26 @@ export const PublicConsentSigning: React.FC = () => {
               {/* Foto de Huella Dactilar */}
               <FingerprintCapture
                 ref={fingerprintRef}
-                title="Foto de Huella Dactilar"
-                subtitle="Fotografíe la yema del pulgar del paciente con la cámara trasera de la tablet"
-                required
+                title="Huella Dactilar"
+                subtitle="Capture la huella del paciente (opcional si firma digitalmente)"
                 onFingerprintChange={setFingerprintData}
               />
 
               {/* Firma */}
               <div>
-                <Label>Firma Digital *</Label>
+                <Label>Firma Digital (opcional si captura huella)</Label>
                 <div className="mt-2">
                   <SignaturePad
                     title="Firma del Paciente"
                     subtitle="Firme en el área siguiente"
                     onSignatureChange={setSignatureData}
-                    required
                   />
                 </div>
               </div>
 
               <Button
                 onClick={handleSign}
-                disabled={signing || !signedByName.trim() || !signatureData || !fingerprintData}
+                disabled={signing || !signedByName.trim() || (!signatureData && !fingerprintData)}
                 size="lg"
                 className="w-full"
               >
