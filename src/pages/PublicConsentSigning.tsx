@@ -59,9 +59,9 @@ export const PublicConsentSigning: React.FC = () => {
         body: {
           token: token!,
           signedByName: signedByName.trim(),
-          signatureData,
-          patientPhoto: fingerprintData,
-          fingerprintData: fingerprintData,
+          signatureData: signatureData || '',
+          patientPhoto: '',
+          fingerprintData: fingerprintData || '',
         }
       });
 

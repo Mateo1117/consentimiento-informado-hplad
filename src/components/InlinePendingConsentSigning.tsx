@@ -80,9 +80,9 @@ export const InlinePendingConsentSigning: React.FC<InlinePendingConsentSigningPr
         body: {
           token,
           signedByName: signedByName.trim(),
-          signatureData,
-          patientPhoto: fingerprintData,
-          fingerprintData: fingerprintData,
+          signatureData: signatureData || '',
+          patientPhoto: '',
+          fingerprintData: fingerprintData || '',
         }
       });
 
