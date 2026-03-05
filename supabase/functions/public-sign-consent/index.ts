@@ -124,26 +124,27 @@ serve(async (req: Request) => {
       });
     }
     if (!signatureData || signatureData.length < 20) {
-      return new Response(JSON.stringify({ success: false, error: "Firma requerida" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
-    }
-    if (!patientPhoto || patientPhoto.length < 20) {
-      return new Response(JSON.stringify({ success: false, error: "Foto requerida" }), {
-        status: 400,
-        headers: { "Content-Type": "application/json", ...corsHeaders },
-      });
+      // Signature is optional if fingerprint is provided
+      if (!fingerprintData || fingerprintData.length < 20) {
+        return new Response(JSON.stringify({ success: false, error: "Debe proporcionar al menos la firma digital o la huella dactilar" }), {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        });
+      }
     }
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // 1) Subir evidencias (URLs públicas)
-    const patientPhotoUrl = await toPublicUrl(supabase, patientPhoto, "patient");
-    const signatureUrl = await toPublicUrl(supabase, signatureData, "firma_remota");
-    const fingerprintUrl = fingerprintData
+    // 1) Subir evidencias (URLs públicas) - solo subir lo que realmente se proporcionó
+    const patientPhotoUrl = (patientPhoto && patientPhoto.length > 20)
+      ? await toPublicUrl(supabase, patientPhoto, "patient")
+      : null;
+    const signatureUrl = (signatureData && signatureData.length > 20)
+      ? await toPublicUrl(supabase, signatureData, "firma_remota")
+      : null;
+    const fingerprintUrl = (fingerprintData && fingerprintData.length > 20)
       ? await toPublicUrl(supabase, fingerprintData, "huella")
       : null;
 
