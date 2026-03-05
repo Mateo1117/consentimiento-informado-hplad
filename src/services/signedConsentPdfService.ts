@@ -1,15 +1,14 @@
 /**
  * signedConsentPdfService.ts
  * Genera automáticamente el PDF de un consentimiento firmado
- * (firma + huella side-by-side) y lo sube a Storage, luego
- * actualiza el registro y llama al webhook externo con el pdf_url.
+ * (firma + huella side-by-side), lo sube a Storage y
+ * actualiza el registro `consents.pdf_url`.
  */
 
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/utils/logger";
 import { BasePDFGenerator, BasePDFData } from "@/utils/pdfGeneratorBase";
 
-const WEBHOOK_URL = "https://webhook.mcmasociados.tech/webhook/crear_consentimiento";
 const BUCKET = "consent-pdfs";
 
 // ─── helpers ────────────────────────────────────────────────────────────────
@@ -210,74 +209,9 @@ export async function generateAndUploadSignedPDF(params: {
     logger.error("Error generando/subiendo PDF post-firma:", err?.message);
   }
 
-  // 4) Llamar al webhook externo con todos los datos + pdf_url
-  let webhookOk = false;
-  try {
-    const payload = consent.payload || {};
-    const hasDisability = !!payload.hasDisability;
-    const isMinor = !!payload.isMinor;
-    const requiresGuardian = hasDisability || isMinor;
-    const decisionRaw = payload.decision || payload.consentDecision;
-    const aceptacion = decisionRaw === "disentir" ? "Rechazado" : "Aceptado";
-    const procedureName =
-      payload.procedureName || defaultProcedureName(consent.consent_type);
-    const guardianName = payload.guardianName || null;
-    const guardianDocument = payload.guardianDocument || null;
-    const guardianRelationship = payload.guardianRelationship || null;
-    const guardianPhone = payload.guardianPhone || null;
-
-    const webhookPayload = {
-      paciente_nombre_completo: consent.patient_name,
-      paciente_tipo_documento: consent.patient_document_type || "CC",
-      paciente_numero_documento: consent.patient_document_number || "",
-      paciente_email: consent.patient_email || null,
-      paciente_telefono: consent.patient_phone || null,
-      paciente_firma: requiresGuardian ? null : (patientPhotoUrl || signatureData),
-      paciente_foto: patientPhotoUrl || consent.patient_photo_url || null,
-      paciente_huella: patientPhotoUrl || null,
-      paciente_tiene_discapacidad: hasDisability,
-      paciente_es_menor: isMinor,
-      acudiente_nombre_completo: requiresGuardian ? (guardianName || consent.signed_by_name) : null,
-      acudiente_documento: requiresGuardian ? guardianDocument : null,
-      acudiente_parentesco: requiresGuardian ? guardianRelationship : null,
-      acudiente_telefono: requiresGuardian ? guardianPhone : null,
-      acudiente_firma: requiresGuardian ? (patientPhotoUrl || signatureData) : null,
-      tipo_procedimiento: procedureName,
-      procedimiento_medico: procedureName,
-      diagnostico: procedureName,
-      nombre_consentimiento: consentUpperName(consent.consent_type),
-      aceptacion_procedimiento: aceptacion,
-      fecha_firma: new Date().toISOString(),
-      fecha_documento: new Date().toISOString().split("T")[0],
-      profesional_nombre_completo: consent.professional_name || "",
-      profesional_documento: consent.professional_document || null,
-      profesional_firma: consent.professional_signature_data || null,
-      pdf_url: pdfPublicUrl || null,
-      consent_id: consent.id,
-      payload_adicional: payload,
-    };
-
-    // Llamar al webhook via edge function para evitar CORS
-    const { data: resp, error: wErr } = await supabase.functions.invoke("enviar-consentimiento", {
-      body: webhookPayload,
-    });
-
-    if (wErr) {
-      logger.warn("Webhook post-firma (vía edge) falló, intentando directo:", wErr.message);
-      // Fallback: llamar directamente (puede fallar por CORS en browser)
-      const direct = await fetch(WEBHOOK_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(webhookPayload),
-      }).catch(() => null);
-      webhookOk = direct?.ok ?? false;
-    } else {
-      webhookOk = true;
-      logger.info("Webhook post-firma enviado OK:", resp);
-    }
-  } catch (err: any) {
-    logger.error("Error enviando webhook post-firma:", err?.message);
-  }
+  // 4) El webhook se envía únicamente desde la Edge Function `public-sign-consent`
+  // para evitar duplicados de procesos/documentos.
+  const webhookOk = true;
 
   // La actualización de pdf_url ya se realizó arriba al subir el archivo (usando la ruta)
   return { pdfUrl: pdfPublicUrl, pdfPath, webhookOk };
