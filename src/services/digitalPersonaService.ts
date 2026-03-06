@@ -14,7 +14,7 @@ import { logger } from "@/utils/logger";
 
 // ─── Configuración ────────────────────────────────────────────────────────────
 const DEFAULT_PORTS = [9986, 9987]; // puertos típicos del Lite Client
-const WS_PROTOCOL = "wss";
+const WS_PROTOCOLS = ["wss", "ws"]; // intentar ambos protocolos
 const WS_HOST = "127.0.0.1";
 const CONNECTION_TIMEOUT = 3000; // ms
 
@@ -47,27 +47,29 @@ class DigitalPersonaService {
 
   // ── Detectar si el Lite Client está corriendo ──────────────────────────
   async detect(): Promise<boolean> {
-    for (const port of DEFAULT_PORTS) {
-      try {
-        const ok = await this.tryConnect(port);
-        if (ok) {
-          this.connectedPort = port;
-          logger.info(`[DigitalPersona] Lite Client detectado en puerto ${port}`);
-          return true;
+    for (const protocol of WS_PROTOCOLS) {
+      for (const port of DEFAULT_PORTS) {
+        try {
+          const ok = await this.tryConnect(port, protocol);
+          if (ok) {
+            this.connectedPort = port;
+            logger.info(`[DigitalPersona] Lite Client detectado en ${protocol}://${WS_HOST}:${port}`);
+            return true;
+          }
+        } catch {
+          // Siguiente combinación
         }
-      } catch {
-        // Siguiente puerto
       }
     }
     logger.info("[DigitalPersona] Lite Client no detectado");
     return false;
   }
 
-  private tryConnect(port: number): Promise<boolean> {
+  private tryConnect(port: number, protocol: string = "wss"): Promise<boolean> {
     return new Promise((resolve) => {
       let ws: WebSocket;
       try {
-        ws = new WebSocket(`${WS_PROTOCOL}://${WS_HOST}:${port}`);
+        ws = new WebSocket(`${protocol}://${WS_HOST}:${port}`);
       } catch {
         resolve(false);
         return;
