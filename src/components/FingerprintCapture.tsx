@@ -7,6 +7,7 @@ import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Usb, Loader2 } from '
 import { toast } from 'sonner';
 import { digitalPersonaService, type ReaderInfo, type CaptureResult } from '@/services/digitalPersonaService';
 import { webUsbDetectionService, type WebUsbDeviceInfo } from '@/services/webUsbDetectionService';
+import { webUsbCaptureService, type WebUsbCaptureStatus } from '@/services/webUsbCaptureService';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 export interface FingerprintCaptureRef {
@@ -436,6 +437,8 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   const [usbCapturing,   setUsbCapturing]   = useState(false);
   // WebUSB hardware detection
   const [webUsbInfo,     setWebUsbInfo]     = useState<WebUsbDeviceInfo>(webUsbDetectionService.getLastInfo());
+  // WebUSB direct capture state
+  const [webUsbCaptureStatus, setWebUsbCaptureStatus] = useState<WebUsbCaptureStatus>(webUsbCaptureService.getStatus());
 
   // ── Camera helpers ──────────────────────────────────────────────────────────
   const stopCamera = useCallback(() => {
@@ -476,10 +479,17 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     };
     webUsbDetectionService.onChange(handleWebUsb);
 
+    // WebUSB capture status listener
+    const handleWebUsbCapture = (status: WebUsbCaptureStatus) => {
+      if (!cancelled) setWebUsbCaptureStatus(status);
+    };
+    webUsbCaptureService.onStatusChange(handleWebUsbCapture);
+
     return () => {
       cancelled = true;
       digitalPersonaService.off('statusChange', handleStatusChange);
       webUsbDetectionService.offChange(handleWebUsb);
+      webUsbCaptureService.offStatusChange(handleWebUsbCapture);
     };
   }, []);
 
@@ -506,6 +516,43 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
       setUsbCapturing(false);
     }
   }, [onFingerprintChange]);
+
+  // ── WebUSB Direct: capture fingerprint without agent ──────────────────────
+  const captureWithWebUSB = useCallback(async () => {
+    setStep('usb-waiting');
+    try {
+      // Connect if not already connected
+      if (!webUsbCaptureService.isConnected()) {
+        const connected = await webUsbCaptureService.connect(true);
+        if (!connected) {
+          toast.error('No se pudo conectar al huellero. Asegúrese de que está conectado al USB.');
+          setStep('idle');
+          return;
+        }
+      }
+
+      // Capture
+      const result = await webUsbCaptureService.capture(30000);
+      if (result.success && result.imageBase64) {
+        setCapturedImage(result.imageBase64);
+        setSelectedFinger(null);
+        setStep('captured');
+        onFingerprintChange?.(result.imageBase64);
+        toast.success('Huella capturada correctamente vía WebUSB');
+      } else {
+        toast.error(result.error || 'No se pudo capturar la huella');
+        setStep('idle');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al capturar con WebUSB');
+      setStep('idle');
+    }
+  }, [onFingerprintChange]);
+
+  const cancelWebUSBCapture = useCallback(() => {
+    webUsbCaptureService.cancelCapture();
+    setStep('idle');
+  }, []);
 
   const cancelUSBCapture = useCallback(() => {
     digitalPersonaService.stopCapture();
@@ -799,49 +846,17 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                       </Button>
                     ) : (
                       <div className="space-y-2">
-                        {/* If Lite Client also available, use it for capture */}
-                        {usbDetected ? (
-                          <Button
-                            onClick={captureWithUSB}
-                            className="w-full"
-                            size="lg"
-                          >
-                            <Fingerprint className="h-5 w-5 mr-2" />
-                            Capturar Huella
-                          </Button>
-                        ) : (
-                          <>
-                            <Button
-                              onClick={async () => {
-                                setUsbDetecting(true);
-                                try {
-                                  const found = await digitalPersonaService.detect();
-                                  setUsbDetected(found);
-                                  if (found) {
-                                    setUsbReaderInfo(digitalPersonaService.getInfo());
-                                    captureWithUSB();
-                                  } else {
-                                    // Lite Client not available, use camera with the device confirmed present
-                                    toast.info('Huellero detectado. El agente local (Lite Client) no está activo — se usará la cámara para capturar la huella.');
-                                    startCamera();
-                                  }
-                                } catch {
-                                  startCamera();
-                                } finally {
-                                  setUsbDetecting(false);
-                                }
-                              }}
-                              className="w-full"
-                              size="lg"
-                            >
-                              <Fingerprint className="h-5 w-5 mr-2" />
-                              Capturar Huella
-                            </Button>
-                            <p className="text-xs text-center text-muted-foreground">
-                              Dispositivo detectado por WebUSB. Si el Lite Client no está activo, se usará la cámara.
-                            </p>
-                          </>
-                        )}
+                        <Button
+                          onClick={captureWithWebUSB}
+                          className="w-full"
+                          size="lg"
+                        >
+                          <Fingerprint className="h-5 w-5 mr-2" />
+                          Capturar Huella
+                        </Button>
+                        <p className="text-xs text-center text-muted-foreground">
+                          Lectura directa vía WebUSB — sin necesidad de agente local.
+                        </p>
                       </div>
                     )}
                   </div>
@@ -992,7 +1007,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                 </p>
               </div>
             </div>
-            <Button variant="outline" onClick={cancelUSBCapture} className="w-full">
+            <Button variant="outline" onClick={() => { cancelUSBCapture(); cancelWebUSBCapture(); }} className="w-full">
               <RotateCcw className="h-4 w-4 mr-2" /> Cancelar
             </Button>
           </div>
