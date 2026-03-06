@@ -65,19 +65,18 @@ class DigitalPersonaService {
 
   private tryConnect(port: number): Promise<boolean> {
     return new Promise((resolve) => {
-      const timeout = setTimeout(() => {
-        ws.close();
-        resolve(false);
-      }, CONNECTION_TIMEOUT);
-
       let ws: WebSocket;
       try {
         ws = new WebSocket(`${WS_PROTOCOL}://${WS_HOST}:${port}`);
       } catch {
-        clearTimeout(timeout);
         resolve(false);
         return;
       }
+
+      const timeout = setTimeout(() => {
+        try { ws.close(); } catch {}
+        resolve(false);
+      }, CONNECTION_TIMEOUT);
 
       ws.onopen = () => {
         clearTimeout(timeout);
