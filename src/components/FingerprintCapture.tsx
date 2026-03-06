@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Usb, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { digitalPersonaService, type ReaderInfo, type CaptureResult } from '@/services/digitalPersonaService';
+import { webUsbDetectionService, type WebUsbDeviceInfo } from '@/services/webUsbDetectionService';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 export interface FingerprintCaptureRef {
@@ -433,6 +434,8 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   const [usbDetecting,   setUsbDetecting]   = useState(false);
   const [usbDetected,    setUsbDetected]    = useState(false);
   const [usbCapturing,   setUsbCapturing]   = useState(false);
+  // WebUSB hardware detection
+  const [webUsbInfo,     setWebUsbInfo]     = useState<WebUsbDeviceInfo>(webUsbDetectionService.getLastInfo());
 
   // ── Camera helpers ──────────────────────────────────────────────────────────
   const stopCamera = useCallback(() => {
@@ -466,9 +469,17 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     };
     digitalPersonaService.on('statusChange', handleStatusChange);
 
+    // WebUSB detection (silent, no prompt)
+    webUsbDetectionService.detectPaired();
+    const handleWebUsb = (info: WebUsbDeviceInfo) => {
+      if (!cancelled) setWebUsbInfo(info);
+    };
+    webUsbDetectionService.onChange(handleWebUsb);
+
     return () => {
       cancelled = true;
       digitalPersonaService.off('statusChange', handleStatusChange);
+      webUsbDetectionService.offChange(handleWebUsb);
     };
   }, []);
 
@@ -715,7 +726,38 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
 
             {!usbDetecting && (
               <>
-                {/* USB section */}
+                {/* WebUSB hardware detection badge */}
+                {webUsbDetectionService.isSupported() && (
+                  <div className={`rounded-lg p-3 flex items-center justify-between text-sm ${
+                    webUsbInfo.connected
+                      ? 'bg-green-500/10 border border-green-500/30'
+                      : 'bg-muted/30 border border-border'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-2.5 h-2.5 rounded-full ${webUsbInfo.connected ? 'bg-green-500 animate-pulse' : 'bg-muted-foreground/30'}`} />
+                      <span className={webUsbInfo.connected ? 'text-green-700 dark:text-green-400 font-medium' : 'text-muted-foreground'}>
+                        {webUsbInfo.connected
+                          ? `${webUsbInfo.productName} conectado`
+                          : 'Huellero USB no detectado'}
+                      </span>
+                    </div>
+                    {!webUsbInfo.connected && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs h-7"
+                        onClick={async () => {
+                          await webUsbDetectionService.requestDevice();
+                        }}
+                      >
+                        <Usb className="h-3 w-3 mr-1" />
+                        Vincular
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+                {/* USB Lite Client section */}
                 <div className="bg-muted/50 rounded-xl p-4 space-y-3">
                   <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <Usb className="h-4 w-4 text-primary" />
