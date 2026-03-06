@@ -440,7 +440,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     streamRef.current = null;
   }, []);
 
-  // ── USB Reader: auto-detect on mount and auto-start capture if found ──
+  // ── USB Reader: detect on mount (don't auto-start capture) ──
   useEffect(() => {
     let cancelled = false;
     const detectReader = async () => {
@@ -451,31 +451,6 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
           setUsbDetected(found);
           if (found) {
             setUsbReaderInfo(digitalPersonaService.getInfo());
-            // Auto-start USB capture immediately
-            setStep('usb-waiting');
-            setUsbCapturing(true);
-            try {
-              const result: CaptureResult = await digitalPersonaService.startCapture();
-              if (!cancelled) {
-                if (result.success && result.imageBase64) {
-                  setCapturedImage(result.imageBase64);
-                  setSelectedFinger(null);
-                  setStep('captured');
-                  onFingerprintChange?.(result.imageBase64);
-                  toast.success('Huella capturada correctamente con el lector USB');
-                } else {
-                  toast.error(result.error || 'No se pudo capturar la huella');
-                  setStep('idle');
-                }
-              }
-            } catch (err: any) {
-              if (!cancelled) {
-                toast.error(err?.message || 'Error al capturar con el lector USB');
-                setStep('idle');
-              }
-            } finally {
-              if (!cancelled) setUsbCapturing(false);
-            }
           }
         }
       } catch {
@@ -495,7 +470,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
       cancelled = true;
       digitalPersonaService.off('statusChange', handleStatusChange);
     };
-  }, [onFingerprintChange]);
+  }, []);
 
   // ── USB Reader: capture fingerprint ─────────────────────────────────────
   const captureWithUSB = useCallback(async () => {
@@ -740,40 +715,49 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
 
             {!usbDetecting && (
               <>
+                {/* USB section */}
                 <div className="bg-muted/50 rounded-xl p-4 space-y-3">
                   <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                     <Usb className="h-4 w-4 text-primary" />
                     {usbDetected
-                      ? 'Lector USB listo — presione para iniciar captura'
-                      : 'Lector USB no detectado — conecte el dispositivo e intente de nuevo'}
+                      ? 'Lector USB detectado — presione para capturar'
+                      : 'Lector USB no detectado'}
                   </p>
-                  <ol className="space-y-2 text-sm text-muted-foreground list-none">
-                    {[
-                      'Presione el botón "Activar Lector de Huella".',
-                      'Cuando el indicador muestre "Esperando huella...", solicite al paciente colocar la yema del dedo en el sensor.',
-                      'Mantenga el dedo firme sobre el lector hasta que se confirme la captura.',
-                    ].map((txt, i) => (
-                      <li key={i} className="flex items-start gap-2">
-                        <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center shrink-0 mt-0.5">
-                          {i + 1}
-                        </span>
-                        {txt}
-                      </li>
-                    ))}
-                  </ol>
+                  {usbDetected && (
+                    <ol className="space-y-2 text-sm text-muted-foreground list-none">
+                      {[
+                        'Presione el botón "Activar Lector de Huella".',
+                        'Cuando el indicador muestre "Esperando huella...", solicite al paciente colocar la yema del dedo en el sensor.',
+                        'Mantenga el dedo firme sobre el lector hasta que se confirme la captura.',
+                      ].map((txt, i) => (
+                        <li key={i} className="flex items-start gap-2">
+                          <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center shrink-0 mt-0.5">
+                            {i + 1}
+                          </span>
+                          {txt}
+                        </li>
+                      ))}
+                    </ol>
+                  )}
                 </div>
 
+                {/* Main action button */}
                 <Button
                   onClick={usbDetected ? captureWithUSB : async () => {
                     setUsbDetecting(true);
-                    const found = await digitalPersonaService.detect();
-                    setUsbDetected(found);
-                    setUsbDetecting(false);
-                    if (found) {
-                      setUsbReaderInfo(digitalPersonaService.getInfo());
-                      captureWithUSB();
-                    } else {
-                      toast.error('No se detectó el lector USB. Verifique que esté conectado y el servicio DigitalPersona esté activo.');
+                    try {
+                      const found = await digitalPersonaService.detect();
+                      setUsbDetected(found);
+                      if (found) {
+                        setUsbReaderInfo(digitalPersonaService.getInfo());
+                        captureWithUSB();
+                      } else {
+                        toast.error('No se detectó el lector USB. Use la cámara como alternativa.');
+                      }
+                    } catch {
+                      toast.error('Error al buscar el lector USB.');
+                    } finally {
+                      setUsbDetecting(false);
                     }
                   }}
                   className="w-full"
@@ -781,6 +765,26 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                 >
                   <Fingerprint className="h-5 w-5 mr-2" />
                   Activar Lector de Huella
+                </Button>
+
+                {/* Camera fallback */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t border-border" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-card px-2 text-muted-foreground">o</span>
+                  </div>
+                </div>
+
+                <Button
+                  variant="outline"
+                  onClick={startCamera}
+                  className="w-full"
+                  size="lg"
+                >
+                  <Camera className="h-5 w-5 mr-2" />
+                  Capturar con Cámara
                 </Button>
               </>
             )}
