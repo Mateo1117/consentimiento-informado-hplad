@@ -906,8 +906,8 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                     <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Usb className="h-4 w-4 text-primary" />
                       {usbDetected
-                        ? 'Lector USB detectado — presione para capturar'
-                        : 'Lector USB no detectado'}
+                        ? 'Lite Client detectado — captura vía agente local'
+                        : 'Alternativa: Lite Client (agente local)'}
                     </p>
                     {usbDetected && (
                       <ol className="space-y-2 text-sm text-muted-foreground list-none">
