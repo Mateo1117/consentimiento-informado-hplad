@@ -93,7 +93,56 @@ class DigitalPersonaService {
     return false;
   }
 
-  private buildCandidateEndpoints(): Array<{ protocol: string; host: string; port: number; url: string }> {
+  private async discoverWebSdkEndpoint(): Promise<{ protocol: string; host: string; port: number; path: string; url: string } | null> {
+    for (const protocol of DISCOVERY_PROTOCOLS) {
+      for (const host of DEFAULT_HOSTS) {
+        for (const port of DISCOVERY_PORTS) {
+          const discoveryUrl = `${protocol}://${host}:${port}/get_connection`;
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), CONNECTION_TIMEOUT);
+
+          try {
+            const response = await fetch(discoveryUrl, {
+              method: "GET",
+              cache: "no-store",
+              signal: controller.signal,
+            });
+            if (!response.ok) continue;
+
+            const payload = await response.json().catch(() => null);
+            const endpoint = payload?.endpoint || payload?.Endpoint;
+            if (typeof endpoint !== "string") continue;
+
+            const parsed = new URL(endpoint);
+            const wsProtocol = parsed.protocol === "https:" ? "wss" : "ws";
+            const hostValue = parsed.hostname;
+            const portValue = parsed.port ? Number(parsed.port) : wsProtocol === "wss" ? 443 : 80;
+            const pathValue = `${parsed.pathname}${parsed.search}`;
+            const wsUrl = `${wsProtocol}://${hostValue}:${portValue}${pathValue}`;
+
+            logger.info(`[DigitalPersona] Endpoint WebSDK descubierto en ${discoveryUrl}: ${wsUrl}`);
+            return {
+              protocol: wsProtocol,
+              host: hostValue,
+              port: portValue,
+              path: pathValue,
+              url: wsUrl,
+            };
+          } catch {
+            // ignorar fallos en discovery y continuar
+          } finally {
+            clearTimeout(timeout);
+          }
+        }
+      }
+    }
+
+    return null;
+  }
+
+  private buildCandidateEndpoints(
+    preferredEndpoint?: { protocol: string; host: string; port: number; path: string; url: string }
+  ): Array<{ protocol: string; host: string; port: number; path: string; url: string }> {
     const hosts = this.connectedHost
       ? [this.connectedHost, ...DEFAULT_HOSTS.filter((h) => h !== this.connectedHost)]
       : [...DEFAULT_HOSTS];
@@ -102,8 +151,13 @@ class DigitalPersonaService {
       ? [this.connectedPort, ...DEFAULT_PORTS.filter((p) => p !== this.connectedPort)]
       : [...DEFAULT_PORTS];
 
-    const endpoints: Array<{ protocol: string; host: string; port: number; url: string }> = [];
+    const endpoints: Array<{ protocol: string; host: string; port: number; path: string; url: string }> = [];
     const seen = new Set<string>();
+
+    if (preferredEndpoint) {
+      seen.add(preferredEndpoint.url);
+      endpoints.push(preferredEndpoint);
+    }
 
     for (const protocol of WS_PROTOCOLS) {
       for (const host of hosts) {
@@ -111,7 +165,7 @@ class DigitalPersonaService {
           const url = `${protocol}://${host}:${port}`;
           if (seen.has(url)) continue;
           seen.add(url);
-          endpoints.push({ protocol, host, port, url });
+          endpoints.push({ protocol, host, port, path: "", url });
         }
       }
     }
@@ -119,7 +173,9 @@ class DigitalPersonaService {
     return endpoints;
   }
 
-  private tryConnect(port: number, protocol: string = "ws", host: string = "127.0.0.1"): Promise<{ ok: boolean; error?: string }> {
+  private tryConnect(
+    endpoint: { protocol: string; host: string; port: number; path: string; url: string }
+  ): Promise<{ ok: boolean; error?: string }> {
     return new Promise((resolve) => {
       let ws: WebSocket;
       let settled = false;
