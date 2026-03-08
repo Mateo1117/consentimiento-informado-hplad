@@ -13,6 +13,11 @@ declare namespace WebSdk {
 }
 
 declare namespace Fingerprint {
+  function b64UrlTo64(a: string): string;
+  function b64To64Url(a: string): string;
+  function b64UrlToUtf8(str: string): string;
+  function strToB64Url(str: string): string;
+
   enum SampleFormat {
     Raw = 1,
     Intermediate = 2,
