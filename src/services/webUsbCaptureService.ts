@@ -6,19 +6,16 @@
  *   Vendor ID:  0x05BA
  *   Product ID: 0x000A
  *   Imagen:     338 × 384 px (raw 8-bit grayscale)
- *
- * Referencia: github.com/kspionjak/dp4500 y libfprint/uru4000
  */
 
 import { logger } from "@/utils/logger";
 
-const DP_VENDOR_ID  = 0x05ba;
+const DP_VENDOR_ID = 0x05ba;
 const DP_PRODUCT_ID = 0x000a;
 
-// Image dimensions for the U.are.U 4500
-const IMG_WIDTH  = 338;
+const IMG_WIDTH = 338;
 const IMG_HEIGHT = 384;
-const IMG_SIZE   = IMG_WIDTH * IMG_HEIGHT; // 129,792 bytes
+const IMG_SIZE = IMG_WIDTH * IMG_HEIGHT;
 
 export type WebUsbCaptureStatus =
   | "disconnected"
@@ -29,7 +26,7 @@ export type WebUsbCaptureStatus =
 
 export interface WebUsbCaptureResult {
   success: boolean;
-  imageBase64?: string; // data:image/png;base64,...
+  imageBase64?: string;
   width?: number;
   height?: number;
   error?: string;
@@ -38,10 +35,13 @@ export interface WebUsbCaptureResult {
 type StatusCallback = (status: WebUsbCaptureStatus, message?: string) => void;
 
 class WebUsbCaptureService {
-  private device: any = null; // USBDevice (WebUSB API)
+  private device: USBDevice | null = null;
   private status: WebUsbCaptureStatus = "disconnected";
   private listeners: Set<StatusCallback> = new Set();
   private captureAbort: AbortController | null = null;
+  private inEndpointNumber: number | null = null;
+  private claimedInterfaceNumber: number | null = null;
+  private lastError: string | null = null;
 
   isSupported(): boolean {
     return typeof navigator !== "undefined" && !!navigator.usb;
@@ -51,87 +51,141 @@ class WebUsbCaptureService {
     return this.status;
   }
 
+  getLastError(): string | null {
+    return this.lastError;
+  }
+
   isConnected(): boolean {
     return this.device !== null && this.status === "connected";
   }
 
-  /**
-   * Connect to an already-paired DigitalPersona device, or prompt user to select one.
-   */
   async connect(promptIfNeeded = true): Promise<boolean> {
     if (!this.isSupported()) {
-      this.setStatus("error", "WebUSB no soportado en este navegador");
+      const message = "WebUSB no soportado en este navegador";
+      this.lastError = message;
+      this.setStatus("error", message);
       return false;
     }
 
+    this.lastError = null;
     this.setStatus("connecting");
 
     try {
-      // First try to find an already-paired device
       const devices = await navigator.usb!.getDevices();
       let dp = devices.find(
-        (d) => d.vendorId === DP_VENDOR_ID
+        (d) => d.vendorId === DP_VENDOR_ID && d.productId === DP_PRODUCT_ID
       );
 
-      // If not paired yet, prompt user
+      if (!dp) {
+        dp = devices.find((d) => d.vendorId === DP_VENDOR_ID);
+      }
+
       if (!dp && promptIfNeeded) {
         try {
           dp = await navigator.usb!.requestDevice({
-            filters: [{ vendorId: DP_VENDOR_ID }],
+            filters: [{ vendorId: DP_VENDOR_ID, productId: DP_PRODUCT_ID }, { vendorId: DP_VENDOR_ID }],
           });
         } catch (e: any) {
           if (e?.name === "NotFoundError") {
             this.setStatus("disconnected");
-            return false; // User cancelled
+            return false;
           }
           throw e;
         }
       }
 
       if (!dp) {
-        this.setStatus("disconnected");
+        this.lastError = "No se encontró un dispositivo DigitalPersona pareado en Chrome.";
+        this.setStatus("disconnected", this.lastError);
         return false;
       }
 
       this.device = dp;
 
-      // Open and claim
-      await dp.open();
-      logger.info("[WebUSB Capture] Device opened");
+      if (!dp.opened) {
+        await dp.open();
+      }
+      logger.info("[WebUSB Capture] Device opened", {
+        productName: dp.productName,
+        vendorId: dp.vendorId,
+        productId: dp.productId,
+      });
 
       if (dp.configuration === null) {
-        await dp.selectConfiguration(1);
+        const fallbackConfiguration = dp.configurations[0]?.configurationValue ?? 1;
+        await dp.selectConfiguration(fallbackConfiguration);
       }
-      logger.info("[WebUSB Capture] Configuration selected:", dp.configuration?.configurationValue);
 
-      await dp.claimInterface(0);
-      logger.info("[WebUSB Capture] Interface 0 claimed");
-
-      // Initialize the device
+      await this.claimCaptureInterface();
       await this.initializeDevice();
 
       this.setStatus("connected");
       logger.info("[WebUSB Capture] Connected to", dp.productName || "DigitalPersona device");
       return true;
     } catch (err: any) {
-      logger.error("[WebUSB Capture] Connection error:", err);
-      this.setStatus("error", err?.message || "Error de conexión");
-      // Try to clean up
-      try { await this.device?.close(); } catch { }
-      this.device = null;
+      const message = this.formatWebUsbError(err);
+      this.lastError = message;
+      logger.error("[WebUSB Capture] Connection error:", {
+        message,
+        name: err?.name,
+        code: err?.code,
+        raw: err,
+      });
+      this.setStatus("error", message);
+      await this.cleanupConnection();
       return false;
     }
   }
 
-  /**
-   * Initialize the DigitalPersona device.
-   * Sends vendor-specific control transfer to prepare for capture.
-   */
+  private async claimCaptureInterface(): Promise<void> {
+    if (!this.device) throw new Error("Device not connected");
+    if (!this.device.configuration) throw new Error("No se encontró configuración USB del dispositivo.");
+
+    const interfaces = this.device.configuration.interfaces ?? [];
+    let selectedInterface: number | null = null;
+    let selectedAlternate: number | null = null;
+    let selectedEndpoint: number | null = null;
+
+    for (const intf of interfaces) {
+      for (const alt of intf.alternates) {
+        const endpoint = alt.endpoints.find(
+          (ep) => ep.direction === "in" && (ep.type === "bulk" || ep.type === "interrupt")
+        );
+
+        if (endpoint) {
+          selectedInterface = intf.interfaceNumber;
+          selectedAlternate = alt.alternateSetting;
+          selectedEndpoint = endpoint.endpointNumber;
+          break;
+        }
+      }
+      if (selectedInterface !== null) break;
+    }
+
+    if (selectedInterface === null || selectedEndpoint === null) {
+      throw new Error("No se encontró una interfaz de captura válida en el huellero USB.");
+    }
+
+    if (selectedAlternate !== null && selectedAlternate > 0) {
+      await this.device.selectAlternateInterface(selectedInterface, selectedAlternate);
+    }
+
+    await this.device.claimInterface(selectedInterface);
+
+    this.claimedInterfaceNumber = selectedInterface;
+    this.inEndpointNumber = selectedEndpoint;
+
+    logger.info("[WebUSB Capture] Interface/endpoint claimed", {
+      interfaceNumber: selectedInterface,
+      alternateSetting: selectedAlternate,
+      endpointIn: selectedEndpoint,
+    });
+  }
+
   private async initializeDevice(): Promise<void> {
     if (!this.device) throw new Error("Device not connected");
 
     try {
-      // Send initialization control transfer
       const initCmd = new Uint8Array([0x00, 0x00, 0x00, 0x00]);
       await this.device.controlTransferOut(
         {
@@ -145,15 +199,10 @@ class WebUsbCaptureService {
       );
       logger.info("[WebUSB Capture] Device initialized");
     } catch (e) {
-      // Some devices may not need this exact init; continue anyway
       logger.warn("[WebUSB Capture] Init control transfer warning (may be ok):", e);
     }
   }
 
-  /**
-   * Start capture — waits for finger and reads image.
-   * Returns a PNG base64 string.
-   */
   async capture(timeoutMs = 30000): Promise<WebUsbCaptureResult> {
     if (!this.device) {
       return { success: false, error: "Huellero no conectado. Presione 'Vincular Huellero' primero." };
@@ -163,10 +212,8 @@ class WebUsbCaptureService {
     this.captureAbort = new AbortController();
 
     try {
-      // Send start capture command
       await this.startCapture();
 
-      // Wait for finger presence
       const fingerDetected = await this.waitForFinger(timeoutMs);
       if (!fingerDetected) {
         this.setStatus("connected");
@@ -176,14 +223,12 @@ class WebUsbCaptureService {
         };
       }
 
-      // Read fingerprint image
       const rawImage = await this.readImageData();
-
-      // Convert raw grayscale to PNG base64
       const pngBase64 = this.rawToPngBase64(rawImage, IMG_WIDTH, IMG_HEIGHT);
 
       this.setStatus("connected");
       logger.info("[WebUSB Capture] Fingerprint captured successfully");
+
       return {
         success: true,
         imageBase64: pngBase64,
@@ -191,20 +236,24 @@ class WebUsbCaptureService {
         height: IMG_HEIGHT,
       };
     } catch (err: any) {
-      logger.error("[WebUSB Capture] Capture error:", err);
+      const message = this.formatWebUsbError(err);
+      this.lastError = message;
+      logger.error("[WebUSB Capture] Capture error:", {
+        message,
+        name: err?.name,
+        code: err?.code,
+        raw: err,
+      });
       this.setStatus("connected");
       return {
         success: false,
-        error: err?.message || "Error al capturar la huella",
+        error: message,
       };
     } finally {
       this.captureAbort = null;
     }
   }
 
-  /**
-   * Send start capture command via control transfer.
-   */
   private async startCapture(): Promise<void> {
     const cmd = new Uint8Array([0x01, 0x00, 0x00, 0x00]);
     await this.device!.controlTransferOut(
@@ -220,11 +269,9 @@ class WebUsbCaptureService {
     logger.info("[WebUSB Capture] Capture started, waiting for finger...");
   }
 
-  /**
-   * Poll finger status via control transfer.
-   */
   private async waitForFinger(timeoutMs: number): Promise<boolean> {
     const start = Date.now();
+
     while (Date.now() - start < timeoutMs) {
       if (this.captureAbort?.signal.aborted) return false;
 
@@ -239,44 +286,43 @@ class WebUsbCaptureService {
           },
           1
         );
+
         if (result.data && result.data.getUint8(0) === 1) {
           logger.info("[WebUSB Capture] Finger detected");
           return true;
         }
       } catch (e) {
-        // Some reads may fail intermittently, keep trying
         logger.warn("[WebUSB Capture] Finger status read warning:", e);
       }
 
       await new Promise((r) => setTimeout(r, 100));
     }
+
     return false;
   }
 
-  /**
-   * Read raw image data from bulk IN endpoint.
-   */
   private async readImageData(): Promise<Uint8Array> {
-    // Read image data in chunks — endpoint 1 (IN)
+    if (!this.inEndpointNumber) {
+      throw new Error("No hay endpoint de lectura USB disponible.");
+    }
+
     const chunks: Uint8Array[] = [];
     let totalRead = 0;
-    const maxRead = IMG_SIZE + 1024; // some padding
+    const maxRead = IMG_SIZE + 1024;
 
     while (totalRead < IMG_SIZE) {
-      const remaining = Math.min(16384, maxRead - totalRead); // 16KB chunks
-      const result = await this.device!.transferIn(1, remaining);
+      const remaining = Math.min(16384, maxRead - totalRead);
+      const result = await this.device!.transferIn(this.inEndpointNumber, remaining);
 
       if (result.data && result.data.byteLength > 0) {
-        const chunk = new Uint8Array(result.data.buffer);
+        const chunk = new Uint8Array(result.data.buffer, result.data.byteOffset, result.data.byteLength);
         chunks.push(chunk);
         totalRead += chunk.length;
-        logger.info(`[WebUSB Capture] Read ${totalRead}/${IMG_SIZE} bytes`);
       } else {
         break;
       }
     }
 
-    // Merge chunks
     const merged = new Uint8Array(totalRead);
     let offset = 0;
     for (const c of chunks) {
@@ -284,31 +330,28 @@ class WebUsbCaptureService {
       offset += c.length;
     }
 
-    // Trim or pad to exact image size
     if (merged.length >= IMG_SIZE) {
       return merged.slice(0, IMG_SIZE);
     }
 
-    // If we got less data, pad with white
     const padded = new Uint8Array(IMG_SIZE);
     padded.fill(255);
     padded.set(merged);
     return padded;
   }
 
-  /**
-   * Convert raw 8-bit grayscale to PNG via canvas.
-   */
   private rawToPngBase64(raw: Uint8Array, w: number, h: number): string {
     const canvas = document.createElement("canvas");
     canvas.width = w;
     canvas.height = h;
-    const ctx = canvas.getContext("2d")!;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("No se pudo crear el contexto de imagen para la huella.");
+
     const imgData = ctx.createImageData(w, h);
     const d = imgData.data;
 
     for (let i = 0; i < w * h; i++) {
-      const v = raw[i] || 255;
+      const v = raw[i] ?? 255;
       d[i * 4] = v;
       d[i * 4 + 1] = v;
       d[i * 4 + 2] = v;
@@ -319,34 +362,61 @@ class WebUsbCaptureService {
     return canvas.toDataURL("image/png");
   }
 
-  /**
-   * Cancel an ongoing capture.
-   */
   cancelCapture(): void {
     this.captureAbort?.abort();
     this.setStatus("connected");
   }
 
-  /**
-   * Disconnect and release the device.
-   */
   async disconnect(): Promise<void> {
     this.cancelCapture();
-    try {
-      if (this.device) {
-        await this.device.releaseInterface(0).catch(() => { });
-        await this.device.close().catch(() => { });
-      }
-    } catch { }
-    this.device = null;
+    await this.cleanupConnection();
     this.setStatus("disconnected");
     logger.info("[WebUSB Capture] Disconnected");
   }
 
-  // ── Events ─────────────────────────────────────────────────
+  private async cleanupConnection(): Promise<void> {
+    try {
+      if (this.device) {
+        if (this.claimedInterfaceNumber !== null) {
+          await this.device.releaseInterface(this.claimedInterfaceNumber).catch(() => {});
+        }
+        await this.device.close().catch(() => {});
+      }
+    } finally {
+      this.device = null;
+      this.inEndpointNumber = null;
+      this.claimedInterfaceNumber = null;
+    }
+  }
+
+  private formatWebUsbError(err: any): string {
+    const name = err?.name ? String(err.name) : "";
+    const message = err?.message ? String(err.message) : "";
+
+    if (name === "NotFoundError") {
+      return "No se seleccionó el huellero en el diálogo de Chrome.";
+    }
+
+    if (name === "SecurityError") {
+      return "Permiso WebUSB bloqueado. Use HTTPS y permita acceso al dispositivo en Chrome.";
+    }
+
+    if (name === "NetworkError" || /claim/i.test(message)) {
+      return "No se pudo reclamar la interfaz USB. Cierre software de DigitalPersona/SDK y reconecte el huellero.";
+    }
+
+    if (name === "InvalidStateError") {
+      return "Estado USB inválido. Desconecte y vuelva a conectar el huellero.";
+    }
+
+    if (message) return message;
+    return "Error de conexión WebUSB con el huellero.";
+  }
+
   onStatusChange(cb: StatusCallback) {
     this.listeners.add(cb);
   }
+
   offStatusChange(cb: StatusCallback) {
     this.listeners.delete(cb);
   }
@@ -354,7 +424,11 @@ class WebUsbCaptureService {
   private setStatus(status: WebUsbCaptureStatus, message?: string) {
     this.status = status;
     this.listeners.forEach((cb) => {
-      try { cb(status, message); } catch { }
+      try {
+        cb(status, message);
+      } catch {
+        // noop
+      }
     });
   }
 }
