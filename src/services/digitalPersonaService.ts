@@ -327,6 +327,7 @@ class DigitalPersonaService {
     this.ws = null;
     this.status = "disconnected";
     this.connectedPort = null;
+    this.connectedHost = null;
     this.emit("statusChange", this.getInfo());
   }
 
