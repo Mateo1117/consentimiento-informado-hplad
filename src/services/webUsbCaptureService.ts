@@ -398,7 +398,7 @@ class WebUsbCaptureService {
     }
 
     if (name === "SecurityError") {
-      return "Permiso WebUSB bloqueado. Use HTTPS y permita acceso al dispositivo en Chrome.";
+      return "WebUSB bloqueado: abra la aplicación desde la URL publicada (no desde el preview/iframe). Chrome requiere HTTPS y contexto de primer nivel.";
     }
 
     if (name === "NetworkError" || /claim/i.test(message)) {
