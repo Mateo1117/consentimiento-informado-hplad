@@ -49,6 +49,12 @@ class DigitalPersonaService {
   private connectedPort: number | null = null;
   private connectedHost: string | null = null;
   private lastDetectError: string | null = null;
+  private _diagLog: Array<{ ts: number; msg: string }> = [];
+  private _lastCloseCode: number | null = null;
+  private _lastCloseReason: string | null = null;
+  private _wsReadyState: number | null = null;
+  private _discoveredEndpoint: string | null = null;
+  private _attemptedEndpoints: string[] = [];
 
   // ── Detectar si el Lite Client está corriendo ──────────────────────────
   async detect(): Promise<boolean> {
@@ -57,6 +63,10 @@ class DigitalPersonaService {
     }
 
     this.lastDetectError = null;
+    this._diagLog = [];
+    this._attemptedEndpoints = [];
+    this._lastCloseCode = null;
+    this._lastCloseReason = null;
     const attemptedEndpoints = new Set<string>();
     const attemptErrors: string[] = [];
 
@@ -67,18 +77,22 @@ class DigitalPersonaService {
       for (const endpoint of endpoints) {
         const safeEndpoint = this.sanitizeEndpointForDiagnostics(endpoint.url);
         attemptedEndpoints.add(safeEndpoint);
+        this._attemptedEndpoints.push(safeEndpoint);
+        this._addDiag(`Intentando ${safeEndpoint}...`);
 
         const result = await this.tryConnect(endpoint);
         if (result.ok) {
           this.connectedPort = endpoint.port;
           this.connectedHost = endpoint.host;
           this.lastDetectError = null;
+          this._addDiag(`✓ Conectado a ${safeEndpoint}`);
           logger.info(`[DigitalPersona] Lite Client detectado en ${safeEndpoint}`);
           return true;
         }
 
         if (result.error) {
           attemptErrors.push(`${safeEndpoint} (${result.error})`);
+          this._addDiag(`✗ ${safeEndpoint}: ${result.error}`);
         }
       }
     }
@@ -121,6 +135,8 @@ class DigitalPersonaService {
             const pathValue = `${parsed.pathname}${parsed.search}`;
             const wsUrl = `${wsProtocol}://${hostValue}:${portValue}${pathValue}`;
 
+            this._discoveredEndpoint = wsUrl;
+            this._addDiag(`Discovery broker → ${this.sanitizeEndpointForDiagnostics(wsUrl)}`);
             logger.info(`[DigitalPersona] Endpoint WebSDK descubierto en ${discoveryUrl}: ${wsUrl}`);
             return {
               protocol: wsProtocol,
@@ -285,6 +301,8 @@ class DigitalPersonaService {
 
       ws.onclose = (event) => {
         clearTimeout(timeout);
+        this._lastCloseCode = event.code;
+        this._lastCloseReason = event.reason || null;
         settle(false, transientError || `closed_${event.code || 0}`);
       };
     });
@@ -451,6 +469,29 @@ class DigitalPersonaService {
 
   isConnected(): boolean {
     return this.status === "connected" || this.status === "capturing";
+  }
+
+  getDiagnostics() {
+    return {
+      status: this.status,
+      wsReadyState: this.ws?.readyState ?? null,
+      connectedPort: this.connectedPort,
+      connectedHost: this.connectedHost,
+      discoveredEndpoint: this._discoveredEndpoint
+        ? this.sanitizeEndpointForDiagnostics(this._discoveredEndpoint)
+        : null,
+      lastCloseCode: this._lastCloseCode,
+      lastCloseReason: this._lastCloseReason,
+      lastError: this.lastDetectError,
+      attemptedEndpoints: this._attemptedEndpoints,
+      log: this._diagLog.slice(-20),
+    };
+  }
+
+  private _addDiag(msg: string) {
+    this._diagLog.push({ ts: Date.now(), msg });
+    if (this._diagLog.length > 50) this._diagLog.shift();
+    this.emit("diagnostics", this.getDiagnostics());
   }
 
   // ── Eventos ────────────────────────────────────────────────────────────
