@@ -820,7 +820,32 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
         {/* ── idle ─────────────────────────────────────────────────────────── */}
         {step === 'idle' && (
           <div className="space-y-4">
-            {usbDetecting && (
+            {/* ── iframe/preview warning ── */}
+            {isPreviewOrEmbedded() && (
+              <div className="rounded-xl border-2 border-amber-500/40 bg-amber-500/10 p-4 space-y-2">
+                <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                  <Lightbulb className="h-4 w-4" />
+                  Lector USB no disponible en preview/iframe
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  WebUSB y WebSocket local están bloqueados por el navegador en este contexto.
+                  Para usar el lector de huella USB, abra la aplicación desde la URL publicada:
+                </p>
+                <a
+                  href="https://consentimiento-informado-hplad.lovable.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-block text-sm font-medium text-primary underline"
+                >
+                  Abrir URL publicada ↗
+                </a>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Mientras tanto, puede usar la <strong>cámara</strong> como alternativa.
+                </p>
+              </div>
+            )}
+
+            {usbDetecting && !isPreviewOrEmbedded() && (
               <div className="bg-muted/50 rounded-lg p-3 flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 Buscando lector de huella USB...
@@ -829,162 +854,159 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
 
             {!usbDetecting && (
               <>
-                {/* ── WebUSB: principal method for Chrome (no agent needed) ── */}
-                {webUsbDetectionService.isSupported() && (
-                  <div className={`rounded-xl p-4 space-y-3 border-2 transition-colors ${
-                    webUsbInfo.connected
-                      ? 'bg-green-500/10 border-green-500/40'
-                      : 'bg-muted/30 border-dashed border-primary/30'
-                  }`}>
-                    {/* Status row */}
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-3 h-3 rounded-full shrink-0 ${
-                          webUsbInfo.connected
-                            ? 'bg-green-500 shadow-[0_0_8px_2px_hsl(142_71%_45%/0.4)] animate-pulse'
-                            : 'bg-muted-foreground/25'
-                        }`} />
-                        <span className={`text-sm font-semibold ${
-                          webUsbInfo.connected
-                            ? 'text-green-700 dark:text-green-400'
-                            : 'text-foreground'
-                        }`}>
-                          {webUsbInfo.connected
-                            ? `✓ ${webUsbInfo.productName} conectado`
-                            : 'Conectar huellero USB'}
-                        </span>
-                      </div>
-                      {webUsbInfo.connected && webUsbInfo.serialNumber && (
-                        <span className="text-xs text-muted-foreground font-mono">
-                          S/N: {webUsbInfo.serialNumber}
-                        </span>
-                      )}
-                    </div>
+                {/* ── Hardware options only when NOT in iframe ── */}
+                {!isPreviewOrEmbedded() && (
+                  <>
+                    {/* ── WebUSB: principal method for Chrome (no agent needed) ── */}
+                    {webUsbDetectionService.isSupported() && (
+                      <div className={`rounded-xl p-4 space-y-3 border-2 transition-colors ${
+                        webUsbInfo.connected
+                          ? 'bg-green-500/10 border-green-500/40'
+                          : 'bg-muted/30 border-dashed border-primary/30'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-3 h-3 rounded-full shrink-0 ${
+                              webUsbInfo.connected
+                                ? 'bg-green-500 shadow-[0_0_8px_2px_hsl(142_71%_45%/0.4)] animate-pulse'
+                                : 'bg-muted-foreground/25'
+                            }`} />
+                            <span className={`text-sm font-semibold ${
+                              webUsbInfo.connected
+                                ? 'text-green-700 dark:text-green-400'
+                                : 'text-foreground'
+                            }`}>
+                              {webUsbInfo.connected
+                                ? `✓ ${webUsbInfo.productName} conectado`
+                                : 'Conectar huellero USB'}
+                            </span>
+                          </div>
+                          {webUsbInfo.connected && webUsbInfo.serialNumber && (
+                            <span className="text-xs text-muted-foreground font-mono">
+                              S/N: {webUsbInfo.serialNumber}
+                            </span>
+                          )}
+                        </div>
 
-                    {/* Instructions when not connected */}
-                    {!webUsbInfo.connected && (
-                      <div className="space-y-3">
-                        <p className="text-sm text-muted-foreground">
-                          Conecte el lector DigitalPersona al puerto USB y presione <strong>Vincular Huellero</strong>.
-                          Chrome le pedirá seleccionar el dispositivo.
-                        </p>
-                        <ol className="space-y-1.5 text-xs text-muted-foreground list-none">
+                        {!webUsbInfo.connected && (
+                          <div className="space-y-3">
+                            <p className="text-sm text-muted-foreground">
+                              Conecte el lector DigitalPersona al puerto USB y presione <strong>Vincular Huellero</strong>.
+                            </p>
+                            <ol className="space-y-1.5 text-xs text-muted-foreground list-none">
+                              {[
+                                'Conecte el huellero U.are.U 4500 al puerto USB del equipo.',
+                                'Presione "Vincular Huellero" — aparecerá un diálogo de Chrome.',
+                                'Seleccione "DigitalPersona" de la lista y haga clic en "Conectar".',
+                              ].map((txt, i) => (
+                                <li key={i} className="flex items-start gap-2">
+                                  <span className="w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-bold">
+                                    {i + 1}
+                                  </span>
+                                  {txt}
+                                </li>
+                              ))}
+                            </ol>
+                          </div>
+                        )}
+
+                        {!webUsbInfo.connected ? (
+                          <Button
+                            className="w-full"
+                            size="lg"
+                            onClick={async () => {
+                              const result = await webUsbDetectionService.requestDevice();
+                              if (result.connected) {
+                                toast.success(`${result.productName} vinculado correctamente`);
+                              }
+                            }}
+                          >
+                            <Usb className="h-5 w-5 mr-2" />
+                            Vincular Huellero
+                          </Button>
+                        ) : (
+                          <div className="space-y-2">
+                            <Button
+                              onClick={captureWithWebUSB}
+                              className="w-full"
+                              size="lg"
+                            >
+                              <Fingerprint className="h-5 w-5 mr-2" />
+                              Capturar Huella
+                            </Button>
+                            <p className="text-xs text-center text-muted-foreground">
+                              Lectura directa vía WebUSB — sin necesidad de agente local.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* ── Lite Client section ── */}
+                    <div className="bg-muted/50 rounded-xl p-4 space-y-3">
+                      <p className="text-sm font-semibold text-foreground flex items-center gap-2">
+                        <Usb className="h-4 w-4 text-primary" />
+                        {usbDetected
+                          ? 'Lite Client detectado — captura vía agente local'
+                          : 'Alternativa: Lite Client (agente local)'}
+                      </p>
+                      {usbDetected && (
+                        <ol className="space-y-2 text-sm text-muted-foreground list-none">
                           {[
-                            'Conecte el huellero U.are.U 4500 al puerto USB del equipo.',
-                            'Presione "Vincular Huellero" — aparecerá un diálogo de Chrome.',
-                            'Seleccione "DigitalPersona" de la lista y haga clic en "Conectar".',
+                            'Presione el botón "Activar Lector de Huella".',
+                            'Cuando el indicador muestre "Esperando huella...", solicite al paciente colocar la yema del dedo en el sensor.',
+                            'Mantenga el dedo firme sobre el lector hasta que se confirme la captura.',
                           ].map((txt, i) => (
                             <li key={i} className="flex items-start gap-2">
-                              <span className="w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-bold">
+                              <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center shrink-0 mt-0.5">
                                 {i + 1}
                               </span>
                               {txt}
                             </li>
                           ))}
                         </ol>
-                      </div>
-                    )}
-
-                    {/* Pair / Capture button */}
-                    {!webUsbInfo.connected ? (
+                      )}
                       <Button
-                        className="w-full"
-                        size="lg"
-                        onClick={async () => {
-                          const result = await webUsbDetectionService.requestDevice();
-                          if (result.connected) {
-                            toast.success(`${result.productName} vinculado correctamente`);
+                        onClick={usbDetected ? captureWithUSB : async () => {
+                          setUsbDetecting(true);
+                          try {
+                            const found = await digitalPersonaService.detect();
+                            setUsbDetected(found);
+                            if (found) {
+                              setUsbReaderInfo(digitalPersonaService.getInfo());
+                              captureWithUSB();
+                            } else {
+                              toast.error('No se detectó el Lite Client de DigitalPersona. Instale el agente local o use la cámara.');
+                            }
+                          } catch {
+                            toast.error('Error al buscar el lector USB.');
+                          } finally {
+                            setUsbDetecting(false);
                           }
                         }}
+                        className="w-full"
+                        size="lg"
                       >
-                        <Usb className="h-5 w-5 mr-2" />
-                        Vincular Huellero
+                        <Fingerprint className="h-5 w-5 mr-2" />
+                        Activar Lector de Huella
                       </Button>
-                    ) : (
-                      <div className="space-y-2">
-                        <Button
-                          onClick={captureWithWebUSB}
-                          className="w-full"
-                          size="lg"
-                        >
-                          <Fingerprint className="h-5 w-5 mr-2" />
-                          Capturar Huella
-                        </Button>
-                        <p className="text-xs text-center text-muted-foreground">
-                          Lectura directa vía WebUSB — sin necesidad de agente local.
-                        </p>
+                    </div>
+
+                    {/* Divider */}
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t border-border" />
                       </div>
-                    )}
-                  </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-card px-2 text-muted-foreground">o capturar con cámara</span>
+                      </div>
+                    </div>
+                  </>
                 )}
 
-                {/* ── Lite Client section (always available as alternative) ── */}
-                {(true) && (
-                  <div className="bg-muted/50 rounded-xl p-4 space-y-3">
-                    <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                      <Usb className="h-4 w-4 text-primary" />
-                      {usbDetected
-                        ? 'Lite Client detectado — captura vía agente local'
-                        : 'Alternativa: Lite Client (agente local)'}
-                    </p>
-                    {usbDetected && (
-                      <ol className="space-y-2 text-sm text-muted-foreground list-none">
-                        {[
-                          'Presione el botón "Activar Lector de Huella".',
-                          'Cuando el indicador muestre "Esperando huella...", solicite al paciente colocar la yema del dedo en el sensor.',
-                          'Mantenga el dedo firme sobre el lector hasta que se confirme la captura.',
-                        ].map((txt, i) => (
-                          <li key={i} className="flex items-start gap-2">
-                            <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center shrink-0 mt-0.5">
-                              {i + 1}
-                            </span>
-                            {txt}
-                          </li>
-                        ))}
-                      </ol>
-                    )}
-                    <Button
-                      onClick={usbDetected ? captureWithUSB : async () => {
-                        setUsbDetecting(true);
-                        try {
-                          const found = await digitalPersonaService.detect();
-                          setUsbDetected(found);
-                          if (found) {
-                            setUsbReaderInfo(digitalPersonaService.getInfo());
-                            captureWithUSB();
-                          } else {
-                              const previewMsg = isPreviewOrEmbedded()
-                                ? ' Abra la URL publicada para probar conexión local del navegador.'
-                                : '';
-                              toast.error(`No se detectó el Lite Client de DigitalPersona.${previewMsg}`);
-                          }
-                        } catch {
-                          toast.error('Error al buscar el lector USB.');
-                        } finally {
-                          setUsbDetecting(false);
-                        }
-                      }}
-                      className="w-full"
-                      size="lg"
-                    >
-                      <Fingerprint className="h-5 w-5 mr-2" />
-                      Activar Lector de Huella
-                    </Button>
-                  </div>
-                )}
-
-                {/* Camera fallback */}
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t border-border" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-card px-2 text-muted-foreground">o capturar con cámara</span>
-                  </div>
-                </div>
-
+                {/* Camera — always available */}
                 <Button
-                  variant="outline"
+                  variant={isPreviewOrEmbedded() ? "default" : "outline"}
                   onClick={startCamera}
                   className="w-full"
                   size="lg"
