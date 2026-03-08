@@ -517,21 +517,28 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     }
   }, [onFingerprintChange]);
 
-  // ── WebUSB Direct: capture fingerprint without agent ──────────────────────
+  // ── Smart capture: try WebUSB first, fallback to Lite Client ──────────────
   const captureWithWebUSB = useCallback(async () => {
     setStep('usb-waiting');
     try {
-      // Connect if not already connected
+      // Try WebUSB direct first
       if (!webUsbCaptureService.isConnected()) {
         const connected = await webUsbCaptureService.connect(true);
         if (!connected) {
-          toast.error(webUsbCaptureService.getLastError() || 'No se pudo conectar al huellero. Verifique que no esté ocupado por otro software.');
+          const lastErr = webUsbCaptureService.getLastError() || '';
+          // If SecurityError or blocked, fallback to Lite Client automatically
+          if (lastErr.includes('bloqueado') || lastErr.includes('SecurityError') || lastErr.includes('iframe')) {
+            toast.info('WebUSB no disponible, intentando vía Lite Client...');
+            await captureViaLiteClientFallback();
+            return;
+          }
+          toast.error(lastErr || 'No se pudo conectar al huellero.');
           setStep('idle');
           return;
         }
       }
 
-      // Capture
+      // Capture via WebUSB
       const result = await webUsbCaptureService.capture(30000);
       if (result.success && result.imageBase64) {
         setCapturedImage(result.imageBase64);
@@ -546,6 +553,37 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     } catch (err: any) {
       toast.error(err?.message || 'Error al capturar con WebUSB');
       setStep('idle');
+    }
+  }, [onFingerprintChange]);
+
+  // ── Lite Client fallback ────────────────────────────────────────────────
+  const captureViaLiteClientFallback = useCallback(async () => {
+    try {
+      const found = await digitalPersonaService.detect();
+      if (!found) {
+        toast.error('No se detectó el Lite Client de DigitalPersona. Instale el agente local o use la cámara.');
+        setStep('idle');
+        return;
+      }
+      setUsbDetected(true);
+      setUsbReaderInfo(digitalPersonaService.getInfo());
+      setUsbCapturing(true);
+      const result: CaptureResult = await digitalPersonaService.startCapture();
+      if (result.success && result.imageBase64) {
+        setCapturedImage(result.imageBase64);
+        setSelectedFinger(null);
+        setStep('captured');
+        onFingerprintChange?.(result.imageBase64);
+        toast.success('Huella capturada correctamente vía Lite Client');
+      } else {
+        toast.error(result.error || 'No se pudo capturar la huella');
+        setStep('idle');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al capturar con Lite Client');
+      setStep('idle');
+    } finally {
+      setUsbCapturing(false);
     }
   }, [onFingerprintChange]);
 
@@ -862,8 +900,8 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                   </div>
                 )}
 
-                {/* ── Lite Client section (when WebUSB is NOT supported) ── */}
-                {!webUsbDetectionService.isSupported() && (
+                {/* ── Lite Client section (always available as alternative) ── */}
+                {(
                   <div className="bg-muted/50 rounded-xl p-4 space-y-3">
                     <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Usb className="h-4 w-4 text-primary" />
