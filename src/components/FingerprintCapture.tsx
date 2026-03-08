@@ -455,40 +455,44 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     streamRef.current = null;
   }, []);
 
-  // ── USB Reader: detect on mount (don't auto-start capture) ──
+  // ── USB Reader: detect on mount (skip in iframe — blocked by browser) ──
   useEffect(() => {
     let cancelled = false;
-    const detectReader = async () => {
-      setUsbDetecting(true);
-      try {
-        const found = await digitalPersonaService.detect();
-        if (!cancelled) {
-          setUsbDetected(found);
-          if (found) {
-            setUsbReaderInfo(digitalPersonaService.getInfo());
+    const inPreview = isPreviewOrEmbedded();
+
+    if (!inPreview) {
+      const detectReader = async () => {
+        setUsbDetecting(true);
+        try {
+          const found = await digitalPersonaService.detect();
+          if (!cancelled) {
+            setUsbDetected(found);
+            if (found) {
+              setUsbReaderInfo(digitalPersonaService.getInfo());
+            }
           }
+        } catch {
+          if (!cancelled) setUsbDetected(false);
+        } finally {
+          if (!cancelled) setUsbDetecting(false);
         }
-      } catch {
-        if (!cancelled) setUsbDetected(false);
-      } finally {
-        if (!cancelled) setUsbDetecting(false);
-      }
-    };
-    detectReader();
+      };
+      detectReader();
+
+      // WebUSB detection (silent, no prompt)
+      webUsbDetectionService.detectPaired();
+    }
 
     const handleStatusChange = (info: ReaderInfo) => {
       if (!cancelled) setUsbReaderInfo(info);
     };
     digitalPersonaService.on('statusChange', handleStatusChange);
 
-    // WebUSB detection (silent, no prompt)
-    webUsbDetectionService.detectPaired();
     const handleWebUsb = (info: WebUsbDeviceInfo) => {
       if (!cancelled) setWebUsbInfo(info);
     };
     webUsbDetectionService.onChange(handleWebUsb);
 
-    // WebUSB capture status listener
     const handleWebUsbCapture = (status: WebUsbCaptureStatus) => {
       if (!cancelled) setWebUsbCaptureStatus(status);
     };
