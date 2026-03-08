@@ -59,13 +59,15 @@ class DigitalPersonaService {
     this.lastDetectError = null;
     const attemptedEndpoints = new Set<string>();
     const attemptErrors: string[] = [];
-    const endpoints = this.buildCandidateEndpoints();
+
+    const dynamicEndpoint = await this.discoverWebSdkEndpoint();
+    const endpoints = this.buildCandidateEndpoints(dynamicEndpoint || undefined);
 
     for (let retry = 1; retry <= DETECTION_RETRIES; retry++) {
       for (const endpoint of endpoints) {
         attemptedEndpoints.add(endpoint.url);
 
-        const result = await this.tryConnect(endpoint.port, endpoint.protocol, endpoint.host);
+        const result = await this.tryConnect(endpoint);
         if (result.ok) {
           this.connectedPort = endpoint.port;
           this.connectedHost = endpoint.host;
