@@ -535,10 +535,12 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     try {
       const found = await digitalPersonaService.detect();
       if (!found) {
+        const detectReason = digitalPersonaService.getLastDetectError();
         const previewMsg = isPreviewOrEmbedded()
           ? ' Está abriendo desde preview/iframe; use la URL publicada para evitar bloqueos del navegador.'
           : '';
-        toast.error(`No se detectó el Lite Client de DigitalPersona.${previewMsg}`);
+        const reasonMsg = detectReason ? `\n\nDetalle técnico: ${detectReason}` : '';
+        toast.error(`No se detectó el Lite Client de DigitalPersona.${previewMsg}${reasonMsg}`);
         setStep('idle');
         return;
       }
@@ -980,7 +982,9 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                               setUsbReaderInfo(digitalPersonaService.getInfo());
                               captureWithUSB();
                             } else {
-                              toast.error('No se detectó el Lite Client de DigitalPersona. Instale el agente local o use la cámara.');
+                              const detectReason = digitalPersonaService.getLastDetectError();
+                              const reasonMsg = detectReason ? `\n\nDetalle técnico: ${detectReason}` : '';
+                              toast.error(`No se detectó el Lite Client de DigitalPersona. Instale el agente local o use la cámara.${reasonMsg}`);
                             }
                           } catch {
                             toast.error('Error al buscar el lector USB.');
