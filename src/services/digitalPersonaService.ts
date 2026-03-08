@@ -185,6 +185,7 @@ class DigitalPersonaService {
     } catch {
       return url;
     }
+  }
 
   private tryConnect(
     endpoint: { protocol: string; host: string; port: number; path: string; url: string }
