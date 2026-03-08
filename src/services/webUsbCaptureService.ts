@@ -35,7 +35,7 @@ export interface WebUsbCaptureResult {
 type StatusCallback = (status: WebUsbCaptureStatus, message?: string) => void;
 
 class WebUsbCaptureService {
-  private device: USBDevice | null = null;
+  private device: any = null;
   private status: WebUsbCaptureStatus = "disconnected";
   private listeners: Set<StatusCallback> = new Set();
   private captureAbort: AbortController | null = null;
