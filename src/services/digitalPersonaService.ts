@@ -190,7 +190,7 @@ class DigitalPersonaService {
       };
 
       try {
-        ws = new WebSocket(`${protocol}://${host}:${port}`);
+        ws = new WebSocket(endpoint.url);
       } catch (err) {
         const message = err instanceof Error ? err.message : "constructor_error";
         settle(false, message);
