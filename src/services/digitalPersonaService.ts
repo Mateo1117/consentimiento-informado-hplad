@@ -1,25 +1,13 @@
 /**
  * digitalPersonaService.ts
- * Comunicación con el agente local DigitalPersona Lite Client
- * para el lector de huella USB U.are.U 4500.
+ * Integración con DigitalPersona Lite Client / Authentication Device Client
+ * usando las librerías oficiales @digitalpersona/websdk + @digitalpersona/fingerprint.
  *
- * El Lite Client corre como servicio Windows y expone un WebSocket
- * en wss://127.0.0.1:9986 (puerto configurable).
- *
- * Protocolo: JSON sobre WebSocket — comandos enumerativos y respuestas
- * con base64 de la imagen PNG de la huella.
+ * Las librerías se cargan como IIFE en index.html y exponen los globals
+ * `WebSdk` y `Fingerprint`.
  */
 
 import { logger } from "@/utils/logger";
-
-// ─── Configuración ────────────────────────────────────────────────────────────
-const DEFAULT_PORTS = [9986, 9987, 9000, 9001]; // puertos comunes del Lite Client/Web SDK
-const DEFAULT_HOSTS = ["127.0.0.1", "localhost", "[::1]"]; // variantes localhost
-const WS_PROTOCOLS = ["ws", "wss"]; // preferir ws local para evitar problemas de TLS/certificados
-const DISCOVERY_PORTS = [52181, 52182]; // broker de conexión usado por WebSDK moderno
-const DISCOVERY_PROTOCOLS = ["https", "http"];
-const CONNECTION_TIMEOUT = 1200; // ms
-const DETECTION_RETRIES = 1;
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 export type ReaderStatus = "disconnected" | "connecting" | "connected" | "capturing" | "error";
@@ -41,373 +29,240 @@ type EventCallback = (data: any) => void;
 
 // ─── Clase principal ──────────────────────────────────────────────────────────
 class DigitalPersonaService {
-  private ws: WebSocket | null = null;
+  private reader: Fingerprint.WebApi | null = null;
   private status: ReaderStatus = "disconnected";
   private deviceName: string | null = null;
+  private deviceUid: string | null = null;
   private listeners: Map<string, Set<EventCallback>> = new Map();
   private captureResolve: ((result: CaptureResult) => void) | null = null;
-  private connectedPort: number | null = null;
-  private connectedHost: string | null = null;
   private lastDetectError: string | null = null;
+
+  // Diagnostics
   private _diagLog: Array<{ ts: number; msg: string }> = [];
   private _lastCloseCode: number | null = null;
   private _lastCloseReason: string | null = null;
   private _wsReadyState: number | null = null;
   private _discoveredEndpoint: string | null = null;
   private _attemptedEndpoints: string[] = [];
+  private connectedPort: number | null = null;
+  private connectedHost: string | null = null;
 
-  // ── Detectar si el Lite Client está corriendo ──────────────────────────
+  // ── Verificar que las librerías están disponibles ─────────────────────
+  private isSdkAvailable(): boolean {
+    return typeof Fingerprint !== "undefined" && typeof Fingerprint.WebApi === "function";
+  }
+
+  // ── Detectar si el Lite Client está corriendo ─────────────────────────
   async detect(): Promise<boolean> {
-    if (this.ws?.readyState === WebSocket.OPEN && this.isConnected()) {
+    if (this.reader && this.status === "connected") {
       return true;
     }
 
     this.lastDetectError = null;
     this._diagLog = [];
     this._attemptedEndpoints = [];
-    this._lastCloseCode = null;
-    this._lastCloseReason = null;
-    const attemptedEndpoints = new Set<string>();
-    const attemptErrors: string[] = [];
 
-    const dynamicEndpoint = await this.discoverWebSdkEndpoint();
-    const endpoints = this.buildCandidateEndpoints(dynamicEndpoint || undefined);
-
-    for (let retry = 1; retry <= DETECTION_RETRIES; retry++) {
-      for (const endpoint of endpoints) {
-        const safeEndpoint = this.sanitizeEndpointForDiagnostics(endpoint.url);
-        attemptedEndpoints.add(safeEndpoint);
-        this._attemptedEndpoints.push(safeEndpoint);
-        this._addDiag(`Intentando ${safeEndpoint}...`);
-
-        const result = await this.tryConnect(endpoint);
-        if (result.ok) {
-          this.connectedPort = endpoint.port;
-          this.connectedHost = endpoint.host;
-          this.lastDetectError = null;
-          this._addDiag(`✓ Conectado a ${safeEndpoint}`);
-          logger.info(`[DigitalPersona] Lite Client detectado en ${safeEndpoint}`);
-          return true;
-        }
-
-        if (result.error) {
-          attemptErrors.push(`${safeEndpoint} (${result.error})`);
-          this._addDiag(`✗ ${safeEndpoint}: ${result.error}`);
-        }
-      }
+    if (!this.isSdkAvailable()) {
+      this.lastDetectError = "Las librerías DigitalPersona WebSDK no están cargadas. Verifique que los scripts estén incluidos en index.html.";
+      this._addDiag("✗ SDK no disponible (Fingerprint.WebApi no encontrado)");
+      this.status = "disconnected";
+      return false;
     }
 
-    const endpointList = Array.from(attemptedEndpoints).join(", ");
-    const diagnosis = attemptErrors.length
-      ? ` | Diagnóstico: ${attemptErrors.slice(0, 4).join("; ")}`
-      : "";
+    this._addDiag("Inicializando Fingerprint.WebApi (SDK oficial)...");
+    this.status = "connecting";
+    this.emit("statusChange", this.getInfo());
 
-    this.lastDetectError = `No hubo respuesta del Lite Client en: ${endpointList}${diagnosis}`;
-    this.status = "disconnected";
-    logger.info("[DigitalPersona] Lite Client no detectado");
-    return false;
-  }
-
-  private async discoverWebSdkEndpoint(): Promise<{ protocol: string; host: string; port: number; path: string; url: string } | null> {
-    for (const protocol of DISCOVERY_PROTOCOLS) {
-      for (const host of DEFAULT_HOSTS) {
-        for (const port of DISCOVERY_PORTS) {
-          const discoveryUrl = `${protocol}://${host}:${port}/get_connection`;
-          const controller = new AbortController();
-          const timeout = setTimeout(() => controller.abort(), CONNECTION_TIMEOUT);
-
-          try {
-            const response = await fetch(discoveryUrl, {
-              method: "GET",
-              cache: "no-store",
-              signal: controller.signal,
-            });
-            if (!response.ok) continue;
-
-            const payload = await response.json().catch(() => null);
-            const endpoint = payload?.endpoint || payload?.Endpoint;
-            if (typeof endpoint !== "string") continue;
-
-            const parsed = new URL(endpoint);
-            const wsProtocol = parsed.protocol === "https:" ? "wss" : "ws";
-            const hostValue = parsed.hostname;
-            const portValue = parsed.port ? Number(parsed.port) : wsProtocol === "wss" ? 443 : 80;
-            const pathValue = `${parsed.pathname}${parsed.search}`;
-            const wsUrl = `${wsProtocol}://${hostValue}:${portValue}${pathValue}`;
-
-            this._discoveredEndpoint = wsUrl;
-            this._addDiag(`Discovery broker → ${this.sanitizeEndpointForDiagnostics(wsUrl)}`);
-            logger.info(`[DigitalPersona] Endpoint WebSDK descubierto en ${discoveryUrl}: ${wsUrl}`);
-            return {
-              protocol: wsProtocol,
-              host: hostValue,
-              port: portValue,
-              path: pathValue,
-              url: wsUrl,
-            };
-          } catch {
-            // ignorar fallos en discovery y continuar
-          } finally {
-            clearTimeout(timeout);
-          }
-        }
-      }
-    }
-
-    return null;
-  }
-
-  private buildCandidateEndpoints(
-    preferredEndpoint?: { protocol: string; host: string; port: number; path: string; url: string }
-  ): Array<{ protocol: string; host: string; port: number; path: string; url: string }> {
-    const hosts = this.connectedHost
-      ? [this.connectedHost, ...DEFAULT_HOSTS.filter((h) => h !== this.connectedHost)]
-      : [...DEFAULT_HOSTS];
-
-    const ports = this.connectedPort
-      ? [this.connectedPort, ...DEFAULT_PORTS.filter((p) => p !== this.connectedPort)]
-      : [...DEFAULT_PORTS];
-
-    const endpoints: Array<{ protocol: string; host: string; port: number; path: string; url: string }> = [];
-    const seen = new Set<string>();
-
-    if (preferredEndpoint) {
-      seen.add(preferredEndpoint.url);
-      endpoints.push(preferredEndpoint);
-    }
-
-    for (const protocol of WS_PROTOCOLS) {
-      for (const host of hosts) {
-        for (const port of ports) {
-          const url = `${protocol}://${host}:${port}`;
-          if (seen.has(url)) continue;
-          seen.add(url);
-          endpoints.push({ protocol, host, port, path: "", url });
-        }
-      }
-    }
-
-    return endpoints;
-  }
-
-  private sanitizeEndpointForDiagnostics(url: string): string {
     try {
-      const parsed = new URL(url);
-      const sensitiveParams = ["web_sdk_password", "web_sdk_username", "web_sdk_salt", "token", "password"];
-      sensitiveParams.forEach((key) => {
-        if (parsed.searchParams.has(key)) parsed.searchParams.set(key, "***");
-      });
-      return `${parsed.protocol}//${parsed.host}${parsed.pathname}${parsed.search}`;
-    } catch {
-      return url;
+      // Crear instancia del reader con opciones por defecto
+      // El WebSDK maneja internamente el descubrimiento del broker y la conexión WebSocket
+      const reader = new Fingerprint.WebApi({ debug: false });
+      this.reader = reader;
+
+      // Configurar event handlers
+      this.setupSdkHandlers(reader);
+
+      // Intentar enumerar dispositivos — si funciona, el Lite Client está corriendo
+      const devices = await this.withTimeout(
+        reader.enumerateDevices(),
+        8000,
+        "Timeout al conectar con el Lite Client"
+      );
+
+      this._addDiag(`Dispositivos encontrados: ${devices.length}`);
+
+      if (devices.length > 0) {
+        this.deviceUid = devices[0];
+        // Intentar obtener info del dispositivo
+        try {
+          const info = await this.withTimeout(
+            reader.getDeviceInfo(devices[0]),
+            5000,
+            "Timeout al obtener info del dispositivo"
+          );
+          this.deviceName = `DigitalPersona (${info.DeviceID})`;
+          this._addDiag(`Dispositivo: ${info.DeviceID}`);
+        } catch {
+          this.deviceName = "DigitalPersona U.are.U";
+          this._addDiag("Info del dispositivo no disponible, usando nombre genérico");
+        }
+      } else {
+        this.deviceName = "DigitalPersona (sin lector conectado)";
+        this._addDiag("Lite Client activo pero sin lector USB detectado");
+      }
+
+      this.status = "connected";
+      this.connectedHost = "127.0.0.1";
+      this.connectedPort = 52181;
+      this._discoveredEndpoint = "WebSDK oficial (broker automático)";
+      this.emit("statusChange", this.getInfo());
+      this._addDiag("✓ Conectado al Lite Client vía SDK oficial");
+      logger.info("[DigitalPersona] Lite Client detectado vía SDK oficial");
+      return true;
+    } catch (err: any) {
+      const msg = err?.message || String(err);
+      this.lastDetectError = `No se pudo conectar al Lite Client: ${msg}`;
+      this._addDiag(`✗ Error: ${msg}`);
+      this.status = "disconnected";
+      this.reader = null;
+      logger.info("[DigitalPersona] Lite Client no detectado:", msg);
+      return false;
     }
   }
 
-  private tryConnect(
-    endpoint: { protocol: string; host: string; port: number; path: string; url: string }
-  ): Promise<{ ok: boolean; error?: string }> {
-    return new Promise((resolve) => {
-      let ws: WebSocket;
-      let settled = false;
-      let openGraceTimeout: ReturnType<typeof setTimeout> | null = null;
-      let transientError: string | undefined;
-
-      const settle = (ok: boolean, error?: string) => {
-        if (settled) return;
-        settled = true;
-        if (openGraceTimeout) clearTimeout(openGraceTimeout);
-        resolve({ ok, error });
-      };
-
-      try {
-        ws = new WebSocket(endpoint.url);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : "constructor_error";
-        settle(false, message);
-        return;
-      }
-
-      const timeout = setTimeout(() => {
-        try { ws.close(); } catch {}
-        settle(false, "timeout");
-      }, CONNECTION_TIMEOUT);
-
-      ws.onopen = () => {
-        // Algunos Lite Client aceptan conexión pero demoran/omiten la primera respuesta.
-        // Si el socket abre correctamente, damos una ventana corta antes de descartar.
-        openGraceTimeout = setTimeout(() => {
-          clearTimeout(timeout);
-          this.ws = ws;
-          this.status = "connected";
-          this.deviceName = this.deviceName || "DigitalPersona U.are.U";
-          this.setupListeners(ws);
-          this.emit("statusChange", this.getInfo());
-          settle(true);
-        }, 500);
-
-        try {
-          ws.send(JSON.stringify({
-            Action: "wireformat.QueryDevices",
-            Type: "cyclic"
-          }));
-        } catch {
-          // Si falla el send, dejamos que timeout/onclose resuelvan el intento.
-        }
-      };
-
-      ws.onmessage = (event) => {
-        clearTimeout(timeout);
-        if (openGraceTimeout) clearTimeout(openGraceTimeout);
-
-        try {
-          const data = JSON.parse(event.data);
-
-          // Respuesta típica del Lite Client (con o sin dispositivo conectado)
-          const looksLikeLiteClient =
-            data.Devices !== undefined ||
-            data.DeviceID !== undefined ||
-            (typeof data.Action === "string" && data.Action.startsWith("wireformat."));
-
-          if (looksLikeLiteClient) {
-            this.ws = ws;
-            this.status = "connected";
-            this.setupListeners(ws);
-            if (Array.isArray(data.Devices) && data.Devices.length > 0) {
-              this.deviceName = data.Devices[0].DeviceName || "U.are.U 4500";
-            } else {
-              this.deviceName = "DigitalPersona U.are.U";
-            }
-            this.emit("statusChange", this.getInfo());
-            settle(true);
-          } else {
-            ws.close();
-            settle(false, "unexpected_payload");
-          }
-        } catch {
-          // Si el mensaje no es JSON, pero el socket ya abrió, aceptamos como servicio local activo.
-          this.ws = ws;
-          this.status = "connected";
-          this.deviceName = this.deviceName || "DigitalPersona U.are.U";
-          this.setupListeners(ws);
-          this.emit("statusChange", this.getInfo());
-          settle(true);
-        }
-      };
-
-      ws.onerror = () => {
-        clearTimeout(timeout);
-        transientError = transientError || "socket_error";
-      };
-
-      ws.onclose = (event) => {
-        clearTimeout(timeout);
-        this._lastCloseCode = event.code;
-        this._lastCloseReason = event.reason || null;
-        settle(false, transientError || `closed_${event.code || 0}`);
-      };
+  private withTimeout<T>(promise: Promise<T>, ms: number, errMsg: string): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error(errMsg)), ms);
+      promise.then(
+        (v) => { clearTimeout(timer); resolve(v); },
+        (e) => { clearTimeout(timer); reject(e); }
+      );
     });
   }
 
-  private setupListeners(ws: WebSocket) {
-    ws.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        this.handleMessage(data);
-      } catch (e) {
-        logger.error("[DigitalPersona] Error parsing message:", e);
+  // ── Configurar handlers del SDK ──────────────────────────────────────
+  private setupSdkHandlers(reader: Fingerprint.WebApi) {
+    reader.onDeviceConnected = (event) => {
+      this.deviceUid = event.deviceUid;
+      this.deviceName = `DigitalPersona (${event.deviceUid})`;
+      this.status = "connected";
+      this._addDiag(`Dispositivo conectado: ${event.deviceUid}`);
+      this.emit("deviceConnected", { name: this.deviceName });
+      this.emit("statusChange", this.getInfo());
+    };
+
+    reader.onDeviceDisconnected = (event) => {
+      this._addDiag(`Dispositivo desconectado: ${event.deviceUid}`);
+      if (event.deviceUid === this.deviceUid) {
+        this.deviceUid = null;
+        this.status = "connected"; // Lite Client still running
+        this.emit("deviceDisconnected", {});
+        this.emit("statusChange", this.getInfo());
       }
     };
 
-    ws.onclose = () => {
-      this.status = "disconnected";
-      this.ws = null;
-      this.emit("statusChange", this.getInfo());
-      logger.info("[DigitalPersona] WebSocket cerrado");
-    };
+    reader.onSamplesAcquired = (event) => {
+      this._addDiag(`Muestras adquiridas (formato: ${event.sampleFormat})`);
+      
+      // event.samples es un string base64url con los datos
+      // Para PngImage, es un JSON array de base64url strings
+      let imageBase64: string | null = null;
+      const FP = Fingerprint as any; // avoid type conflicts with npm package d.ts
+      
+      try {
+        const samplesData = JSON.parse(FP.b64UrlToUtf8(event.samples));
+        if (Array.isArray(samplesData) && samplesData.length > 0) {
+          // Cada sample es base64url encoded
+          const rawB64 = FP.b64UrlTo64(samplesData[0]);
+          imageBase64 = `data:image/png;base64,${rawB64}`;
+        }
+      } catch {
+        // Fallback: try treating samples directly as base64
+        try {
+          const rawB64 = FP.b64UrlTo64(event.samples);
+          imageBase64 = `data:image/png;base64,${rawB64}`;
+        } catch {
+          this._addDiag("Error al decodificar samples");
+        }
+      }
 
-    ws.onerror = (e) => {
-      this.status = "error";
-      this.emit("statusChange", this.getInfo());
-      logger.error("[DigitalPersona] WebSocket error:", e);
-    };
-  }
-
-  private handleMessage(data: any) {
-    // Dispositivo conectado/desconectado
-    if (data.Action === "wireformat.DeviceConnected") {
-      this.deviceName = data.DeviceName || "U.are.U 4500";
-      this.status = "connected";
-      this.emit("deviceConnected", { name: this.deviceName });
-      this.emit("statusChange", this.getInfo());
-    }
-
-    if (data.Action === "wireformat.DeviceDisconnected") {
-      this.status = "disconnected";
-      this.emit("deviceDisconnected", {});
-      this.emit("statusChange", this.getInfo());
-    }
-
-    // Reporte de calidad durante captura
-    if (data.Action === "wireformat.QualityReported") {
-      this.emit("quality", { quality: data.Quality });
-    }
-
-    // Muestras adquiridas (la huella)
-    if (data.Action === "wireformat.SamplesAcquired" || data.Samples) {
-      const samples = data.Samples || [];
-      if (samples.length > 0) {
-        const imageData = samples[0]; // Base64 PNG
-        const imageBase64 = imageData.startsWith("data:")
-          ? imageData
-          : `data:image/png;base64,${imageData}`;
-
+      if (imageBase64) {
         this.status = "connected";
         this.emit("statusChange", this.getInfo());
-        this.emit("captured", { imageBase64, quality: data.Quality });
+        this.emit("captured", { imageBase64 });
 
         if (this.captureResolve) {
-          this.captureResolve({
-            success: true,
-            imageBase64,
-            quality: data.Quality,
-          });
+          this.captureResolve({ success: true, imageBase64 });
+          this.captureResolve = null;
+        }
+      } else {
+        this._addDiag("No se pudo extraer imagen de las muestras");
+        if (this.captureResolve) {
+          this.captureResolve({ success: false, error: "No se pudo decodificar la huella capturada" });
           this.captureResolve = null;
         }
       }
-    }
+    };
 
-    // Error durante captura
-    if (data.Action === "wireformat.ErrorOccurred" || data.Error) {
-      const error = data.Error || data.Message || "Error del lector";
+    reader.onQualityReported = (event) => {
+      this._addDiag(`Calidad: ${Fingerprint.QualityCode[event.quality] || event.quality}`);
+      this.emit("quality", { quality: event.quality });
+    };
+
+    reader.onErrorOccurred = (event) => {
+      const errorMsg = `Error del lector (código: ${event.error})`;
+      this._addDiag(`✗ ${errorMsg}`);
       this.status = "connected";
       this.emit("statusChange", this.getInfo());
-      this.emit("error", { error });
+      this.emit("error", { error: errorMsg });
 
       if (this.captureResolve) {
-        this.captureResolve({ success: false, error });
+        this.captureResolve({ success: false, error: errorMsg });
         this.captureResolve = null;
       }
-    }
+    };
+
+    reader.onAcquisitionStarted = (event) => {
+      this._addDiag(`Adquisición iniciada en ${event.deviceUid}`);
+    };
+
+    reader.onAcquisitionStopped = (event) => {
+      this._addDiag(`Adquisición detenida en ${event.deviceUid}`);
+    };
+
+    reader.onCommunicationFailed = () => {
+      this._addDiag("✗ Comunicación con Lite Client perdida");
+      this.status = "error";
+      this.lastDetectError = "Se perdió la comunicación con el Lite Client";
+      this.emit("statusChange", this.getInfo());
+
+      if (this.captureResolve) {
+        this.captureResolve({ success: false, error: "Se perdió la comunicación con el Lite Client" });
+        this.captureResolve = null;
+      }
+    };
   }
 
   // ── Iniciar captura ────────────────────────────────────────────────────
   async startCapture(): Promise<CaptureResult> {
-    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      return { success: false, error: "Lector no conectado" };
+    if (!this.reader) {
+      return { success: false, error: "Lite Client no conectado" };
     }
 
     this.status = "capturing";
     this.emit("statusChange", this.getInfo());
+    this._addDiag("Iniciando captura (formato PngImage)...");
 
-    return new Promise((resolve) => {
+    return new Promise<CaptureResult>(async (resolve) => {
       this.captureResolve = resolve;
 
-      // Timeout de 30 segundos para la captura
+      // Timeout de 30 segundos
       const timeout = setTimeout(() => {
         if (this.captureResolve) {
           this.captureResolve = null;
           this.status = "connected";
           this.emit("statusChange", this.getInfo());
+          this._addDiag("✗ Timeout de captura (30s)");
           resolve({
             success: false,
             error: "Tiempo de espera agotado. Coloque el dedo en el lector e intente de nuevo.",
@@ -415,28 +270,39 @@ class DigitalPersonaService {
         }
       }, 30000);
 
-      // Enviar comando de captura (formato PNG)
-      this.ws!.send(JSON.stringify({
-        Action: "wireformat.StartAcquisition",
-        SampleFormat: 3, // PngImage = 3 en el enum de DigitalPersona
-      }));
-
       // Limpiar timeout cuando se resuelva
       const originalResolve = this.captureResolve;
       this.captureResolve = (result) => {
         clearTimeout(timeout);
         originalResolve?.(result);
-        resolve(result);
       };
+
+      try {
+        await this.reader!.startAcquisition(
+          Fingerprint.SampleFormat.PngImage,
+          this.deviceUid || undefined
+        );
+        this._addDiag("Esperando huella en el sensor...");
+      } catch (err: any) {
+        clearTimeout(timeout);
+        this.captureResolve = null;
+        const msg = err?.message || String(err);
+        this._addDiag(`✗ Error al iniciar adquisición: ${msg}`);
+        this.status = "connected";
+        this.emit("statusChange", this.getInfo());
+        resolve({ success: false, error: `Error al iniciar captura: ${msg}` });
+      }
     });
   }
 
   // ── Detener captura ────────────────────────────────────────────────────
   stopCapture() {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify({
-        Action: "wireformat.StopAcquisition",
-      }));
+    if (this.reader) {
+      try {
+        this.reader.stopAcquisition(this.deviceUid || undefined);
+      } catch {
+        // Ignorar errores al detener
+      }
     }
     this.status = "connected";
     this.captureResolve = null;
@@ -446,11 +312,14 @@ class DigitalPersonaService {
   // ── Desconectar ────────────────────────────────────────────────────────
   disconnect() {
     this.stopCapture();
-    this.ws?.close();
-    this.ws = null;
+    if (this.reader) {
+      this.reader.off(); // Remove all handlers
+      this.reader = null;
+    }
     this.status = "disconnected";
     this.connectedPort = null;
     this.connectedHost = null;
+    this.deviceUid = null;
     this.emit("statusChange", this.getInfo());
   }
 
@@ -474,17 +343,15 @@ class DigitalPersonaService {
   getDiagnostics() {
     return {
       status: this.status,
-      wsReadyState: this.ws?.readyState ?? null,
+      wsReadyState: this.reader ? 1 : null, // SDK manages internally
       connectedPort: this.connectedPort,
       connectedHost: this.connectedHost,
-      discoveredEndpoint: this._discoveredEndpoint
-        ? this.sanitizeEndpointForDiagnostics(this._discoveredEndpoint)
-        : null,
+      discoveredEndpoint: this._discoveredEndpoint,
       lastCloseCode: this._lastCloseCode,
       lastCloseReason: this._lastCloseReason,
       lastError: this.lastDetectError,
       attemptedEndpoints: this._attemptedEndpoints,
-      log: this._diagLog.slice(-20),
+      log: this._diagLog.slice(-30),
     };
   }
 
