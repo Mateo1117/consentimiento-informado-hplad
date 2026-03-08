@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { digitalPersonaService, type ReaderInfo, type CaptureResult } from '@/services/digitalPersonaService';
 import { webUsbDetectionService, type WebUsbDeviceInfo } from '@/services/webUsbDetectionService';
 import { webUsbCaptureService, type WebUsbCaptureStatus } from '@/services/webUsbCaptureService';
+import { LiteClientDiagnostics } from '@/components/LiteClientDiagnostics';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 export interface FingerprintCaptureRef {
@@ -1005,6 +1006,9 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                         Activar Lector de Huella
                       </Button>
                     </div>
+
+                    {/* Diagnostic panel */}
+                    <LiteClientDiagnostics />
 
                     {/* Divider */}
                     <div className="relative">
