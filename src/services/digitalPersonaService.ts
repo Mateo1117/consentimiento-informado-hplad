@@ -335,7 +335,12 @@ class DigitalPersonaService {
     return {
       status: this.status,
       deviceName: this.deviceName || undefined,
+      error: this.lastDetectError || undefined,
     };
+  }
+
+  getLastDetectError(): string | null {
+    return this.lastDetectError;
   }
 
   isConnected(): boolean {
