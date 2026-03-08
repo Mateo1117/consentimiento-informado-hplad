@@ -55,60 +55,91 @@ class DigitalPersonaService {
     }
 
     this.lastDetectError = null;
-    const attemptedEndpoints: string[] = [];
+    const attemptedEndpoints = new Set<string>();
+    const attemptErrors: string[] = [];
+    const endpoints = this.buildCandidateEndpoints();
 
     for (let retry = 1; retry <= DETECTION_RETRIES; retry++) {
-      for (const protocol of WS_PROTOCOLS) {
-        for (const host of DEFAULT_HOSTS) {
-          for (const port of DEFAULT_PORTS) {
-            const endpoint = `${protocol}://${host}:${port}`;
-            attemptedEndpoints.push(endpoint);
+      for (const endpoint of endpoints) {
+        attemptedEndpoints.add(endpoint.url);
 
-            try {
-              const ok = await this.tryConnect(port, protocol, host);
-              if (ok) {
-                this.connectedPort = port;
-                this.connectedHost = host;
-                this.lastDetectError = null;
-                logger.info(`[DigitalPersona] Lite Client detectado en ${endpoint}`);
-                return true;
-              }
-            } catch {
-              // Siguiente combinación
-            }
-          }
+        const result = await this.tryConnect(endpoint.port, endpoint.protocol, endpoint.host);
+        if (result.ok) {
+          this.connectedPort = endpoint.port;
+          this.connectedHost = endpoint.host;
+          this.lastDetectError = null;
+          logger.info(`[DigitalPersona] Lite Client detectado en ${endpoint.url}`);
+          return true;
+        }
+
+        if (result.error) {
+          attemptErrors.push(`${endpoint.url} (${result.error})`);
         }
       }
     }
 
-    this.lastDetectError = `No hubo respuesta del Lite Client en: ${attemptedEndpoints.join(", ")}`;
+    const endpointList = Array.from(attemptedEndpoints).join(", ");
+    const diagnosis = attemptErrors.length
+      ? ` | Diagnóstico: ${attemptErrors.slice(0, 4).join("; ")}`
+      : "";
+
+    this.lastDetectError = `No hubo respuesta del Lite Client en: ${endpointList}${diagnosis}`;
+    this.status = "disconnected";
     logger.info("[DigitalPersona] Lite Client no detectado");
     return false;
   }
 
-  private tryConnect(port: number, protocol: string = "wss", host: string = "127.0.0.1"): Promise<boolean> {
+  private buildCandidateEndpoints(): Array<{ protocol: string; host: string; port: number; url: string }> {
+    const hosts = this.connectedHost
+      ? [this.connectedHost, ...DEFAULT_HOSTS.filter((h) => h !== this.connectedHost)]
+      : [...DEFAULT_HOSTS];
+
+    const ports = this.connectedPort
+      ? [this.connectedPort, ...DEFAULT_PORTS.filter((p) => p !== this.connectedPort)]
+      : [...DEFAULT_PORTS];
+
+    const endpoints: Array<{ protocol: string; host: string; port: number; url: string }> = [];
+    const seen = new Set<string>();
+
+    for (const protocol of WS_PROTOCOLS) {
+      for (const host of hosts) {
+        for (const port of ports) {
+          const url = `${protocol}://${host}:${port}`;
+          if (seen.has(url)) continue;
+          seen.add(url);
+          endpoints.push({ protocol, host, port, url });
+        }
+      }
+    }
+
+    return endpoints;
+  }
+
+  private tryConnect(port: number, protocol: string = "ws", host: string = "127.0.0.1"): Promise<{ ok: boolean; error?: string }> {
     return new Promise((resolve) => {
       let ws: WebSocket;
       let settled = false;
       let openGraceTimeout: ReturnType<typeof setTimeout> | null = null;
+      let transientError: string | undefined;
 
-      const settle = (ok: boolean) => {
+      const settle = (ok: boolean, error?: string) => {
         if (settled) return;
         settled = true;
         if (openGraceTimeout) clearTimeout(openGraceTimeout);
-        resolve(ok);
+        resolve({ ok, error });
       };
 
       try {
         ws = new WebSocket(`${protocol}://${host}:${port}`);
-      } catch {
-        settle(false);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "constructor_error";
+        settle(false, message);
         return;
       }
 
       const timeout = setTimeout(() => {
         try { ws.close(); } catch {}
-        settle(false);
+        settle(false, "timeout");
       }, CONNECTION_TIMEOUT);
 
       ws.onopen = () => {
@@ -160,7 +191,7 @@ class DigitalPersonaService {
             settle(true);
           } else {
             ws.close();
-            settle(false);
+            settle(false, "unexpected_payload");
           }
         } catch {
           // Si el mensaje no es JSON, pero el socket ya abrió, aceptamos como servicio local activo.
@@ -175,12 +206,12 @@ class DigitalPersonaService {
 
       ws.onerror = () => {
         clearTimeout(timeout);
-        settle(false);
+        transientError = transientError || "socket_error";
       };
 
-      ws.onclose = () => {
+      ws.onclose = (event) => {
         clearTimeout(timeout);
-        settle(false);
+        settle(false, transientError || `closed_${event.code || 0}`);
       };
     });
   }
