@@ -440,6 +440,15 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   // WebUSB direct capture state
   const [webUsbCaptureStatus, setWebUsbCaptureStatus] = useState<WebUsbCaptureStatus>(webUsbCaptureService.getStatus());
 
+  const isPreviewOrEmbedded = useCallback(() => {
+    if (typeof window === 'undefined') return false;
+    const inIframe = window.self !== window.top;
+    const host = window.location.hostname;
+    const isPreviewHost = host.includes('lovableproject.com') || host.includes('id-preview--');
+    const hasPreviewToken = window.location.search.includes('__lovable_token=');
+    return inIframe || isPreviewHost || hasPreviewToken;
+  }, []);
+
   // ── Camera helpers ──────────────────────────────────────────────────────────
   const stopCamera = useCallback(() => {
     streamRef.current?.getTracks().forEach(t => t.stop());
