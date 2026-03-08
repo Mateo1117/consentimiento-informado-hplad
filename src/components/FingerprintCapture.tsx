@@ -901,7 +901,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                 )}
 
                 {/* ── Lite Client section (always available as alternative) ── */}
-                {(
+                {(true) && (
                   <div className="bg-muted/50 rounded-xl p-4 space-y-3">
                     <p className="text-sm font-semibold text-foreground flex items-center gap-2">
                       <Usb className="h-4 w-4 text-primary" />
