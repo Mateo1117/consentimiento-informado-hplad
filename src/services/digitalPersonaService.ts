@@ -68,60 +68,98 @@ class DigitalPersonaService {
   private tryConnect(port: number, protocol: string = "wss"): Promise<boolean> {
     return new Promise((resolve) => {
       let ws: WebSocket;
+      let settled = false;
+      let openGraceTimeout: ReturnType<typeof setTimeout> | null = null;
+
+      const settle = (ok: boolean) => {
+        if (settled) return;
+        settled = true;
+        if (openGraceTimeout) clearTimeout(openGraceTimeout);
+        resolve(ok);
+      };
+
       try {
         ws = new WebSocket(`${protocol}://${WS_HOST}:${port}`);
       } catch {
-        resolve(false);
+        settle(false);
         return;
       }
 
       const timeout = setTimeout(() => {
         try { ws.close(); } catch {}
-        resolve(false);
+        settle(false);
       }, CONNECTION_TIMEOUT);
 
       ws.onopen = () => {
-        clearTimeout(timeout);
-        // Enviar comando de enumeración para confirmar que es el Lite Client
-        ws.send(JSON.stringify({
-          Action: "wireformat.QueryDevices",
-          Type: "cyclic"
-        }));
+        // Algunos Lite Client aceptan conexión pero demoran/omiten la primera respuesta.
+        // Si el socket abre correctamente, damos una ventana corta antes de descartar.
+        openGraceTimeout = setTimeout(() => {
+          clearTimeout(timeout);
+          this.ws = ws;
+          this.status = "connected";
+          this.deviceName = this.deviceName || "DigitalPersona U.are.U";
+          this.setupListeners(ws);
+          this.emit("statusChange", this.getInfo());
+          settle(true);
+        }, 500);
+
+        try {
+          ws.send(JSON.stringify({
+            Action: "wireformat.QueryDevices",
+            Type: "cyclic"
+          }));
+        } catch {
+          // Si falla el send, dejamos que timeout/onclose resuelvan el intento.
+        }
       };
 
       ws.onmessage = (event) => {
         clearTimeout(timeout);
+        if (openGraceTimeout) clearTimeout(openGraceTimeout);
+
         try {
           const data = JSON.parse(event.data);
-          if (data.Devices || data.DeviceID || data.Action) {
-            // Es el Lite Client
+
+          // Respuesta típica del Lite Client (con o sin dispositivo conectado)
+          const looksLikeLiteClient =
+            data.Devices !== undefined ||
+            data.DeviceID !== undefined ||
+            (typeof data.Action === "string" && data.Action.startsWith("wireformat."));
+
+          if (looksLikeLiteClient) {
             this.ws = ws;
             this.status = "connected";
             this.setupListeners(ws);
-            if (data.Devices && data.Devices.length > 0) {
+            if (Array.isArray(data.Devices) && data.Devices.length > 0) {
               this.deviceName = data.Devices[0].DeviceName || "U.are.U 4500";
             } else {
               this.deviceName = "DigitalPersona U.are.U";
             }
             this.emit("statusChange", this.getInfo());
-            resolve(true);
+            settle(true);
           } else {
             ws.close();
-            resolve(false);
+            settle(false);
           }
         } catch {
-          ws.close();
-          resolve(false);
+          // Si el mensaje no es JSON, pero el socket ya abrió, aceptamos como servicio local activo.
+          this.ws = ws;
+          this.status = "connected";
+          this.deviceName = this.deviceName || "DigitalPersona U.are.U";
+          this.setupListeners(ws);
+          this.emit("statusChange", this.getInfo());
+          settle(true);
         }
       };
 
       ws.onerror = () => {
         clearTimeout(timeout);
-        resolve(false);
+        settle(false);
       };
 
       ws.onclose = () => {
         clearTimeout(timeout);
+        settle(false);
       };
     });
   }

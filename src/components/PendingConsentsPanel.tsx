@@ -101,7 +101,7 @@ export const PendingConsentsPanel: React.FC<PendingConsentsPanelProps> = ({
 
       <CardContent className="px-4 pb-4 space-y-3">
         {consents.map((consent, idx) => (
-          <React.Fragment key={consent.id}>
+          <div key={consent.id}>
             {idx > 0 && <Separator />}
             <div className="flex items-start justify-between gap-3 pt-1">
               <div className="flex-1 min-w-0">
@@ -138,7 +138,7 @@ export const PendingConsentsPanel: React.FC<PendingConsentsPanelProps> = ({
                 <ChevronRight className="h-3.5 w-3.5" />
               </Button>
             </div>
-          </React.Fragment>
+          </div>
         ))}
 
         <div className="pt-1">
