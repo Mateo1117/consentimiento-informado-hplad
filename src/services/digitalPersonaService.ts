@@ -13,10 +13,10 @@
 import { logger } from "@/utils/logger";
 
 // ─── Configuración ────────────────────────────────────────────────────────────
-const DEFAULT_PORTS = [9986, 9987]; // puertos típicos del Lite Client
+const DEFAULT_PORTS = [9986, 9987, 9000, 9001]; // puertos comunes del Lite Client/Web SDK
 const DEFAULT_HOSTS = ["127.0.0.1", "localhost", "[::1]"]; // variantes localhost
-const WS_PROTOCOLS = ["wss", "ws"]; // intentar ambos protocolos
-const CONNECTION_TIMEOUT = 3000; // ms
+const WS_PROTOCOLS = ["ws", "wss"]; // preferir ws local para evitar problemas de TLS/certificados
+const CONNECTION_TIMEOUT = 5000; // ms
 const DETECTION_RETRIES = 2;
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
