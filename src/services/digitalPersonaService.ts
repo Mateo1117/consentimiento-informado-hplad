@@ -167,18 +167,19 @@ class DigitalPersonaService {
       // event.samples es un string base64url con los datos
       // Para PngImage, es un JSON array de base64url strings
       let imageBase64: string | null = null;
+      const FP = Fingerprint as any; // avoid type conflicts with npm package d.ts
       
       try {
-        const samplesData = JSON.parse(Fingerprint.b64UrlToUtf8(event.samples));
+        const samplesData = JSON.parse(FP.b64UrlToUtf8(event.samples));
         if (Array.isArray(samplesData) && samplesData.length > 0) {
           // Cada sample es base64url encoded
-          const rawB64 = Fingerprint.b64UrlTo64(samplesData[0]);
+          const rawB64 = FP.b64UrlTo64(samplesData[0]);
           imageBase64 = `data:image/png;base64,${rawB64}`;
         }
       } catch {
         // Fallback: try treating samples directly as base64
         try {
-          const rawB64 = Fingerprint.b64UrlTo64(event.samples);
+          const rawB64 = FP.b64UrlTo64(event.samples);
           imageBase64 = `data:image/png;base64,${rawB64}`;
         } catch {
           this._addDiag("Error al decodificar samples");
