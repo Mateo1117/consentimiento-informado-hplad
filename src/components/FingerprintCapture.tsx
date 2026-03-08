@@ -953,7 +953,10 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                             setUsbReaderInfo(digitalPersonaService.getInfo());
                             captureWithUSB();
                           } else {
-                            toast.error('No se detectó el lector USB. Use la cámara como alternativa.');
+                              const previewMsg = isPreviewOrEmbedded()
+                                ? ' Abra la URL publicada para probar conexión local del navegador.'
+                                : '';
+                              toast.error(`No se detectó el Lite Client de DigitalPersona.${previewMsg}`);
                           }
                         } catch {
                           toast.error('Error al buscar el lector USB.');
