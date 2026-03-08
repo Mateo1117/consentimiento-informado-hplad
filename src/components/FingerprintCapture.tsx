@@ -525,7 +525,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
       if (!webUsbCaptureService.isConnected()) {
         const connected = await webUsbCaptureService.connect(true);
         if (!connected) {
-          toast.error('No se pudo conectar al huellero. Asegúrese de que está conectado al USB.');
+          toast.error(webUsbCaptureService.getLastError() || 'No se pudo conectar al huellero. Verifique que no esté ocupado por otro software.');
           setStep('idle');
           return;
         }
