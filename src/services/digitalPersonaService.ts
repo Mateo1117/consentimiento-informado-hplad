@@ -16,6 +16,8 @@ import { logger } from "@/utils/logger";
 const DEFAULT_PORTS = [9986, 9987, 9000, 9001]; // puertos comunes del Lite Client/Web SDK
 const DEFAULT_HOSTS = ["127.0.0.1", "localhost", "[::1]"]; // variantes localhost
 const WS_PROTOCOLS = ["ws", "wss"]; // preferir ws local para evitar problemas de TLS/certificados
+const DISCOVERY_PORTS = [52181, 52182]; // broker de conexión usado por WebSDK moderno
+const DISCOVERY_PROTOCOLS = ["https", "http"];
 const CONNECTION_TIMEOUT = 1200; // ms
 const DETECTION_RETRIES = 1;
 
