@@ -65,19 +65,20 @@ class DigitalPersonaService {
 
     for (let retry = 1; retry <= DETECTION_RETRIES; retry++) {
       for (const endpoint of endpoints) {
-        attemptedEndpoints.add(endpoint.url);
+        const safeEndpoint = this.sanitizeEndpointForDiagnostics(endpoint.url);
+        attemptedEndpoints.add(safeEndpoint);
 
         const result = await this.tryConnect(endpoint);
         if (result.ok) {
           this.connectedPort = endpoint.port;
           this.connectedHost = endpoint.host;
           this.lastDetectError = null;
-          logger.info(`[DigitalPersona] Lite Client detectado en ${endpoint.url}`);
+          logger.info(`[DigitalPersona] Lite Client detectado en ${safeEndpoint}`);
           return true;
         }
 
         if (result.error) {
-          attemptErrors.push(`${endpoint.url} (${result.error})`);
+          attemptErrors.push(`${safeEndpoint} (${result.error})`);
         }
       }
     }
@@ -171,6 +172,19 @@ class DigitalPersonaService {
     }
 
     return endpoints;
+  }
+
+  private sanitizeEndpointForDiagnostics(url: string): string {
+    try {
+      const parsed = new URL(url);
+      const sensitiveParams = ["web_sdk_password", "web_sdk_username", "web_sdk_salt", "token", "password"];
+      sensitiveParams.forEach((key) => {
+        if (parsed.searchParams.has(key)) parsed.searchParams.set(key, "***");
+      });
+      return `${parsed.protocol}//${parsed.host}${parsed.pathname}${parsed.search}`;
+    } catch {
+      return url;
+    }
   }
 
   private tryConnect(

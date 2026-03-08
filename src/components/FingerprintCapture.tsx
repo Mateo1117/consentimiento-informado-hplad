@@ -974,6 +974,12 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                       )}
                       <Button
                         onClick={usbDetected ? captureWithUSB : async () => {
+                          const inPreview = isPreviewOrEmbedded();
+                          if (inPreview) {
+                            toast.info('El Lite Client puede bloquearse en preview/iframe. Abra la URL publicada y reintente.');
+                            return;
+                          }
+
                           setUsbDetecting(true);
                           try {
                             const found = await digitalPersonaService.detect();
