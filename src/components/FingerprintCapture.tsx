@@ -530,24 +530,28 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   const captureWithWebUSB = useCallback(async () => {
     setStep('usb-waiting');
     try {
-      // Try WebUSB direct first
       if (!webUsbCaptureService.isConnected()) {
         const connected = await webUsbCaptureService.connect(true);
         if (!connected) {
           const lastErr = webUsbCaptureService.getLastError() || '';
-          // If SecurityError or blocked, fallback to Lite Client automatically
-          if (lastErr.includes('bloqueado') || lastErr.includes('SecurityError') || lastErr.includes('iframe')) {
-            toast.info('WebUSB no disponible, intentando vía Lite Client...');
+          const blockedByContext =
+            lastErr.includes('bloqueado') ||
+            lastErr.includes('SecurityError') ||
+            lastErr.includes('iframe') ||
+            isPreviewOrEmbedded();
+
+          if (blockedByContext) {
+            toast.info('WebUSB está bloqueado en preview/iframe. Intentando Lite Client...');
             await captureViaLiteClientFallback();
             return;
           }
-          toast.error(lastErr || 'No se pudo conectar al huellero.');
+
+          toast.error(lastErr || 'No se pudo conectar al huellero por WebUSB.');
           setStep('idle');
           return;
         }
       }
 
-      // Capture via WebUSB
       const result = await webUsbCaptureService.capture(30000);
       if (result.success && result.imageBase64) {
         setCapturedImage(result.imageBase64);
@@ -563,7 +567,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
       toast.error(err?.message || 'Error al capturar con WebUSB');
       setStep('idle');
     }
-  }, [onFingerprintChange]);
+  }, [onFingerprintChange, captureViaLiteClientFallback, isPreviewOrEmbedded]);
 
   // ── Lite Client fallback ────────────────────────────────────────────────
   const captureViaLiteClientFallback = useCallback(async () => {
