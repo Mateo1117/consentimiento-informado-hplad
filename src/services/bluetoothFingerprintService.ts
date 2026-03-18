@@ -551,8 +551,9 @@ class BluetoothFingerprintService {
   private async sendCommand(instruction: number, data: Uint8Array = new Uint8Array()): Promise<void> {
     if (!this.writeChar) throw new Error("Sin característica de escritura");
 
-    const payloadLen = data.length + 3; // instruction(1) + data + checksum(2)
-    const packet = new Uint8Array(9 + data.length + 2);
+    const payloadLen = data.length + 3; // instruction(1) + checksum(2)
+    const packetLength = 12 + data.length; // header(2)+addr(4)+pid(1)+len(2)+instruction(1)+data+checksum(2)
+    const packet = new Uint8Array(packetLength);
 
     // Header 0xEF01
     packet[0] = 0xef;
@@ -567,7 +568,7 @@ class BluetoothFingerprintService {
     // PID = Command
     packet[6] = PID_COMMAND;
 
-    // Length
+    // Length = instruction + data + checksum(2)
     packet[7] = (payloadLen >> 8) & 0xff;
     packet[8] = payloadLen & 0xff;
 
@@ -579,15 +580,15 @@ class BluetoothFingerprintService {
       packet[10 + i] = data[i];
     }
 
-    // Checksum = sum of PID + length bytes + instruction + data
+    // Checksum = PID + LEN_H + LEN_L + instruction + data bytes
     let chksum = PID_COMMAND + packet[7] + packet[8] + instruction;
     for (let i = 0; i < data.length; i++) chksum += data[i];
+
     const chkIdx = 10 + data.length;
     packet[chkIdx] = (chksum >> 8) & 0xff;
     packet[chkIdx + 1] = chksum & 0xff;
 
-    // Log outgoing command
-    const hex = Array.from(packet).map(b => b.toString(16).padStart(2, '0')).join(' ');
+    const hex = Array.from(packet).map((b) => b.toString(16).padStart(2, '0')).join(' ');
     this._addDiag(`▶ TX ${packet.length}B: ${hex}`);
 
     // BLE MTU splitting (typically 20 bytes for BLE 4.x)
@@ -605,7 +606,7 @@ class BluetoothFingerprintService {
         throw err;
       }
       if (i + mtu < packet.length) {
-        await new Promise(r => setTimeout(r, 10));
+        await new Promise((r) => setTimeout(r, 10));
       }
     }
   }
