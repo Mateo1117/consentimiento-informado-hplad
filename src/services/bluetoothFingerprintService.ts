@@ -79,6 +79,7 @@ class BluetoothFingerprintService {
   private server: BluetoothRemoteGATTServer | null = null;
   private writeChar: BluetoothRemoteGATTCharacteristic | null = null;
   private notifyChar: BluetoothRemoteGATTCharacteristic | null = null;
+  private allChars: BluetoothRemoteGATTCharacteristic[] = [];
   private status: BtStatus = "disconnected";
   private deviceName: string | null = null;
   private listeners: Map<string, Set<EventCallback>> = new Map();
@@ -90,6 +91,12 @@ class BluetoothFingerprintService {
   private expectedImageBytes = 0;
   private receivedImageBytes = 0;
   private isReceivingImage = false;
+  private rawDataTimer: ReturnType<typeof setTimeout> | null = null;
+  private isCapturing = false;
+  private detectedProtocol: "synochip" | "raw" | "unknown" = "unknown";
+  private discoveredServiceUuid: string | null = null;
+  private discoveredWriteUuid: string | null = null;
+  private discoveredNotifyUuid: string | null = null;
 
   // ── Check Web Bluetooth availability ────────────────────────────────────
   isSupported(): boolean {
