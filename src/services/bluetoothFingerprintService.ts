@@ -95,7 +95,7 @@ class BluetoothFingerprintService {
   isSupported(): boolean {
     return typeof navigator !== "undefined" &&
            "bluetooth" in navigator &&
-           typeof navigator.bluetooth?.requestDevice === "function";
+           typeof (navigator as any).bluetooth?.requestDevice === "function";
   }
 
   // ── Platform detection ──────────────────────────────────────────────────
