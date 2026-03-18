@@ -3,7 +3,7 @@ import React, {
 } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Usb, Loader2 } from 'lucide-react';
+import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Usb, Loader2, Bluetooth } from 'lucide-react';
 import { toast } from 'sonner';
 import { digitalPersonaService, type ReaderInfo, type CaptureResult } from '@/services/digitalPersonaService';
 import { webUsbDetectionService, type WebUsbDeviceInfo } from '@/services/webUsbDetectionService';
