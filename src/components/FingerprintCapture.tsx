@@ -3,12 +3,13 @@ import React, {
 } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Usb, Loader2 } from 'lucide-react';
+import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Usb, Loader2, Bluetooth } from 'lucide-react';
 import { toast } from 'sonner';
 import { digitalPersonaService, type ReaderInfo, type CaptureResult } from '@/services/digitalPersonaService';
 import { webUsbDetectionService, type WebUsbDeviceInfo } from '@/services/webUsbDetectionService';
 import { webUsbCaptureService, type WebUsbCaptureStatus } from '@/services/webUsbCaptureService';
 import { LiteClientDiagnostics } from '@/components/LiteClientDiagnostics';
+import { bluetoothFingerprintService, type BtReaderInfo, type BtCaptureResult } from '@/services/bluetoothFingerprintService';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 export interface FingerprintCaptureRef {
@@ -438,7 +439,11 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   const [usbCapturing,   setUsbCapturing]   = useState(false);
   // WebUSB hardware detection
   const [webUsbInfo,     setWebUsbInfo]     = useState<WebUsbDeviceInfo>(webUsbDetectionService.getLastInfo());
-  // WebUSB direct capture state
+  // Bluetooth Reader state
+  const [btReaderInfo, setBtReaderInfo] = useState<BtReaderInfo>(bluetoothFingerprintService.getInfo());
+  const [btConnecting, setBtConnecting] = useState(false);
+  const [btCapturing, setBtCapturing] = useState(false);
+  const btSupported = bluetoothFingerprintService.isSupported();
   const [webUsbCaptureStatus, setWebUsbCaptureStatus] = useState<WebUsbCaptureStatus>(webUsbCaptureService.getStatus());
 
   const isPreviewOrEmbedded = useCallback(() => {
@@ -499,11 +504,17 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     };
     webUsbCaptureService.onStatusChange(handleWebUsbCapture);
 
+    const handleBtStatus = (info: BtReaderInfo) => {
+      if (!cancelled) setBtReaderInfo(info);
+    };
+    bluetoothFingerprintService.on('statusChange', handleBtStatus);
+
     return () => {
       cancelled = true;
       digitalPersonaService.off('statusChange', handleStatusChange);
       webUsbDetectionService.offChange(handleWebUsb);
       webUsbCaptureService.offStatusChange(handleWebUsbCapture);
+      bluetoothFingerprintService.off('statusChange', handleBtStatus);
     };
   }, []);
 
@@ -622,6 +633,67 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     setUsbCapturing(false);
     setStep('idle');
   }, []);
+
+  // ── Bluetooth: connect and capture ──────────────────────────────────────
+  const connectBluetooth = useCallback(async () => {
+    setBtConnecting(true);
+    try {
+      const connected = await bluetoothFingerprintService.connect();
+      if (connected) {
+        setBtReaderInfo(bluetoothFingerprintService.getInfo());
+        toast.success(`${bluetoothFingerprintService.getInfo().deviceName} conectado`);
+      } else {
+        const err = bluetoothFingerprintService.getLastError();
+        if (err && !err.includes('cancelada')) {
+          toast.error(err);
+        }
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al conectar Bluetooth');
+    } finally {
+      setBtConnecting(false);
+    }
+  }, []);
+
+  const captureWithBluetooth = useCallback(async () => {
+    setStep('usb-waiting');
+    setBtCapturing(true);
+    try {
+      if (!bluetoothFingerprintService.isConnected()) {
+        const connected = await bluetoothFingerprintService.connect();
+        if (!connected) {
+          const err = bluetoothFingerprintService.getLastError();
+          if (err && !err.includes('cancelada')) toast.error(err);
+          setStep('idle');
+          setBtCapturing(false);
+          return;
+        }
+      }
+      const result: BtCaptureResult = await bluetoothFingerprintService.capture(30000);
+      if (result.success && result.imageBase64) {
+        setCapturedImage(result.imageBase64);
+        setSelectedFinger(null);
+        setStep('captured');
+        onFingerprintChange?.(result.imageBase64);
+        toast.success('Huella capturada correctamente vía Bluetooth');
+      } else {
+        toast.error(result.error || 'No se pudo capturar la huella');
+        setStep('idle');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al capturar con Bluetooth');
+      setStep('idle');
+    } finally {
+      setBtCapturing(false);
+    }
+  }, [onFingerprintChange]);
+
+  const cancelBtCapture = useCallback(() => {
+    bluetoothFingerprintService.disconnect();
+    setBtCapturing(false);
+    setStep('idle');
+  }, []);
+
   const startCamera = useCallback(async () => {
     setCameraError(null);
     setStep('preview');
@@ -1016,10 +1088,123 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                         <span className="w-full border-t border-border" />
                       </div>
                       <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">o capturar con cámara</span>
+                        <span className="bg-card px-2 text-muted-foreground">o usar Bluetooth / cámara</span>
                       </div>
                     </div>
                   </>
+                )}
+
+                {/* ── Bluetooth fingerprint scanner (available on all platforms) ── */}
+                {btSupported && (
+                  <div className={`rounded-xl p-4 space-y-3 border-2 transition-colors ${
+                    btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing'
+                      ? 'bg-blue-500/10 border-blue-500/40'
+                      : 'bg-muted/30 border-dashed border-blue-400/30'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-3 h-3 rounded-full shrink-0 ${
+                          btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing'
+                            ? 'bg-blue-500 shadow-[0_0_8px_2px_hsl(217_91%_60%/0.4)] animate-pulse'
+                            : btReaderInfo.status === 'connecting'
+                            ? 'bg-amber-400 animate-pulse'
+                            : 'bg-muted-foreground/25'
+                        }`} />
+                        <span className={`text-sm font-semibold ${
+                          btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing'
+                            ? 'text-blue-700 dark:text-blue-400'
+                            : 'text-foreground'
+                        }`}>
+                          {btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing'
+                            ? `✓ ${btReaderInfo.deviceName} conectado`
+                            : btReaderInfo.status === 'connecting'
+                            ? 'Conectando...'
+                            : 'Lector de Huella Bluetooth'}
+                        </span>
+                      </div>
+                      <Bluetooth className="h-4 w-4 text-blue-500" />
+                    </div>
+
+                    {btReaderInfo.status !== 'connected' && btReaderInfo.status !== 'capturing' && (
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Conecte el lector Bluetooth SHU0809 para capturar huellas de forma inalámbrica.
+                          Compatible con <strong>Android, Windows y macOS</strong>.
+                        </p>
+                        <ol className="space-y-1.5 text-xs text-muted-foreground list-none">
+                          {[
+                            'Encienda el lector Bluetooth (LED azul parpadeando).',
+                            'Presione "Vincular Lector Bluetooth" — selecciónelo en el diálogo.',
+                            'Coloque el dedo del paciente en el sensor cuando se indique.',
+                          ].map((txt, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <span className="w-4 h-4 rounded-full bg-blue-500/15 text-blue-600 text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-bold">
+                                {i + 1}
+                              </span>
+                              {txt}
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+
+                    {btReaderInfo.status !== 'connected' && btReaderInfo.status !== 'capturing' ? (
+                      <Button
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        size="lg"
+                        onClick={connectBluetooth}
+                        disabled={btConnecting}
+                      >
+                        {btConnecting ? (
+                          <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Buscando...</>
+                        ) : (
+                          <><Bluetooth className="h-5 w-5 mr-2" /> Vincular Lector Bluetooth</>
+                        )}
+                      </Button>
+                    ) : (
+                      <div className="space-y-2">
+                        <Button
+                          onClick={captureWithBluetooth}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                          size="lg"
+                          disabled={btCapturing}
+                        >
+                          {btCapturing ? (
+                            <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Capturando...</>
+                          ) : (
+                            <><Fingerprint className="h-5 w-5 mr-2" /> Capturar Huella Bluetooth</>
+                          )}
+                        </Button>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">
+                            Captura inalámbrica vía Bluetooth
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => bluetoothFingerprintService.disconnect()}
+                            className="text-xs text-destructive hover:underline"
+                          >
+                            Desconectar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {btReaderInfo.error && (
+                      <p className="text-xs text-destructive">{btReaderInfo.error}</p>
+                    )}
+                  </div>
+                )}
+
+                {!btSupported && (
+                  <div className="rounded-lg border border-dashed border-blue-300/30 bg-muted/20 p-3">
+                    <p className="text-xs text-muted-foreground flex items-center gap-2">
+                      <Bluetooth className="h-3.5 w-3.5" />
+                      {bluetoothFingerprintService.getPlatform() === 'ios'
+                        ? 'Para usar el lector Bluetooth en iOS, instale el navegador Bluefy.'
+                        : 'Web Bluetooth no disponible en este navegador. Use Chrome o Edge.'}
+                    </p>
+                  </div>
                 )}
 
                 {/* Camera — always available */}
@@ -1099,14 +1284,16 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                   Esperando huella...
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Coloque la yema del dedo del paciente en el lector USB
+                  Coloque la yema del dedo del paciente en el lector
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  {usbReaderInfo.deviceName || 'DigitalPersona U.are.U 4500'}
+                  {btCapturing
+                    ? (btReaderInfo.deviceName || 'Lector Bluetooth')
+                    : (usbReaderInfo.deviceName || 'DigitalPersona U.are.U 4500')}
                 </p>
               </div>
             </div>
-            <Button variant="outline" onClick={() => { cancelUSBCapture(); cancelWebUSBCapture(); }} className="w-full">
+            <Button variant="outline" onClick={() => { cancelUSBCapture(); cancelWebUSBCapture(); cancelBtCapture(); }} className="w-full">
               <RotateCcw className="h-4 w-4 mr-2" /> Cancelar
             </Button>
           </div>
@@ -1312,7 +1499,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
           <div className="bg-muted/40 rounded-lg p-3 flex items-start gap-2">
             <Fingerprint className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
             <p className="text-xs text-muted-foreground">
-              <strong>Tip:</strong> Asegúrese de que el lector DigitalPersona U.are.U 4500 esté conectado al PC y el servicio Lite Client esté activo. El paciente debe colocar la yema del dedo firmemente sobre el sensor cuando se le indique.
+              <strong>Tip:</strong> Puede usar el lector USB (DigitalPersona U.are.U 4500) conectado al PC, el lector Bluetooth SHU0809 de forma inalámbrica, o la cámara del dispositivo como alternativa.
             </p>
           </div>
         )}
