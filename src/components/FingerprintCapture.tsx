@@ -1208,6 +1208,9 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                   </div>
                 )}
 
+                {/* BT Diagnostics */}
+                <BtDiagnostics />
+
                 {/* Camera — always available */}
                 <Button
                   variant={isPreviewOrEmbedded() ? "default" : "outline"}
