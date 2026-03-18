@@ -633,6 +633,67 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     setUsbCapturing(false);
     setStep('idle');
   }, []);
+
+  // ── Bluetooth: connect and capture ──────────────────────────────────────
+  const connectBluetooth = useCallback(async () => {
+    setBtConnecting(true);
+    try {
+      const connected = await bluetoothFingerprintService.connect();
+      if (connected) {
+        setBtReaderInfo(bluetoothFingerprintService.getInfo());
+        toast.success(`${bluetoothFingerprintService.getInfo().deviceName} conectado`);
+      } else {
+        const err = bluetoothFingerprintService.getLastError();
+        if (err && !err.includes('cancelada')) {
+          toast.error(err);
+        }
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al conectar Bluetooth');
+    } finally {
+      setBtConnecting(false);
+    }
+  }, []);
+
+  const captureWithBluetooth = useCallback(async () => {
+    setStep('usb-waiting');
+    setBtCapturing(true);
+    try {
+      if (!bluetoothFingerprintService.isConnected()) {
+        const connected = await bluetoothFingerprintService.connect();
+        if (!connected) {
+          const err = bluetoothFingerprintService.getLastError();
+          if (err && !err.includes('cancelada')) toast.error(err);
+          setStep('idle');
+          setBtCapturing(false);
+          return;
+        }
+      }
+      const result: BtCaptureResult = await bluetoothFingerprintService.capture(30000);
+      if (result.success && result.imageBase64) {
+        setCapturedImage(result.imageBase64);
+        setSelectedFinger(null);
+        setStep('captured');
+        onFingerprintChange?.(result.imageBase64);
+        toast.success('Huella capturada correctamente vía Bluetooth');
+      } else {
+        toast.error(result.error || 'No se pudo capturar la huella');
+        setStep('idle');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al capturar con Bluetooth');
+      setStep('idle');
+    } finally {
+      setBtCapturing(false);
+    }
+  }, [onFingerprintChange]);
+
+  const cancelBtCapture = useCallback(() => {
+    bluetoothFingerprintService.disconnect();
+    setBtCapturing(false);
+    setStep('idle');
+  }, []);
+
   const startCamera = useCallback(async () => {
     setCameraError(null);
     setStep('preview');
