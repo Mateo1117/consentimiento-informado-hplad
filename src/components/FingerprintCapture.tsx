@@ -899,28 +899,14 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
 
         {/* ── idle ─────────────────────────────────────────────────────────── */}
         {step === 'idle' && (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* ── iframe/preview warning ── */}
             {isPreviewOrEmbedded() && (
-              <div className="rounded-xl border-2 border-amber-500/40 bg-amber-500/10 p-4 space-y-2">
-                <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 flex items-center gap-2">
-                  <Lightbulb className="h-4 w-4" />
-                  Lector USB no disponible en preview/iframe
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  WebUSB y WebSocket local están bloqueados por el navegador en este contexto.
-                  Para usar el lector de huella USB, abra la aplicación desde la URL publicada:
-                </p>
-                <a
-                  href="https://consentimiento-informado-hplad.lovable.app"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-block text-sm font-medium text-primary underline"
-                >
-                  Abrir URL publicada ↗
-                </a>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Mientras tanto, puede usar la <strong>cámara</strong> como alternativa.
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
+                <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                  <Lightbulb className="h-3.5 w-3.5 shrink-0" />
+                  Lector USB no disponible en preview.
+                  <a href="https://consentimiento-informado-hplad.lovable.app" target="_blank" rel="noopener noreferrer" className="underline font-medium">Abrir URL publicada ↗</a>
                 </p>
               </div>
             )}
@@ -928,300 +914,174 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
             {usbDetecting && !isPreviewOrEmbedded() && (
               <div className="bg-muted/50 rounded-lg p-3 flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Buscando lector de huella USB...
+                Buscando lector de huella...
               </div>
             )}
 
             {!usbDetecting && (
-              <>
-                {/* ── Hardware options only when NOT in iframe ── */}
+              <div className="space-y-2">
+                {/* ── Método 1: Lector USB (solo fuera de iframe) ── */}
                 {!isPreviewOrEmbedded() && (
-                  <>
-                    {/* ── WebUSB: principal method for Chrome (no agent needed) ── */}
-                    {webUsbDetectionService.isSupported() && (
-                      <div className={`rounded-xl p-4 space-y-3 border-2 transition-colors ${
-                        webUsbInfo.connected
-                          ? 'bg-green-500/10 border-green-500/40'
-                          : 'bg-muted/30 border-dashed border-primary/30'
-                      }`}>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-2.5">
-                            <div className={`w-3 h-3 rounded-full shrink-0 ${
-                              webUsbInfo.connected
-                                ? 'bg-green-500 shadow-[0_0_8px_2px_hsl(142_71%_45%/0.4)] animate-pulse'
-                                : 'bg-muted-foreground/25'
-                            }`} />
-                            <span className={`text-sm font-semibold ${
-                              webUsbInfo.connected
-                                ? 'text-green-700 dark:text-green-400'
-                                : 'text-foreground'
-                            }`}>
-                              {webUsbInfo.connected
-                                ? `✓ ${webUsbInfo.productName} conectado`
-                                : 'Conectar huellero USB'}
-                            </span>
-                          </div>
-                          {webUsbInfo.connected && webUsbInfo.serialNumber && (
-                            <span className="text-xs text-muted-foreground font-mono">
-                              S/N: {webUsbInfo.serialNumber}
-                            </span>
-                          )}
-                        </div>
-
-                        {!webUsbInfo.connected && (
-                          <div className="space-y-3">
-                            <p className="text-sm text-muted-foreground">
-                              Conecte el lector DigitalPersona al puerto USB y presione <strong>Vincular Huellero</strong>.
-                            </p>
-                            <ol className="space-y-1.5 text-xs text-muted-foreground list-none">
-                              {[
-                                'Conecte el huellero U.are.U 4500 al puerto USB del equipo.',
-                                'Presione "Vincular Huellero" — aparecerá un diálogo de Chrome.',
-                                'Seleccione "DigitalPersona" de la lista y haga clic en "Conectar".',
-                              ].map((txt, i) => (
-                                <li key={i} className="flex items-start gap-2">
-                                  <span className="w-4 h-4 rounded-full bg-primary/15 text-primary text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-bold">
-                                    {i + 1}
-                                  </span>
-                                  {txt}
-                                </li>
-                              ))}
-                            </ol>
-                          </div>
+                  <div className={`rounded-lg border p-3 transition-colors ${
+                    webUsbInfo.connected || usbDetected
+                      ? 'border-green-500/40 bg-green-500/5'
+                      : 'border-border bg-muted/20'
+                  }`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <Usb className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-semibold text-foreground">Lector USB</span>
+                        {(webUsbInfo.connected || usbDetected) && (
+                          <span className="text-[10px] bg-green-500/15 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium">
+                            ✓ Conectado
+                          </span>
                         )}
+                      </div>
+                    </div>
 
-                        {!webUsbInfo.connected ? (
+                    {webUsbInfo.connected ? (
+                      <Button onClick={captureWithWebUSB} className="w-full" size="sm">
+                        <Fingerprint className="h-4 w-4 mr-2" /> Capturar Huella (USB)
+                      </Button>
+                    ) : usbDetected ? (
+                      <Button onClick={captureWithUSB} className="w-full" size="sm">
+                        <Fingerprint className="h-4 w-4 mr-2" /> Capturar Huella (Lite Client)
+                      </Button>
+                    ) : (
+                      <div className="flex gap-2">
+                        {webUsbDetectionService.isSupported() && (
                           <Button
-                            className="w-full"
-                            size="lg"
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
                             onClick={async () => {
                               const result = await webUsbDetectionService.requestDevice();
                               if (result.connected) {
-                                toast.success(`${result.productName} vinculado correctamente`);
+                                toast.success(`${result.productName} vinculado`);
                               }
                             }}
                           >
-                            <Usb className="h-5 w-5 mr-2" />
-                            Vincular Huellero
+                            <Usb className="h-3.5 w-3.5 mr-1.5" /> Vincular USB
                           </Button>
-                        ) : (
-                          <div className="space-y-2">
-                            <Button
-                              onClick={captureWithWebUSB}
-                              className="w-full"
-                              size="lg"
-                            >
-                              <Fingerprint className="h-5 w-5 mr-2" />
-                              Capturar Huella
-                            </Button>
-                            <p className="text-xs text-center text-muted-foreground">
-                              Lectura directa vía WebUSB — sin necesidad de agente local.
-                            </p>
-                          </div>
                         )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1"
+                          onClick={async () => {
+                            if (isPreviewOrEmbedded()) {
+                              toast.info('Abra la URL publicada para usar Lite Client.');
+                              return;
+                            }
+                            setUsbDetecting(true);
+                            try {
+                              const found = await digitalPersonaService.detect();
+                              setUsbDetected(found);
+                              if (found) {
+                                setUsbReaderInfo(digitalPersonaService.getInfo());
+                                toast.success('Lite Client detectado');
+                              } else {
+                                toast.error('Lite Client no detectado');
+                              }
+                            } catch {
+                              toast.error('Error al buscar Lite Client');
+                            } finally {
+                              setUsbDetecting(false);
+                            }
+                          }}
+                        >
+                          <Fingerprint className="h-3.5 w-3.5 mr-1.5" /> Lite Client
+                        </Button>
                       </div>
                     )}
-
-                    {/* ── Lite Client section ── */}
-                    <div className="bg-muted/50 rounded-xl p-4 space-y-3">
-                      <p className="text-sm font-semibold text-foreground flex items-center gap-2">
-                        <Usb className="h-4 w-4 text-primary" />
-                        {usbDetected
-                          ? 'Lite Client detectado — captura vía agente local'
-                          : 'Alternativa: Lite Client (agente local)'}
-                      </p>
-                      {usbDetected && (
-                        <ol className="space-y-2 text-sm text-muted-foreground list-none">
-                          {[
-                            'Presione el botón "Activar Lector de Huella".',
-                            'Cuando el indicador muestre "Esperando huella...", solicite al paciente colocar la yema del dedo en el sensor.',
-                            'Mantenga el dedo firme sobre el lector hasta que se confirme la captura.',
-                          ].map((txt, i) => (
-                            <li key={i} className="flex items-start gap-2">
-                              <span className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center shrink-0 mt-0.5">
-                                {i + 1}
-                              </span>
-                              {txt}
-                            </li>
-                          ))}
-                        </ol>
-                      )}
-                      <Button
-                        onClick={usbDetected ? captureWithUSB : async () => {
-                          const inPreview = isPreviewOrEmbedded();
-                          if (inPreview) {
-                            toast.info('El Lite Client puede bloquearse en preview/iframe. Abra la URL publicada y reintente.');
-                            return;
-                          }
-
-                          setUsbDetecting(true);
-                          try {
-                            const found = await digitalPersonaService.detect();
-                            setUsbDetected(found);
-                            if (found) {
-                              setUsbReaderInfo(digitalPersonaService.getInfo());
-                              captureWithUSB();
-                            } else {
-                              const detectReason = digitalPersonaService.getLastDetectError();
-                              const reasonMsg = detectReason ? `\n\nDetalle técnico: ${detectReason}` : '';
-                              toast.error(`No se detectó el Lite Client de DigitalPersona. Instale el agente local o use la cámara.${reasonMsg}`);
-                            }
-                          } catch {
-                            toast.error('Error al buscar el lector USB.');
-                          } finally {
-                            setUsbDetecting(false);
-                          }
-                        }}
-                        className="w-full"
-                        size="lg"
-                      >
-                        <Fingerprint className="h-5 w-5 mr-2" />
-                        Activar Lector de Huella
-                      </Button>
-                    </div>
-
-                    {/* Diagnostic panel */}
-                    <LiteClientDiagnostics />
-
-                    {/* Divider */}
-                    <div className="relative">
-                      <div className="absolute inset-0 flex items-center">
-                        <span className="w-full border-t border-border" />
-                      </div>
-                      <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">o usar Bluetooth / cámara</span>
-                      </div>
-                    </div>
-                  </>
+                  </div>
                 )}
 
-                {/* ── Bluetooth fingerprint scanner (available on all platforms) ── */}
-                {btSupported && (
-                  <div className={`rounded-xl p-4 space-y-3 border-2 transition-colors ${
-                    btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing'
-                      ? 'bg-blue-500/10 border-blue-500/40'
-                      : 'bg-muted/30 border-dashed border-blue-400/30'
-                  }`}>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-3 h-3 rounded-full shrink-0 ${
-                          btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing'
-                            ? 'bg-blue-500 shadow-[0_0_8px_2px_hsl(217_91%_60%/0.4)] animate-pulse'
-                            : btReaderInfo.status === 'connecting'
-                            ? 'bg-amber-400 animate-pulse'
-                            : 'bg-muted-foreground/25'
-                        }`} />
-                        <span className={`text-sm font-semibold ${
-                          btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing'
-                            ? 'text-blue-700 dark:text-blue-400'
-                            : 'text-foreground'
-                        }`}>
-                          {btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing'
-                            ? `✓ ${btReaderInfo.deviceName} conectado`
-                            : btReaderInfo.status === 'connecting'
-                            ? 'Conectando...'
-                            : 'Lector de Huella Bluetooth'}
-                        </span>
-                      </div>
+                {/* ── Método 2: Lector Bluetooth ── */}
+                <div className={`rounded-lg border p-3 transition-colors ${
+                  btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing'
+                    ? 'border-blue-500/40 bg-blue-500/5'
+                    : 'border-border bg-muted/20'
+                }`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
                       <Bluetooth className="h-4 w-4 text-blue-500" />
+                      <span className="text-sm font-semibold text-foreground">Lector Bluetooth</span>
+                      {(btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing') && (
+                        <span className="text-[10px] bg-blue-500/15 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded-full font-medium">
+                          ✓ {btReaderInfo.deviceName}
+                        </span>
+                      )}
                     </div>
-
-                    {btReaderInfo.status !== 'connected' && btReaderInfo.status !== 'capturing' && (
-                      <div className="space-y-3">
-                        <p className="text-sm text-muted-foreground">
-                          Conecte el lector Bluetooth SHU0809 para capturar huellas de forma inalámbrica.
-                          Compatible con <strong>Android, Windows y macOS</strong>.
-                        </p>
-                        <ol className="space-y-1.5 text-xs text-muted-foreground list-none">
-                          {[
-                            'Encienda el lector Bluetooth (LED azul parpadeando).',
-                            'Presione "Vincular Lector Bluetooth" — selecciónelo en el diálogo.',
-                            'Coloque el dedo del paciente en el sensor cuando se indique.',
-                          ].map((txt, i) => (
-                            <li key={i} className="flex items-start gap-2">
-                              <span className="w-4 h-4 rounded-full bg-blue-500/15 text-blue-600 text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-bold">
-                                {i + 1}
-                              </span>
-                              {txt}
-                            </li>
-                          ))}
-                        </ol>
-                      </div>
+                    {btReaderInfo.status === 'connected' && (
+                      <button
+                        type="button"
+                        onClick={() => bluetoothFingerprintService.disconnect()}
+                        className="text-[10px] text-destructive hover:underline"
+                      >
+                        Desconectar
+                      </button>
                     )}
+                  </div>
 
-                    {btReaderInfo.status !== 'connected' && btReaderInfo.status !== 'capturing' ? (
+                  {btSupported ? (
+                    btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing' ? (
                       <Button
-                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                        size="lg"
+                        onClick={captureWithBluetooth}
+                        className="w-full"
+                        size="sm"
+                        disabled={btCapturing}
+                      >
+                        {btCapturing ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Capturando...</>
+                        ) : (
+                          <><Fingerprint className="h-4 w-4 mr-2" /> Capturar Huella (Bluetooth)</>
+                        )}
+                      </Button>
+                    ) : (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full"
                         onClick={connectBluetooth}
                         disabled={btConnecting}
                       >
                         {btConnecting ? (
-                          <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Buscando...</>
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Buscando...</>
                         ) : (
-                          <><Bluetooth className="h-5 w-5 mr-2" /> Vincular Lector Bluetooth</>
+                          <><Bluetooth className="h-4 w-4 mr-2" /> Vincular Bluetooth</>
                         )}
                       </Button>
-                    ) : (
-                      <div className="space-y-2">
-                        <Button
-                          onClick={captureWithBluetooth}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                          size="lg"
-                          disabled={btCapturing}
-                        >
-                          {btCapturing ? (
-                            <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Capturando...</>
-                          ) : (
-                            <><Fingerprint className="h-5 w-5 mr-2" /> Capturar Huella Bluetooth</>
-                          )}
-                        </Button>
-                        <div className="flex items-center justify-between">
-                          <p className="text-xs text-muted-foreground">
-                            Captura inalámbrica vía Bluetooth
-                          </p>
-                          <button
-                            type="button"
-                            onClick={() => bluetoothFingerprintService.disconnect()}
-                            className="text-xs text-destructive hover:underline"
-                          >
-                            Desconectar
-                          </button>
-                        </div>
-                      </div>
-                    )}
-
-                    {btReaderInfo.error && (
-                      <p className="text-xs text-destructive">{btReaderInfo.error}</p>
-                    )}
-                  </div>
-                )}
-
-                {!btSupported && (
-                  <div className="rounded-lg border border-dashed border-blue-300/30 bg-muted/20 p-3">
-                    <p className="text-xs text-muted-foreground flex items-center gap-2">
-                      <Bluetooth className="h-3.5 w-3.5" />
+                    )
+                  ) : (
+                    <p className="text-[11px] text-muted-foreground">
                       {bluetoothFingerprintService.getPlatform() === 'ios'
-                        ? 'Para usar el lector Bluetooth en iOS, instale el navegador Bluefy.'
-                        : 'Web Bluetooth no disponible en este navegador. Use Chrome o Edge.'}
+                        ? 'Requiere el navegador Bluefy en iOS.'
+                        : 'No disponible. Use Chrome o Edge.'}
                     </p>
+                  )}
+                </div>
+
+                {/* ── Método 3: Cámara ── */}
+                <div className="rounded-lg border border-border bg-muted/20 p-3">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Camera className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-semibold text-foreground">Cámara del dispositivo</span>
                   </div>
-                )}
+                  <Button
+                    variant="outline"
+                    onClick={startCamera}
+                    className="w-full"
+                    size="sm"
+                  >
+                    <Camera className="h-4 w-4 mr-2" /> Fotografiar Huella
+                  </Button>
+                </div>
 
-                {/* BT Diagnostics */}
+                {/* ── Diagnósticos colapsables ── */}
+                {!isPreviewOrEmbedded() && <LiteClientDiagnostics />}
                 <BtDiagnostics />
-
-                {/* Camera — always available */}
-                <Button
-                  variant={isPreviewOrEmbedded() ? "default" : "outline"}
-                  onClick={startCamera}
-                  className="w-full"
-                  size="lg"
-                >
-                  <Camera className="h-5 w-5 mr-2" />
-                  Capturar con Cámara
-                </Button>
-              </>
+              </div>
             )}
           </div>
         )}
