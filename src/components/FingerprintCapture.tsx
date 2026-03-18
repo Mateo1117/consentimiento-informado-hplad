@@ -1088,10 +1088,123 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                         <span className="w-full border-t border-border" />
                       </div>
                       <div className="relative flex justify-center text-xs uppercase">
-                        <span className="bg-card px-2 text-muted-foreground">o capturar con cámara</span>
+                        <span className="bg-card px-2 text-muted-foreground">o usar Bluetooth / cámara</span>
                       </div>
                     </div>
                   </>
+                )}
+
+                {/* ── Bluetooth fingerprint scanner (available on all platforms) ── */}
+                {btSupported && (
+                  <div className={`rounded-xl p-4 space-y-3 border-2 transition-colors ${
+                    btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing'
+                      ? 'bg-blue-500/10 border-blue-500/40'
+                      : 'bg-muted/30 border-dashed border-blue-400/30'
+                  }`}>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2.5">
+                        <div className={`w-3 h-3 rounded-full shrink-0 ${
+                          btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing'
+                            ? 'bg-blue-500 shadow-[0_0_8px_2px_hsl(217_91%_60%/0.4)] animate-pulse'
+                            : btReaderInfo.status === 'connecting'
+                            ? 'bg-amber-400 animate-pulse'
+                            : 'bg-muted-foreground/25'
+                        }`} />
+                        <span className={`text-sm font-semibold ${
+                          btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing'
+                            ? 'text-blue-700 dark:text-blue-400'
+                            : 'text-foreground'
+                        }`}>
+                          {btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing'
+                            ? `✓ ${btReaderInfo.deviceName} conectado`
+                            : btReaderInfo.status === 'connecting'
+                            ? 'Conectando...'
+                            : 'Lector de Huella Bluetooth'}
+                        </span>
+                      </div>
+                      <Bluetooth className="h-4 w-4 text-blue-500" />
+                    </div>
+
+                    {btReaderInfo.status !== 'connected' && btReaderInfo.status !== 'capturing' && (
+                      <div className="space-y-3">
+                        <p className="text-sm text-muted-foreground">
+                          Conecte el lector Bluetooth SHU0809 para capturar huellas de forma inalámbrica.
+                          Compatible con <strong>Android, Windows y macOS</strong>.
+                        </p>
+                        <ol className="space-y-1.5 text-xs text-muted-foreground list-none">
+                          {[
+                            'Encienda el lector Bluetooth (LED azul parpadeando).',
+                            'Presione "Vincular Lector Bluetooth" — selecciónelo en el diálogo.',
+                            'Coloque el dedo del paciente en el sensor cuando se indique.',
+                          ].map((txt, i) => (
+                            <li key={i} className="flex items-start gap-2">
+                              <span className="w-4 h-4 rounded-full bg-blue-500/15 text-blue-600 text-[10px] flex items-center justify-center shrink-0 mt-0.5 font-bold">
+                                {i + 1}
+                              </span>
+                              {txt}
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                    )}
+
+                    {btReaderInfo.status !== 'connected' && btReaderInfo.status !== 'capturing' ? (
+                      <Button
+                        className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                        size="lg"
+                        onClick={connectBluetooth}
+                        disabled={btConnecting}
+                      >
+                        {btConnecting ? (
+                          <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Buscando...</>
+                        ) : (
+                          <><Bluetooth className="h-5 w-5 mr-2" /> Vincular Lector Bluetooth</>
+                        )}
+                      </Button>
+                    ) : (
+                      <div className="space-y-2">
+                        <Button
+                          onClick={captureWithBluetooth}
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                          size="lg"
+                          disabled={btCapturing}
+                        >
+                          {btCapturing ? (
+                            <><Loader2 className="h-5 w-5 mr-2 animate-spin" /> Capturando...</>
+                          ) : (
+                            <><Fingerprint className="h-5 w-5 mr-2" /> Capturar Huella Bluetooth</>
+                          )}
+                        </Button>
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-muted-foreground">
+                            Captura inalámbrica vía Bluetooth
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => bluetoothFingerprintService.disconnect()}
+                            className="text-xs text-destructive hover:underline"
+                          >
+                            Desconectar
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {btReaderInfo.error && (
+                      <p className="text-xs text-destructive">{btReaderInfo.error}</p>
+                    )}
+                  </div>
+                )}
+
+                {!btSupported && (
+                  <div className="rounded-lg border border-dashed border-blue-300/30 bg-muted/20 p-3">
+                    <p className="text-xs text-muted-foreground flex items-center gap-2">
+                      <Bluetooth className="h-3.5 w-3.5" />
+                      {bluetoothFingerprintService.getPlatform() === 'ios'
+                        ? 'Para usar el lector Bluetooth en iOS, instale el navegador Bluefy.'
+                        : 'Web Bluetooth no disponible en este navegador. Use Chrome o Edge.'}
+                    </p>
+                  </div>
                 )}
 
                 {/* Camera — always available */}
