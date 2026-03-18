@@ -1284,14 +1284,16 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                   Esperando huella...
                 </p>
                 <p className="text-sm text-muted-foreground">
-                  Coloque la yema del dedo del paciente en el lector USB
+                  Coloque la yema del dedo del paciente en el lector
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  {usbReaderInfo.deviceName || 'DigitalPersona U.are.U 4500'}
+                  {btCapturing
+                    ? (btReaderInfo.deviceName || 'Lector Bluetooth')
+                    : (usbReaderInfo.deviceName || 'DigitalPersona U.are.U 4500')}
                 </p>
               </div>
             </div>
-            <Button variant="outline" onClick={() => { cancelUSBCapture(); cancelWebUSBCapture(); }} className="w-full">
+            <Button variant="outline" onClick={() => { cancelUSBCapture(); cancelWebUSBCapture(); cancelBtCapture(); }} className="w-full">
               <RotateCcw className="h-4 w-4 mr-2" /> Cancelar
             </Button>
           </div>
