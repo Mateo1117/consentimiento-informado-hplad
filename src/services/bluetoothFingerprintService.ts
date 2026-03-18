@@ -40,25 +40,25 @@ const HEADER = 0xef01;
 const DEFAULT_ADDR = 0xffffffff;
 
 const PID_COMMAND = 0x01;
-const PID_DATA    = 0x02;
-const PID_ACK     = 0x07;
-const PID_END     = 0x08;
+const PID_DATA = 0x02;
+const PID_ACK = 0x07;
+const PID_END = 0x08;
 
 // Commands
-const CMD_GEN_IMG     = 0x01; // Capture fingerprint image
-const CMD_IMG2TZ      = 0x02; // Generate character file from image
-const CMD_UP_IMAGE    = 0x0a; // Upload image to host
-const CMD_READ_PARAM  = 0x0f; // Read system parameters
-const CMD_AURA_LED    = 0x35; // Control LED
+const CMD_GEN_IMG = 0x01; // Capture fingerprint image
+const CMD_IMG2TZ = 0x02; // Generate character file from image
+const CMD_UP_IMAGE = 0x0a; // Upload image to host
+const CMD_READ_PARAM = 0x0f; // Read system parameters
+const CMD_AURA_LED = 0x35; // Control LED
 
 // ACK confirmation codes
-const ACK_OK             = 0x00;
-const ACK_PACKET_ERR     = 0x01;
-const ACK_NO_FINGER      = 0x02;
-const ACK_ENROLL_FAIL    = 0x03;
-const ACK_IMG_MESSY       = 0x06;
-const ACK_IMG_SMALL       = 0x07;
-const ACK_NO_MATCH        = 0x08;
+const ACK_OK = 0x00;
+const ACK_PACKET_ERR = 0x01;
+const ACK_NO_FINGER = 0x02;
+const ACK_ENROLL_FAIL = 0x03;
+const ACK_IMG_MESSY = 0x06;
+const ACK_IMG_SMALL = 0x07;
+const ACK_NO_MATCH = 0x08;
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 export type BtStatus = "unavailable" | "disconnected" | "connecting" | "connected" | "capturing" | "error";
@@ -78,13 +78,18 @@ export interface BtCaptureResult {
 
 type EventCallback = (data: any) => void;
 
+type AckWaiter = {
+  resolve: (payload: Uint8Array) => void;
+  reject: (error: Error) => void;
+  timer: ReturnType<typeof setTimeout>;
+};
+
 // ─── Capture state machine ───────────────────────────────────────────────────
 type CapturePhase =
   | "idle"
-  | "polling_genimg"      // Polling GenImg waiting for finger
+  | "polling_genimg" // Polling GenImg waiting for finger
   | "waiting_upimage_ack" // Sent UpImage, waiting for ACK
-  | "receiving_image"     // Receiving DATA/END packets with image
-  ;
+  | "receiving_image"; // Receiving DATA/END packets with image
 
 // ─── Service class ────────────────────────────────────────────────────────────
 class BluetoothFingerprintService {
@@ -93,9 +98,14 @@ class BluetoothFingerprintService {
   private writeChar: BluetoothRemoteGATTCharacteristic | null = null;
   private notifyChar: BluetoothRemoteGATTCharacteristic | null = null;
   private allChars: BluetoothRemoteGATTCharacteristic[] = [];
+  private writeCandidates: BluetoothRemoteGATTCharacteristic[] = [];
+  private notifyCandidates: BluetoothRemoteGATTCharacteristic[] = [];
   private status: BtStatus = "disconnected";
   private deviceName: string | null = null;
   private listeners: Map<string, Set<EventCallback>> = new Map();
+  private batteryLevel?: number;
+  private notificationHandler = this.handleNotification.bind(this);
+  private pendingAckWaiters: AckWaiter[] = [];
 
   // Packet assembly
   private rxBuffer: Uint8Array = new Uint8Array(0);
@@ -119,8 +129,8 @@ class BluetoothFingerprintService {
   // ── Check Web Bluetooth availability ────────────────────────────────────
   isSupported(): boolean {
     return typeof navigator !== "undefined" &&
-           "bluetooth" in navigator &&
-           typeof (navigator as any).bluetooth?.requestDevice === "function";
+      "bluetooth" in navigator &&
+      typeof (navigator as any).bluetooth?.requestDevice === "function";
   }
 
   getPlatform(): "android" | "ios" | "windows" | "macos" | "linux" | "unknown" {
@@ -131,6 +141,12 @@ class BluetoothFingerprintService {
     if (ua.includes("mac os") || ua.includes("macintosh")) return "macos";
     if (ua.includes("linux")) return "linux";
     return "unknown";
+  }
+
+  private shortUuid(uuid?: string | null): string {
+    if (!uuid) return "—";
+    const normalized = uuid.toLowerCase();
+    return normalized.startsWith("0000") ? normalized.slice(4, 8).toUpperCase() : normalized;
   }
 
   // ── Connect to BLE fingerprint scanner ──────────────────────────────────
@@ -149,7 +165,7 @@ class BluetoothFingerprintService {
       return false;
     }
 
-    if (this.server?.connected) {
+    if (this.server?.connected && this.writeChar && this.notifyChar) {
       this._addDiag("Ya conectado");
       return true;
     }
@@ -185,10 +201,12 @@ class BluetoothFingerprintService {
       this.device.addEventListener("gattserverdisconnected", () => {
         this._addDiag("Dispositivo desconectado");
         this.cleanupCapture("Dispositivo desconectado durante la captura");
-        this.status = "disconnected";
         this.server = null;
         this.writeChar = null;
         this.notifyChar = null;
+        this.writeCandidates = [];
+        this.notifyCandidates = [];
+        this.status = "disconnected";
         this.emit("statusChange", this.getInfo());
         this.emit("disconnected", {});
       });
@@ -200,14 +218,14 @@ class BluetoothFingerprintService {
       await this.discoverCharacteristics();
       await this.readBatteryLevel();
 
-      // Verify connection with ReadSysPara
-      this._addDiag("Verificando comunicación (ReadSysPara)...");
-      try {
-        await this.sendCommand(CMD_READ_PARAM);
-        // Wait briefly for response
-        await new Promise(r => setTimeout(r, 500));
-      } catch (err: any) {
-        this._addDiag(`Verificación falló (no crítico): ${err?.message}`);
+      this._addDiag("Verificando canal del protocolo SHU0809...");
+      const protocolReady = await this.verifyProtocolChannel();
+      if (!protocolReady) {
+        this.lastError = "El lector se conectó por Bluetooth, pero no respondió al protocolo SHU0809.";
+        this._addDiag(`✗ ${this.lastError}`);
+        this.disconnect();
+        this.lastError = "El lector no respondió por el canal BLE correcto. Reintente la conexión.";
+        return false;
       }
 
       this.status = "connected";
@@ -229,71 +247,161 @@ class BluetoothFingerprintService {
   private async discoverCharacteristics(): Promise<void> {
     if (!this.server) throw new Error("GATT no conectado");
 
-    let service: BluetoothRemoteGATTService | null = null;
+    const services = await this.server.getPrimaryServices();
+    if (services.length === 0) throw new Error("No se encontró ningún servicio GATT");
 
-    for (const svcUuid of BLE_SERVICE_UUIDS) {
-      try {
-        service = await this.server.getPrimaryService(svcUuid);
-        this._addDiag(`Servicio: ${svcUuid.substring(4, 8).toUpperCase()}`);
-        break;
-      } catch {
-        this._addDiag(`Servicio ${svcUuid.substring(4, 8)} no disponible`);
-      }
-    }
+    this._addDiag(`Servicios disponibles: ${services.map((service) => this.shortUuid(service.uuid)).join(", ")}`);
 
-    if (!service) {
-      try {
-        const services = await this.server.getPrimaryServices();
-        this._addDiag(`Servicios disponibles: ${services.map(s => s.uuid).join(", ")}`);
-        if (services.length > 0) {
-          service = services[0];
-          this._addDiag(`Usando: ${service.uuid}`);
+    this.allChars = [];
+    this.writeCandidates = [];
+    this.notifyCandidates = [];
+
+    const preferredServices = [
+      ...services.filter((service) => BLE_SERVICE_UUIDS.includes(service.uuid.toLowerCase())),
+      ...services.filter((service) => !BLE_SERVICE_UUIDS.includes(service.uuid.toLowerCase())),
+    ];
+
+    for (const service of preferredServices) {
+      const chars = await service.getCharacteristics();
+      this._addDiag(`Servicio ${this.shortUuid(service.uuid)}: ${chars.length} características`);
+      this.allChars.push(...chars);
+
+      for (const char of chars) {
+        const props = char.properties as BluetoothCharacteristicProperties & {
+          writeWithoutResponse?: boolean;
+        };
+        const canWrite = Boolean(props.write || props.writeWithoutResponse);
+        const canNotify = Boolean(props.notify);
+        const canRead = Boolean(props.read);
+
+        this._addDiag(`  ${this.shortUuid(char.uuid)}: W=${canWrite} WR=${Boolean(props.write)} WNR=${Boolean(props.writeWithoutResponse)} N=${canNotify} R=${canRead}`);
+
+        if (canWrite && !this.writeCandidates.includes(char)) {
+          this.writeCandidates.push(char);
         }
-      } catch {
-        throw new Error("No se encontró servicio GATT");
+        if (canNotify && !this.notifyCandidates.includes(char)) {
+          this.notifyCandidates.push(char);
+        }
       }
     }
 
-    if (!service) throw new Error("No se encontró servicio GATT");
+    if (this.writeCandidates.length === 0) throw new Error("Sin característica de escritura");
+    if (this.notifyCandidates.length === 0) throw new Error("Sin característica de notificación");
 
-    const chars = await service.getCharacteristics();
-    this._addDiag(`Características: ${chars.length}`);
+    this.writeChar = this.pickPreferredCharacteristic(this.writeCandidates, WRITE_CHAR_UUIDS, true);
+    this.notifyChar = this.pickPreferredCharacteristic(this.notifyCandidates, NOTIFY_CHAR_UUIDS, false);
 
-    for (const char of chars) {
-      const props = char.properties;
-      const shortUuid = char.uuid.substring(4, 8).toUpperCase();
-      const w = props.write || props.writeWithoutResponse;
-      const n = props.notify;
-      this._addDiag(`  ${shortUuid}: W=${w} N=${n} R=${props.read}`);
-
-      if (!this.writeChar && w) {
-        this.writeChar = char;
-      }
-      if (!this.notifyChar && n) {
-        this.notifyChar = char;
-      }
-    }
-
-    if (!this.writeChar) throw new Error("Sin característica de escritura");
-    if (!this.notifyChar) throw new Error("Sin característica de notificación");
-
-    this.discoveredServiceUuid = service.uuid;
     this.discoveredWriteUuid = this.writeChar.uuid;
     this.discoveredNotifyUuid = this.notifyChar.uuid;
-    this.allChars = chars;
+    this.discoveredServiceUuid =
+      ((this.writeChar as any)?.service?.uuid as string | undefined) ||
+      ((this.notifyChar as any)?.service?.uuid as string | undefined) ||
+      services[0].uuid;
 
-    // Subscribe to notifications on ALL notify characteristics
-    for (const char of chars) {
-      if (char.properties.notify) {
-        try {
-          await char.startNotifications();
-          char.addEventListener("characteristicvaluechanged", this.handleNotification.bind(this));
-          this._addDiag(`Suscrito: ${char.uuid.substring(4, 8).toUpperCase()}`);
-        } catch (e: any) {
-          this._addDiag(`Error suscripción ${char.uuid.substring(4, 8)}: ${e?.message}`);
-        }
+    this._addDiag(`TX seleccionado: ${this.shortUuid(this.discoveredWriteUuid)}`);
+    this._addDiag(`RX seleccionado: ${this.shortUuid(this.discoveredNotifyUuid)}`);
+
+    for (const char of this.notifyCandidates) {
+      try {
+        char.removeEventListener("characteristicvaluechanged", this.notificationHandler as EventListener);
+      } catch {
+        // noop
+      }
+
+      try {
+        await char.startNotifications();
+        char.addEventListener("characteristicvaluechanged", this.notificationHandler as EventListener);
+        this._addDiag(`Suscrito: ${this.shortUuid(char.uuid)}`);
+      } catch (e: any) {
+        this._addDiag(`Error suscripción ${this.shortUuid(char.uuid)}: ${e?.message || e}`);
       }
     }
+  }
+
+  private pickPreferredCharacteristic(
+    candidates: BluetoothRemoteGATTCharacteristic[],
+    preferredUuids: string[],
+    preferWriteWithResponse: boolean,
+  ): BluetoothRemoteGATTCharacteristic {
+    for (const uuid of preferredUuids) {
+      const exact = candidates.find((char) => char.uuid.toLowerCase() === uuid);
+      if (exact) return exact;
+    }
+
+    const sorted = [...candidates].sort((a, b) => {
+      const score = (char: BluetoothRemoteGATTCharacteristic) => {
+        const props = char.properties as BluetoothCharacteristicProperties & { writeWithoutResponse?: boolean };
+        if (preferWriteWithResponse) {
+          if (props.write) return 0;
+          if (props.writeWithoutResponse) return 1;
+        }
+        if (props.notify) return 0;
+        return 2;
+      };
+      return score(a) - score(b);
+    });
+
+    return sorted[0];
+  }
+
+  private async verifyProtocolChannel(): Promise<boolean> {
+    if (this.writeCandidates.length === 0) return false;
+
+    for (const candidate of this.writeCandidates) {
+      this.writeChar = candidate;
+      this.discoveredWriteUuid = candidate.uuid;
+      this.rxBuffer = new Uint8Array(0);
+
+      this._addDiag(`Probando canal TX ${this.shortUuid(candidate.uuid)} con ReadSysPara...`);
+
+      try {
+        const ack = await this.sendCommandAndWaitAck(CMD_READ_PARAM, new Uint8Array(), 1500, candidate);
+        this._addDiag(`✓ ReadSysPara respondió por ${this.shortUuid(candidate.uuid)} con ACK 0x${(ack[0] ?? 0).toString(16)}`);
+        return true;
+      } catch (err: any) {
+        this._addDiag(`Sin respuesta por ${this.shortUuid(candidate.uuid)}: ${err?.message || err}`);
+      }
+    }
+
+    return false;
+  }
+
+  private async sendCommandAndWaitAck(
+    instruction: number,
+    data: Uint8Array = new Uint8Array(),
+    timeoutMs = 1200,
+    writeTarget?: BluetoothRemoteGATTCharacteristic,
+  ): Promise<Uint8Array> {
+    return new Promise<Uint8Array>(async (resolve, reject) => {
+      const cleanup = (waiter: AckWaiter) => {
+        clearTimeout(waiter.timer);
+        this.pendingAckWaiters = this.pendingAckWaiters.filter((item) => item !== waiter);
+      };
+
+      const waiter: AckWaiter = {
+        resolve: (payload) => {
+          cleanup(waiter);
+          resolve(payload);
+        },
+        reject: (error) => {
+          cleanup(waiter);
+          reject(error);
+        },
+        timer: setTimeout(() => {
+          cleanup(waiter);
+          reject(new Error("Sin ACK del lector"));
+        }, timeoutMs),
+      };
+
+      this.pendingAckWaiters.push(waiter);
+
+      try {
+        await this.sendCommand(instruction, data, writeTarget);
+      } catch (err: any) {
+        cleanup(waiter);
+        reject(err);
+      }
+    });
   }
 
   // ── Handle incoming BLE notifications ───────────────────────────────────
@@ -303,8 +411,8 @@ class BluetoothFingerprintService {
     if (!value) return;
 
     const data = new Uint8Array(value.buffer);
-    const hex = Array.from(data.slice(0, 40)).map(b => b.toString(16).padStart(2, '0')).join(' ');
-    this._addDiag(`◀ RX ${data.length}B: ${hex}${data.length > 40 ? '...' : ''}`);
+    const hex = Array.from(data.slice(0, 40)).map((b) => b.toString(16).padStart(2, "0")).join(" ");
+    this._addDiag(`◀ RX ${data.length}B ${this.shortUuid(char.uuid)}: ${hex}${data.length > 40 ? "..." : ""}`);
 
     // Append to reassembly buffer
     const newBuf = new Uint8Array(this.rxBuffer.length + data.length);
@@ -360,7 +468,7 @@ class BluetoothFingerprintService {
 
       // Extract packet payload (exclude 2-byte checksum at end)
       const payload = this.rxBuffer.slice(9, 9 + pktLen - 2);
-      
+
       // Move buffer past this packet
       this.rxBuffer = this.rxBuffer.slice(totalPktSize);
 
@@ -386,6 +494,9 @@ class BluetoothFingerprintService {
     const code = payload[0];
     this._addDiag(`ACK código=0x${code.toString(16)} (${this.ackDescription(code)})`);
 
+    const waiter = this.pendingAckWaiters.shift();
+    waiter?.resolve(payload);
+
     switch (this.capturePhase) {
       case "polling_genimg":
         if (code === ACK_OK) {
@@ -395,12 +506,11 @@ class BluetoothFingerprintService {
           // Now request the image upload
           this.capturePhase = "waiting_upimage_ack";
           this._addDiag("Solicitando UpImage...");
-          this.sendCommand(CMD_UP_IMAGE).catch(err => {
+          this.sendCommand(CMD_UP_IMAGE).catch((err) => {
             this._addDiag(`✗ Error UpImage: ${err?.message}`);
           });
         } else if (code === ACK_NO_FINGER) {
           // No finger yet — polling will retry
-          // Don't log every poll to avoid noise
           this.genImgAttempts++;
           if (this.genImgAttempts % 5 === 0) {
             this._addDiag(`Esperando dedo... (intento ${this.genImgAttempts})`);
@@ -521,7 +631,7 @@ class BluetoothFingerprintService {
 
     for (let i = 0; i < width * height && i < rawData.length; i++) {
       const v = rawData[i];
-      imgData.data[i * 4]     = v;
+      imgData.data[i * 4] = v;
       imgData.data[i * 4 + 1] = v;
       imgData.data[i * 4 + 2] = v;
       imgData.data[i * 4 + 3] = 255;
@@ -548,22 +658,27 @@ class BluetoothFingerprintService {
   }
 
   // ── Build and send Synochip command packet ──────────────────────────────
-  private async sendCommand(instruction: number, data: Uint8Array = new Uint8Array()): Promise<void> {
-    if (!this.writeChar) throw new Error("Sin característica de escritura");
+  private async sendCommand(
+    instruction: number,
+    data: Uint8Array = new Uint8Array(),
+    writeTarget?: BluetoothRemoteGATTCharacteristic,
+  ): Promise<void> {
+    const target = writeTarget || this.writeChar;
+    if (!target) throw new Error("Sin característica de escritura");
 
     const payloadLen = data.length + 3; // instruction(1) + checksum(2)
     const packetLength = 12 + data.length; // header(2)+addr(4)+pid(1)+len(2)+instruction(1)+data+checksum(2)
     const packet = new Uint8Array(packetLength);
 
     // Header 0xEF01
-    packet[0] = 0xef;
-    packet[1] = 0x01;
+    packet[0] = (HEADER >> 8) & 0xff;
+    packet[1] = HEADER & 0xff;
 
     // Address (4 bytes, default 0xFFFFFFFF)
-    packet[2] = 0xff;
-    packet[3] = 0xff;
-    packet[4] = 0xff;
-    packet[5] = 0xff;
+    packet[2] = (DEFAULT_ADDR >> 24) & 0xff;
+    packet[3] = (DEFAULT_ADDR >> 16) & 0xff;
+    packet[4] = (DEFAULT_ADDR >> 8) & 0xff;
+    packet[5] = DEFAULT_ADDR & 0xff;
 
     // PID = Command
     packet[6] = PID_COMMAND;
@@ -588,25 +703,31 @@ class BluetoothFingerprintService {
     packet[chkIdx] = (chksum >> 8) & 0xff;
     packet[chkIdx + 1] = chksum & 0xff;
 
-    const hex = Array.from(packet).map((b) => b.toString(16).padStart(2, '0')).join(' ');
-    this._addDiag(`▶ TX ${packet.length}B: ${hex}`);
+    const hex = Array.from(packet).map((b) => b.toString(16).padStart(2, "0")).join(" ");
+    this._addDiag(`▶ TX ${packet.length}B ${this.shortUuid(target.uuid)}: ${hex}`);
+
+    const props = target.properties as BluetoothCharacteristicProperties & {
+      writeWithoutResponse?: boolean;
+    };
 
     // BLE MTU splitting (typically 20 bytes for BLE 4.x)
     const mtu = 20;
     for (let i = 0; i < packet.length; i += mtu) {
       const chunk = packet.slice(i, Math.min(i + mtu, packet.length));
       try {
-        if (this.writeChar.properties.writeWithoutResponse) {
-          await this.writeChar.writeValueWithoutResponse(chunk);
+        if (props.write && typeof (target as any).writeValueWithResponse === "function") {
+          await (target as any).writeValueWithResponse(chunk);
+        } else if (props.writeWithoutResponse && typeof (target as any).writeValueWithoutResponse === "function") {
+          await (target as any).writeValueWithoutResponse(chunk);
         } else {
-          await this.writeChar.writeValue(chunk);
+          await target.writeValue(chunk);
         }
       } catch (err: any) {
-        this._addDiag(`✗ Error escritura BLE: ${err?.message}`);
+        this._addDiag(`✗ Error escritura BLE ${this.shortUuid(target.uuid)}: ${err?.message}`);
         throw err;
       }
       if (i + mtu < packet.length) {
-        await new Promise((r) => setTimeout(r, 10));
+        await new Promise((r) => setTimeout(r, 20));
       }
     }
   }
@@ -617,8 +738,9 @@ class BluetoothFingerprintService {
       const battService = await this.server!.getPrimaryService("battery_service");
       const battChar = await battService.getCharacteristic("battery_level");
       const value = await battChar.readValue();
-      this._addDiag(`Batería: ${value.getUint8(0)}%`);
-      this.emit("battery", { level: value.getUint8(0) });
+      this.batteryLevel = value.getUint8(0);
+      this._addDiag(`Batería: ${this.batteryLevel}%`);
+      this.emit("battery", { level: this.batteryLevel });
     } catch {
       // Battery service not available — normal
     }
@@ -633,8 +755,8 @@ class BluetoothFingerprintService {
     this.status = "capturing";
     this.emit("statusChange", this.getInfo());
     this._addDiag("═══ INICIO CAPTURA ═══");
-    this._addDiag(`Servicio: ${this.discoveredServiceUuid?.substring(4, 8)}`);
-    this._addDiag(`Write: ${this.discoveredWriteUuid?.substring(4, 8)}, Notify: ${this.discoveredNotifyUuid?.substring(4, 8)}`);
+    this._addDiag(`Servicio: ${this.shortUuid(this.discoveredServiceUuid)}`);
+    this._addDiag(`Write: ${this.shortUuid(this.discoveredWriteUuid)}, Notify: ${this.shortUuid(this.discoveredNotifyUuid)}`);
 
     // Reset state
     this.rxBuffer = new Uint8Array(0);
@@ -649,7 +771,7 @@ class BluetoothFingerprintService {
       // Timeout
       this.captureTimeout = setTimeout(() => {
         this._addDiag(`✗ Timeout (${timeoutMs / 1000}s) — ${this.receivedImageBytes}B recibidos, fase: ${this.capturePhase}`);
-        
+
         // If we have partial image data, try to finalize
         if (this.capturePhase === "receiving_image" && this.receivedImageBytes > 500) {
           this._addDiag("Finalizando con datos parciales...");
@@ -675,7 +797,7 @@ class BluetoothFingerprintService {
   // ── Poll GenImg command ─────────────────────────────────────────────────
   private startGenImgPolling(): void {
     // Send first GenImg immediately
-    this.sendCommand(CMD_GEN_IMG).catch(err => {
+    this.sendCommand(CMD_GEN_IMG).catch((err) => {
       this._addDiag(`✗ GenImg error: ${err?.message}`);
     });
 
@@ -685,7 +807,7 @@ class BluetoothFingerprintService {
         this.stopGenImgPolling();
         return;
       }
-      this.sendCommand(CMD_GEN_IMG).catch(err => {
+      this.sendCommand(CMD_GEN_IMG).catch((err) => {
         this._addDiag(`✗ GenImg poll error: ${err?.message}`);
       });
     }, 500);
@@ -729,6 +851,12 @@ class BluetoothFingerprintService {
     }
     this.capturePhase = "idle";
 
+    for (const waiter of this.pendingAckWaiters) {
+      clearTimeout(waiter.timer);
+      waiter.reject(new Error("Captura interrumpida"));
+    }
+    this.pendingAckWaiters = [];
+
     // Turn off LED
     if (this.server?.connected) {
       this.sendLedCommand(false).catch(() => {});
@@ -765,8 +893,13 @@ class BluetoothFingerprintService {
     this.cleanupCapture();
     this.captureResolve = null;
 
-    if (this.notifyChar) {
-      try { this.notifyChar.stopNotifications().catch(() => {}); } catch {}
+    for (const char of this.notifyCandidates) {
+      try {
+        char.removeEventListener("characteristicvaluechanged", this.notificationHandler as EventListener);
+        char.stopNotifications().catch(() => {});
+      } catch {
+        // noop
+      }
     }
 
     if (this.device?.gatt?.connected) {
@@ -777,6 +910,9 @@ class BluetoothFingerprintService {
     this.server = null;
     this.writeChar = null;
     this.notifyChar = null;
+    this.writeCandidates = [];
+    this.notifyCandidates = [];
+    this.allChars = [];
     this.rxBuffer = new Uint8Array(0);
     this.status = "disconnected";
     this.emit("statusChange", this.getInfo());
@@ -789,6 +925,7 @@ class BluetoothFingerprintService {
       status: this.status,
       deviceName: this.deviceName || undefined,
       error: this.lastError || undefined,
+      batteryLevel: this.batteryLevel,
     };
   }
 
