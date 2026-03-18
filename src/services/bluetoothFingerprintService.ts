@@ -79,6 +79,7 @@ class BluetoothFingerprintService {
   private server: BluetoothRemoteGATTServer | null = null;
   private writeChar: BluetoothRemoteGATTCharacteristic | null = null;
   private notifyChar: BluetoothRemoteGATTCharacteristic | null = null;
+  private allChars: BluetoothRemoteGATTCharacteristic[] = [];
   private status: BtStatus = "disconnected";
   private deviceName: string | null = null;
   private listeners: Map<string, Set<EventCallback>> = new Map();
@@ -90,6 +91,12 @@ class BluetoothFingerprintService {
   private expectedImageBytes = 0;
   private receivedImageBytes = 0;
   private isReceivingImage = false;
+  private rawDataTimer: ReturnType<typeof setTimeout> | null = null;
+  private isCapturing = false;
+  private detectedProtocol: "synochip" | "raw" | "unknown" = "unknown";
+  private discoveredServiceUuid: string | null = null;
+  private discoveredWriteUuid: string | null = null;
+  private discoveredNotifyUuid: string | null = null;
 
   // ── Check Web Bluetooth availability ────────────────────────────────────
   isSupported(): boolean {
@@ -270,10 +277,28 @@ class BluetoothFingerprintService {
     if (!this.writeChar) throw new Error("No se encontró característica de escritura");
     if (!this.notifyChar) throw new Error("No se encontró característica de notificación");
 
+    this.discoveredServiceUuid = service.uuid;
+    this.discoveredWriteUuid = this.writeChar.uuid;
+    this.discoveredNotifyUuid = this.notifyChar.uuid;
+    this.allChars = chars;
+
     // Subscribe to notifications
     await this.notifyChar.startNotifications();
     this.notifyChar.addEventListener("characteristicvaluechanged", this.handleNotification.bind(this));
     this._addDiag("Suscrito a notificaciones");
+
+    // Also subscribe to any additional notify characteristics
+    for (const char of chars) {
+      if (char.properties.notify && char !== this.notifyChar) {
+        try {
+          await char.startNotifications();
+          char.addEventListener("characteristicvaluechanged", this.handleNotification.bind(this));
+          this._addDiag(`También suscrito a ${char.uuid.substring(4, 8)}`);
+        } catch {
+          // ignore
+        }
+      }
+    }
   }
 
   // ── Handle incoming BLE notifications ───────────────────────────────────
@@ -283,18 +308,55 @@ class BluetoothFingerprintService {
     if (!value) return;
 
     const data = new Uint8Array(value.buffer);
+    
+    // Always log raw data for debugging
+    const hex = Array.from(data.slice(0, 32)).map(b => b.toString(16).padStart(2, '0')).join(' ');
+    this._addDiag(`◀ RX ${data.length}B: ${hex}${data.length > 32 ? '...' : ''}`);
 
-    if (this.isReceivingImage) {
-      this.handleImageData(data);
+    if (!this.isCapturing) {
+      // Data received outside capture — could be handshake response
+      this.responseBuffer.push(data);
+      const assembled = this.assemblePacket();
+      if (assembled) {
+        this._addDiag(`Respuesta: PID=${assembled.pid} datos=${assembled.data.length}B`);
+        if (assembled.pid === PID_ACK && assembled.data.length > 0) {
+          this._addDiag(`ACK código=${assembled.data[0]} — protocolo Synochip confirmado`);
+          this.detectedProtocol = "synochip";
+        }
+      }
       return;
     }
 
-    // Parse fingerprint module packet
-    this.responseBuffer.push(data);
-    const assembled = this.assemblePacket();
-    if (assembled) {
-      this.processResponse(assembled);
+    // ── During capture: try to interpret incoming data ──
+    
+    // Check if it looks like a Synochip packet
+    if (data.length >= 2 && data[0] === 0xef && data[1] === 0x01) {
+      this.detectedProtocol = "synochip";
     }
+
+    if (this.detectedProtocol === "synochip") {
+      this.responseBuffer.push(data);
+      const assembled = this.assemblePacket();
+      if (assembled) {
+        this.processResponse(assembled);
+      }
+      return;
+    }
+
+    // ── Raw/unknown protocol: collect all data as potential image ──
+    this.imageDataChunks.push(data);
+    this.receivedImageBytes += data.length;
+    this.emit("progress", { received: this.receivedImageBytes });
+    this._addDiag(`Datos acumulados: ${this.receivedImageBytes} bytes`);
+
+    // Debounce: finalize image after 800ms of no new data
+    if (this.rawDataTimer) clearTimeout(this.rawDataTimer);
+    this.rawDataTimer = setTimeout(() => {
+      if (this.isCapturing && this.receivedImageBytes > 500) {
+        this._addDiag(`Auto-finalizando con ${this.receivedImageBytes} bytes (sin datos nuevos por 800ms)`);
+        this.finalizeImage();
+      }
+    }, 800);
   }
 
   // ── Assemble multi-notification packet ──────────────────────────────────
@@ -587,14 +649,19 @@ class BluetoothFingerprintService {
     }
 
     this.status = "capturing";
+    this.isCapturing = true;
     this.emit("statusChange", this.getInfo());
     this._addDiag("Iniciando captura de huella...");
+    this._addDiag(`Protocolo detectado: ${this.detectedProtocol}`);
+    this._addDiag(`Servicio: ${this.discoveredServiceUuid}`);
+    this._addDiag(`Write: ${this.discoveredWriteUuid}, Notify: ${this.discoveredNotifyUuid}`);
 
     // Reset state
     this.responseBuffer = [];
     this.imageDataChunks = [];
     this.receivedImageBytes = 0;
     this.isReceivingImage = false;
+    if (this.rawDataTimer) clearTimeout(this.rawDataTimer);
 
     return new Promise<BtCaptureResult>(async (resolve) => {
       this.captureResolve = resolve;
@@ -603,20 +670,21 @@ class BluetoothFingerprintService {
       const timeout = setTimeout(() => {
         if (this.captureResolve) {
           // If we have partial image data, try to finalize it
-          if (this.imageDataChunks.length > 0 && this.receivedImageBytes > 1000) {
+          if (this.imageDataChunks.length > 0 && this.receivedImageBytes > 500) {
             this._addDiag(`Timeout con ${this.receivedImageBytes} bytes recibidos, finalizando...`);
             this.finalizeImage();
             return;
           }
 
           this.captureResolve = null;
+          this.isCapturing = false;
           this.isReceivingImage = false;
           this.status = "connected";
           this.emit("statusChange", this.getInfo());
-          this._addDiag("✗ Timeout de captura");
+          this._addDiag(`✗ Timeout de captura (${this.receivedImageBytes} bytes recibidos)`);
           resolve({
             success: false,
-            error: "Tiempo de espera agotado. Coloque el dedo en el lector e intente de nuevo.",
+            error: `Tiempo de espera agotado (${this.receivedImageBytes} bytes recibidos). Coloque el dedo en el lector e intente de nuevo.`,
           });
         }
       }, timeoutMs);
@@ -624,23 +692,81 @@ class BluetoothFingerprintService {
       const originalResolve = this.captureResolve;
       this.captureResolve = (result) => {
         clearTimeout(timeout);
+        this.isCapturing = false;
+        if (this.rawDataTimer) clearTimeout(this.rawDataTimer);
         originalResolve?.(result);
       };
 
       try {
-        // Try to turn on LED (optional, some models)
+        // Strategy 1: Try Synochip protocol (GenImg command)
+        this._addDiag("Enviando comando GenImg (protocolo Synochip)...");
         try {
-          await this.sendCommand(CMD_AURA_LED, new Uint8Array([0x01, 0x04, 0x04, 0x02])); // Blue breathing
-        } catch {
-          // LED control not supported — OK
+          await this.sendCommand(CMD_GEN_IMG);
+        } catch (e: any) {
+          this._addDiag(`GenImg falló: ${e?.message}`);
         }
 
-        // Send GenImg command to capture fingerprint
-        await this.sendCommand(CMD_GEN_IMG);
-        this._addDiag("Esperando huella en el sensor...");
+        // Wait 2s, if no response try alternative commands
+        await new Promise(r => setTimeout(r, 2000));
+
+        if (this.receivedImageBytes === 0 && this.captureResolve) {
+          // Strategy 2: Try simple trigger bytes common in BLE fingerprint scanners
+          this._addDiag("Sin respuesta. Intentando comandos alternativos...");
+
+          const alternativeCommands = [
+            // Common BLE fingerprint scanner trigger commands
+            new Uint8Array([0x55, 0xAA, 0x01, 0x00, 0x00, 0x00, 0x01]), // Scan trigger v1
+            new Uint8Array([0x40, 0x20]),                                 // Short scan command
+            new Uint8Array([0x01]),                                       // Single byte trigger
+            new Uint8Array([0xF5, 0x01, 0x00, 0x00, 0x00, 0x01, 0xF5]), // Alt protocol
+            new Uint8Array([0x7E, 0x00, 0x01, 0x01, 0x00, 0x02, 0x7E]), // Frame protocol
+          ];
+
+          for (const cmd of alternativeCommands) {
+            if (this.receivedImageBytes > 0) break; // Something responded
+            const hex = Array.from(cmd).map(b => b.toString(16).padStart(2, '0')).join(' ');
+            this._addDiag(`▶ TX alt: ${hex}`);
+            try {
+              if (this.writeChar!.properties.writeWithoutResponse) {
+                await this.writeChar!.writeValueWithoutResponse(cmd);
+              } else {
+                await this.writeChar!.writeValue(cmd);
+              }
+              await new Promise(r => setTimeout(r, 1000));
+            } catch (e: any) {
+              this._addDiag(`  falló: ${e?.message}`);
+            }
+          }
+
+          // Strategy 3: Try reading from all characteristics (some devices use read instead of notify)
+          if (this.receivedImageBytes === 0 && this.captureResolve) {
+            this._addDiag("Intentando lectura directa de características...");
+            for (const char of this.allChars) {
+              if (char.properties.read) {
+                try {
+                  const val = await char.readValue();
+                  const data = new Uint8Array(val.buffer);
+                  if (data.length > 0) {
+                    const hex = Array.from(data.slice(0, 20)).map(b => b.toString(16).padStart(2, '0')).join(' ');
+                    this._addDiag(`◀ Read ${char.uuid.substring(4,8)}: ${data.length}B — ${hex}`);
+                    if (data.length > 10) {
+                      this.imageDataChunks.push(data);
+                      this.receivedImageBytes += data.length;
+                    }
+                  }
+                } catch {
+                  // skip
+                }
+              }
+            }
+          }
+        }
+
+        this._addDiag(`Esperando huella en el sensor... (${this.receivedImageBytes} bytes hasta ahora)`);
       } catch (err: any) {
         clearTimeout(timeout);
         this.captureResolve = null;
+        this.isCapturing = false;
         const msg = err?.message || String(err);
         this._addDiag(`✗ Error al iniciar captura: ${msg}`);
         this.status = "connected";
@@ -654,6 +780,8 @@ class BluetoothFingerprintService {
   disconnect() {
     this.captureResolve = null;
     this.isReceivingImage = false;
+    this.isCapturing = false;
+    if (this.rawDataTimer) clearTimeout(this.rawDataTimer);
 
     if (this.notifyChar) {
       try {

@@ -10,6 +10,7 @@ import { webUsbDetectionService, type WebUsbDeviceInfo } from '@/services/webUsb
 import { webUsbCaptureService, type WebUsbCaptureStatus } from '@/services/webUsbCaptureService';
 import { LiteClientDiagnostics } from '@/components/LiteClientDiagnostics';
 import { bluetoothFingerprintService, type BtReaderInfo, type BtCaptureResult } from '@/services/bluetoothFingerprintService';
+import { BtDiagnostics } from '@/components/BtDiagnostics';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 export interface FingerprintCaptureRef {
@@ -1206,6 +1207,9 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                     </p>
                   </div>
                 )}
+
+                {/* BT Diagnostics */}
+                <BtDiagnostics />
 
                 {/* Camera — always available */}
                 <Button
