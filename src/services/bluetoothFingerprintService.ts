@@ -138,7 +138,7 @@ class BluetoothFingerprintService {
 
     try {
       // Request device with fingerprint scanner filters
-      this.device = await navigator.bluetooth.requestDevice({
+      this.device = await (navigator as any).bluetooth.requestDevice({
         filters: [
           { services: [BLE_SERVICE_UUIDS[0]] },
           { services: [BLE_SERVICE_UUIDS[1]] },
