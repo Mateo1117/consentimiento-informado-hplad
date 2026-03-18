@@ -439,7 +439,11 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   const [usbCapturing,   setUsbCapturing]   = useState(false);
   // WebUSB hardware detection
   const [webUsbInfo,     setWebUsbInfo]     = useState<WebUsbDeviceInfo>(webUsbDetectionService.getLastInfo());
-  // WebUSB direct capture state
+  // Bluetooth Reader state
+  const [btReaderInfo, setBtReaderInfo] = useState<BtReaderInfo>(bluetoothFingerprintService.getInfo());
+  const [btConnecting, setBtConnecting] = useState(false);
+  const [btCapturing, setBtCapturing] = useState(false);
+  const btSupported = bluetoothFingerprintService.isSupported();
   const [webUsbCaptureStatus, setWebUsbCaptureStatus] = useState<WebUsbCaptureStatus>(webUsbCaptureService.getStatus());
 
   const isPreviewOrEmbedded = useCallback(() => {
