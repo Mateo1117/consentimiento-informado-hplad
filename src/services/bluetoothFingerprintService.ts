@@ -10,7 +10,7 @@
  *   3. Enviar UpImage para recibir la imagen raw del sensor
  *   4. Recibir paquetes DATA/END con la imagen
  *
- * BLE UART: Servicio 0xFFF0, Write 0xFFF1, Notify 0xFFF2
+ * BLE UART: Servicio 0xFFF0, Write 0xFFF1, Notify/Indicate 0xFFF2
  */
 
 /// <reference types="@types/web-bluetooth" />
@@ -254,24 +254,27 @@ class BluetoothFingerprintService {
       for (const char of chars) {
         const props = char.properties as BluetoothCharacteristicProperties & {
           writeWithoutResponse?: boolean;
+          indicate?: boolean;
         };
         const canWrite = Boolean(props.write || props.writeWithoutResponse);
-        const canNotify = Boolean(props.notify);
+        const canReceive = Boolean(props.notify || props.indicate);
         const canRead = Boolean(props.read);
 
-        this._addDiag(`  ${this.shortUuid(char.uuid)}: W=${canWrite} WR=${Boolean(props.write)} WNR=${Boolean(props.writeWithoutResponse)} N=${canNotify} R=${canRead}`);
+        this._addDiag(
+          `  ${this.shortUuid(char.uuid)}: W=${canWrite} WR=${Boolean(props.write)} WNR=${Boolean(props.writeWithoutResponse)} N=${Boolean(props.notify)} I=${Boolean(props.indicate)} R=${canRead}`,
+        );
 
         if (canWrite && !this.writeCandidates.includes(char)) {
           this.writeCandidates.push(char);
         }
-        if (canNotify && !this.notifyCandidates.includes(char)) {
+        if (canReceive && !this.notifyCandidates.includes(char)) {
           this.notifyCandidates.push(char);
         }
       }
     }
 
     if (this.writeCandidates.length === 0) throw new Error("Sin característica de escritura");
-    if (this.notifyCandidates.length === 0) throw new Error("Sin característica de notificación");
+    if (this.notifyCandidates.length === 0) throw new Error("Sin característica de notificación/indicación");
 
     this.writeChar = this.pickPreferredCharacteristic(this.writeCandidates, WRITE_CHAR_UUIDS, true);
     this.notifyChar = this.pickPreferredCharacteristic(this.notifyCandidates, NOTIFY_CHAR_UUIDS, false);
@@ -296,7 +299,7 @@ class BluetoothFingerprintService {
       try {
         await char.startNotifications();
         char.addEventListener("characteristicvaluechanged", this.notificationHandler as EventListener);
-        this._addDiag(`Suscrito: ${this.shortUuid(char.uuid)}`);
+        this._addDiag(`Suscrito RX: ${this.shortUuid(char.uuid)}`);
       } catch (e: any) {
         this._addDiag(`Error suscripción ${this.shortUuid(char.uuid)}: ${e?.message || e}`);
       }
@@ -315,12 +318,17 @@ class BluetoothFingerprintService {
 
     const sorted = [...candidates].sort((a, b) => {
       const score = (char: BluetoothRemoteGATTCharacteristic) => {
-        const props = char.properties as BluetoothCharacteristicProperties & { writeWithoutResponse?: boolean };
+        const props = char.properties as BluetoothCharacteristicProperties & {
+          writeWithoutResponse?: boolean;
+          indicate?: boolean;
+        };
         if (preferWriteWithResponse) {
           if (props.write) return 0;
           if (props.writeWithoutResponse) return 1;
+        } else {
+          if (props.notify) return 0;
+          if (props.indicate) return 1;
         }
-        if (props.notify) return 0;
         return 2;
       };
       return score(a) - score(b);
