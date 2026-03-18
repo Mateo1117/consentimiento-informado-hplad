@@ -290,18 +290,55 @@ class BluetoothFingerprintService {
     if (!value) return;
 
     const data = new Uint8Array(value.buffer);
+    
+    // Always log raw data for debugging
+    const hex = Array.from(data.slice(0, 32)).map(b => b.toString(16).padStart(2, '0')).join(' ');
+    this._addDiag(`◀ RX ${data.length}B: ${hex}${data.length > 32 ? '...' : ''}`);
 
-    if (this.isReceivingImage) {
-      this.handleImageData(data);
+    if (!this.isCapturing) {
+      // Data received outside capture — could be handshake response
+      this.responseBuffer.push(data);
+      const assembled = this.assemblePacket();
+      if (assembled) {
+        this._addDiag(`Respuesta: PID=${assembled.pid} datos=${assembled.data.length}B`);
+        if (assembled.pid === PID_ACK && assembled.data.length > 0) {
+          this._addDiag(`ACK código=${assembled.data[0]} — protocolo Synochip confirmado`);
+          this.detectedProtocol = "synochip";
+        }
+      }
       return;
     }
 
-    // Parse fingerprint module packet
-    this.responseBuffer.push(data);
-    const assembled = this.assemblePacket();
-    if (assembled) {
-      this.processResponse(assembled);
+    // ── During capture: try to interpret incoming data ──
+    
+    // Check if it looks like a Synochip packet
+    if (data.length >= 2 && data[0] === 0xef && data[1] === 0x01) {
+      this.detectedProtocol = "synochip";
     }
+
+    if (this.detectedProtocol === "synochip") {
+      this.responseBuffer.push(data);
+      const assembled = this.assemblePacket();
+      if (assembled) {
+        this.processResponse(assembled);
+      }
+      return;
+    }
+
+    // ── Raw/unknown protocol: collect all data as potential image ──
+    this.imageDataChunks.push(data);
+    this.receivedImageBytes += data.length;
+    this.emit("progress", { received: this.receivedImageBytes });
+    this._addDiag(`Datos acumulados: ${this.receivedImageBytes} bytes`);
+
+    // Debounce: finalize image after 800ms of no new data
+    if (this.rawDataTimer) clearTimeout(this.rawDataTimer);
+    this.rawDataTimer = setTimeout(() => {
+      if (this.isCapturing && this.receivedImageBytes > 500) {
+        this._addDiag(`Auto-finalizando con ${this.receivedImageBytes} bytes (sin datos nuevos por 800ms)`);
+        this.finalizeImage();
+      }
+    }, 800);
   }
 
   // ── Assemble multi-notification packet ──────────────────────────────────
