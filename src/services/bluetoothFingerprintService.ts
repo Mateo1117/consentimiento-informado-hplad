@@ -780,6 +780,8 @@ class BluetoothFingerprintService {
   disconnect() {
     this.captureResolve = null;
     this.isReceivingImage = false;
+    this.isCapturing = false;
+    if (this.rawDataTimer) clearTimeout(this.rawDataTimer);
 
     if (this.notifyChar) {
       try {
