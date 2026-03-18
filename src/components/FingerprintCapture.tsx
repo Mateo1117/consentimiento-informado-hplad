@@ -1359,13 +1359,10 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
         )}
 
         {/* Tip footer */}
-        {(step === 'idle' || step === 'usb-waiting') && (
-          <div className="bg-muted/40 rounded-lg p-3 flex items-start gap-2">
-            <Fingerprint className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
-            <p className="text-xs text-muted-foreground">
-              <strong>Tip:</strong> Puede usar el lector USB (DigitalPersona U.are.U 4500) conectado al PC, el lector Bluetooth SHU0809 de forma inalámbrica, o la cámara del dispositivo como alternativa.
-            </p>
-          </div>
+        {step === 'idle' && (
+          <p className="text-[11px] text-muted-foreground text-center">
+            Seleccione un método de captura: USB, Bluetooth o cámara.
+          </p>
         )}
       </CardContent>
     </Card>
