@@ -277,10 +277,28 @@ class BluetoothFingerprintService {
     if (!this.writeChar) throw new Error("No se encontró característica de escritura");
     if (!this.notifyChar) throw new Error("No se encontró característica de notificación");
 
+    this.discoveredServiceUuid = service.uuid;
+    this.discoveredWriteUuid = this.writeChar.uuid;
+    this.discoveredNotifyUuid = this.notifyChar.uuid;
+    this.allChars = chars;
+
     // Subscribe to notifications
     await this.notifyChar.startNotifications();
     this.notifyChar.addEventListener("characteristicvaluechanged", this.handleNotification.bind(this));
     this._addDiag("Suscrito a notificaciones");
+
+    // Also subscribe to any additional notify characteristics
+    for (const char of chars) {
+      if (char.properties.notify && char !== this.notifyChar) {
+        try {
+          await char.startNotifications();
+          char.addEventListener("characteristicvaluechanged", this.handleNotification.bind(this));
+          this._addDiag(`También suscrito a ${char.uuid.substring(4, 8)}`);
+        } catch {
+          // ignore
+        }
+      }
+    }
   }
 
   // ── Handle incoming BLE notifications ───────────────────────────────────
