@@ -15,6 +15,7 @@
  * módulos de huella Synochip/ZhianTec (AS608/FPM10A).
  */
 
+/// <reference types="@types/web-bluetooth" />
 import { logger } from "@/utils/logger";
 
 // ─── BLE UUIDs ────────────────────────────────────────────────────────────────
