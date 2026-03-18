@@ -40,6 +40,8 @@ export const BtDiagnostics: React.FC = () => {
             <span className="font-mono">{diag.webBluetoothSupported ? '✓' : '✗'}</span>
             <span className="text-muted-foreground">GATT conectado:</span>
             <span className="font-mono">{diag.gattConnected ? '✓' : '✗'}</span>
+            <span className="text-muted-foreground">Fase captura:</span>
+            <span className="font-mono">{diag.capturePhase || 'idle'}</span>
           </div>
 
           {diag.lastError && (
