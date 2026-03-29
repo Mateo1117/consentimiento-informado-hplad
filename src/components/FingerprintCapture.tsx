@@ -439,15 +439,9 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   const [usbCapturing,   setUsbCapturing]   = useState(false);
   // WebUSB hardware detection
   const [webUsbInfo,     setWebUsbInfo]     = useState<WebUsbDeviceInfo>(webUsbDetectionService.getLastInfo());
-  // Bluetooth Reader state
-  const [btReaderInfo, setBtReaderInfo] = useState<BtReaderInfo>(bluetoothFingerprintService.getInfo());
-  const [btConnecting, setBtConnecting] = useState(false);
-  const [btCapturing, setBtCapturing] = useState(false);
-  const btSupported = bluetoothFingerprintService.isSupported();
-  const [webUsbCaptureStatus, setWebUsbCaptureStatus] = useState<WebUsbCaptureStatus>(webUsbCaptureService.getStatus());
-  // FPService (WebSocket) — hook-based
-  const fp = useFingerprintReader(false);
-  const fpConnected = ['ready', 'success', 'place_finger', 'lift_finger'].includes(fp.status);
+  // FPService (WebSocket) — unified hook
+  const fp = useFPService();
+  const fpConnected = fp.connected;
   const fpBusy = ['place_finger', 'lift_finger', 'connecting'].includes(fp.status);
 
   const isPreviewOrEmbedded = useCallback(() => {
