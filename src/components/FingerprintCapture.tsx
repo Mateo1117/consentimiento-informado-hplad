@@ -3,7 +3,7 @@ import React, {
 } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Usb, Loader2, Bluetooth } from 'lucide-react';
+import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Usb, Loader2, Bluetooth, Wifi } from 'lucide-react';
 import { toast } from 'sonner';
 import { digitalPersonaService, type ReaderInfo, type CaptureResult } from '@/services/digitalPersonaService';
 import { webUsbDetectionService, type WebUsbDeviceInfo } from '@/services/webUsbDetectionService';
@@ -11,6 +11,7 @@ import { webUsbCaptureService, type WebUsbCaptureStatus } from '@/services/webUs
 import { LiteClientDiagnostics } from '@/components/LiteClientDiagnostics';
 import { bluetoothFingerprintService, type BtReaderInfo, type BtCaptureResult } from '@/services/bluetoothFingerprintService';
 import { BtDiagnostics } from '@/components/BtDiagnostics';
+import { fpWebSocketService, type FpServiceInfo } from '@/services/fpWebSocketService';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 export interface FingerprintCaptureRef {
@@ -446,6 +447,10 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   const [btCapturing, setBtCapturing] = useState(false);
   const btSupported = bluetoothFingerprintService.isSupported();
   const [webUsbCaptureStatus, setWebUsbCaptureStatus] = useState<WebUsbCaptureStatus>(webUsbCaptureService.getStatus());
+  // FPService (WebSocket) state
+  const [fpInfo, setFpInfo] = useState<FpServiceInfo>(fpWebSocketService.getInfo());
+  const [fpConnecting, setFpConnecting] = useState(false);
+  const [fpCapturing, setFpCapturing] = useState(false);
 
   const isPreviewOrEmbedded = useCallback(() => {
     if (typeof window === 'undefined') return false;
@@ -510,12 +515,18 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     };
     bluetoothFingerprintService.on('statusChange', handleBtStatus);
 
+    const handleFpStatus = (info: FpServiceInfo) => {
+      if (!cancelled) setFpInfo(info);
+    };
+    fpWebSocketService.on(handleFpStatus);
+
     return () => {
       cancelled = true;
       digitalPersonaService.off('statusChange', handleStatusChange);
       webUsbDetectionService.offChange(handleWebUsb);
       webUsbCaptureService.offStatusChange(handleWebUsbCapture);
       bluetoothFingerprintService.off('statusChange', handleBtStatus);
+      fpWebSocketService.off(handleFpStatus);
     };
   }, []);
 
@@ -694,6 +705,56 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     setBtCapturing(false);
     setStep('idle');
   }, []);
+
+  // ── FPService (WebSocket): connect and capture ──────────────────────────
+  const connectFpService = useCallback(async () => {
+    setFpConnecting(true);
+    try {
+      const ok = await fpWebSocketService.connect();
+      if (ok) {
+        setFpInfo(fpWebSocketService.getInfo());
+        toast.success('FPService conectado');
+      } else {
+        toast.error(fpWebSocketService.getInfo().message || 'No se pudo conectar con FPService');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al conectar con FPService');
+    } finally {
+      setFpConnecting(false);
+    }
+  }, []);
+
+  const captureWithFpService = useCallback(async () => {
+    setStep('usb-waiting');
+    setFpCapturing(true);
+    try {
+      if (!fpWebSocketService.isConnected()) {
+        const ok = await fpWebSocketService.connect();
+        if (!ok) {
+          toast.error('No se pudo conectar con FPService');
+          setStep('idle');
+          setFpCapturing(false);
+          return;
+        }
+      }
+      const result = await fpWebSocketService.capture(30000);
+      if (result.success && result.imageBase64) {
+        setCapturedImage(result.imageBase64);
+        setSelectedFinger(null);
+        setStep('captured');
+        onFingerprintChange?.(result.imageBase64);
+        toast.success('Huella capturada correctamente vía FPService');
+      } else {
+        toast.error(result.error || 'No se pudo capturar la huella');
+        setStep('idle');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al capturar con FPService');
+      setStep('idle');
+    } finally {
+      setFpCapturing(false);
+    }
+  }, [onFingerprintChange]);
 
   const startCamera = useCallback(async () => {
     setCameraError(null);
@@ -1062,7 +1123,75 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                   )}
                 </div>
 
-                {/* ── Método 3: Cámara ── */}
+                {/* ── Método 3: FPService (WebSocket local) ── */}
+                <div className={`rounded-lg border p-3 transition-colors ${
+                  fpInfo.status === 'ready' || fpInfo.status === 'success'
+                    ? 'border-green-500/40 bg-green-500/5'
+                    : fpInfo.status === 'connecting' || fpInfo.status === 'place_finger' || fpInfo.status === 'lift_finger'
+                      ? 'border-amber-500/40 bg-amber-500/5'
+                      : 'border-border bg-muted/20'
+                }`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Wifi className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold text-foreground">FPService (Local)</span>
+                      {fpInfo.status === 'ready' && (
+                        <span className="text-[10px] bg-green-500/15 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium">
+                          ✓ Conectado {fpInfo.deviceSN ? `(${fpInfo.deviceSN})` : ''}
+                        </span>
+                      )}
+                    </div>
+                    {fpInfo.status === 'ready' && (
+                      <button
+                        type="button"
+                        onClick={() => fpWebSocketService.disconnect()}
+                        className="text-[10px] text-destructive hover:underline"
+                      >
+                        Desconectar
+                      </button>
+                    )}
+                  </div>
+
+                  {fpInfo.status === 'place_finger' || fpInfo.status === 'lift_finger' ? (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mb-2 animate-pulse">
+                      {fpInfo.message}
+                    </p>
+                  ) : null}
+
+                  {fpInfo.status === 'ready' || fpInfo.status === 'success' ? (
+                    <Button
+                      onClick={captureWithFpService}
+                      className="w-full"
+                      size="sm"
+                      disabled={fpCapturing}
+                    >
+                      {fpCapturing ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Capturando...</>
+                      ) : (
+                        <><Fingerprint className="h-4 w-4 mr-2" /> Capturar Huella (FPService)</>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={connectFpService}
+                      disabled={fpConnecting}
+                    >
+                      {fpConnecting ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Conectando...</>
+                      ) : (
+                        <><Wifi className="h-4 w-4 mr-2" /> Conectar FPService</>
+                      )}
+                    </Button>
+                  )}
+                  <p className="text-[10px] text-muted-foreground mt-1.5">
+                    Requiere FPService instalado en el equipo (ws://127.0.0.1:21187)
+                  </p>
+                </div>
+
+                {/* ── Método 4: Cámara ── */}
                 <div className="rounded-lg border border-border bg-muted/20 p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <Camera className="h-4 w-4 text-muted-foreground" />
