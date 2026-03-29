@@ -439,6 +439,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   const [usbCapturing,   setUsbCapturing]   = useState(false);
   // WebUSB hardware detection
   const [webUsbInfo,     setWebUsbInfo]     = useState<WebUsbDeviceInfo>(webUsbDetectionService.getLastInfo());
+  const [webUsbCaptureStatus, setWebUsbCaptureStatus2] = useState<WebUsbCaptureStatus>(webUsbCaptureService.getStatus());
   // FPService (WebSocket) — unified hook
   const fp = useFPService();
   const fpConnected = fp.connected;
@@ -498,7 +499,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     webUsbDetectionService.onChange(handleWebUsb);
 
     const handleWebUsbCapture = (status: WebUsbCaptureStatus) => {
-      if (!cancelled) setWebUsbCaptureStatus(status);
+      if (!cancelled) setWebUsbCaptureStatus2(status);
     };
     webUsbCaptureService.onStatusChange(handleWebUsbCapture);
 
@@ -954,75 +955,10 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                   </div>
                 )}
 
-                {/* ── Método 2: Lector Bluetooth ── */}
-                <div className={`rounded-lg border p-3 transition-colors ${
-                  btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing'
-                    ? 'border-blue-500/40 bg-blue-500/5'
-                    : 'border-border bg-muted/20'
-                }`}>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Bluetooth className="h-4 w-4 text-blue-500" />
-                      <span className="text-sm font-semibold text-foreground">Lector Bluetooth</span>
-                      {(btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing') && (
-                        <span className="text-[10px] bg-blue-500/15 text-blue-700 dark:text-blue-400 px-1.5 py-0.5 rounded-full font-medium">
-                          ✓ {btReaderInfo.deviceName}
-                        </span>
-                      )}
-                    </div>
-                    {btReaderInfo.status === 'connected' && (
-                      <button
-                        type="button"
-                        onClick={() => bluetoothFingerprintService.disconnect()}
-                        className="text-[10px] text-destructive hover:underline"
-                      >
-                        Desconectar
-                      </button>
-                    )}
-                  </div>
-
-                  {btSupported ? (
-                    btReaderInfo.status === 'connected' || btReaderInfo.status === 'capturing' ? (
-                      <Button
-                        onClick={captureWithBluetooth}
-                        className="w-full"
-                        size="sm"
-                        disabled={btCapturing}
-                      >
-                        {btCapturing ? (
-                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Capturando...</>
-                        ) : (
-                          <><Fingerprint className="h-4 w-4 mr-2" /> Capturar Huella (Bluetooth)</>
-                        )}
-                      </Button>
-                    ) : (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={connectBluetooth}
-                        disabled={btConnecting}
-                      >
-                        {btConnecting ? (
-                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Buscando...</>
-                        ) : (
-                          <><Bluetooth className="h-4 w-4 mr-2" /> Vincular Bluetooth</>
-                        )}
-                      </Button>
-                    )
-                  ) : (
-                    <p className="text-[11px] text-muted-foreground">
-                      {bluetoothFingerprintService.getPlatform() === 'ios'
-                        ? 'Requiere el navegador Bluefy en iOS.'
-                        : 'No disponible. Use Chrome o Edge.'}
-                    </p>
-                  )}
-                </div>
-
-                {/* ── Método 3: FPService (WebSocket local) ── */}
+                {/* ── Método 2: FPService (WebSocket local) ── */}
                 <div className={`rounded-lg border p-3 transition-colors ${
                   fpConnected
-                    ? 'border-green-500/40 bg-green-500/5'
+                    ? 'border-primary/40 bg-primary/5'
                     : fpBusy
                       ? 'border-amber-500/40 bg-amber-500/5'
                       : 'border-border bg-muted/20'
@@ -1030,10 +966,10 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Wifi className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-semibold text-foreground">FPService (Local)</span>
+                      <span className="text-sm font-semibold text-foreground">FPService (SHU0809)</span>
                       {fp.status === 'ready' && (
-                        <span className="text-[10px] bg-green-500/15 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium">
-                          ✓ Conectado {fp.deviceSN ? `(${fp.deviceSN})` : ''}
+                        <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full font-medium">
+                          ✓ Conectado
                         </span>
                       )}
                     </div>
@@ -1048,6 +984,30 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                     )}
                   </div>
 
+                  {/* Mode selector: FPService vs Lite Client */}
+                  <div className="flex gap-2 mb-2">
+                    <button
+                      type="button"
+                      onClick={() => fp.setMode('fpservice')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md border text-xs transition-colors ${
+                        fp.mode === 'fpservice' ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border hover:bg-muted/50 text-muted-foreground'
+                      }`}
+                    >
+                      <Smartphone className="h-3 w-3" />
+                      Android
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fp.setMode('liteclient')}
+                      className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md border text-xs transition-colors ${
+                        fp.mode === 'liteclient' ? 'border-primary bg-primary/10 text-primary font-medium' : 'border-border hover:bg-muted/50 text-muted-foreground'
+                      }`}
+                    >
+                      <Monitor className="h-3 w-3" />
+                      PC/Mac
+                    </button>
+                  </div>
+
                   {(fp.status === 'place_finger' || fp.status === 'lift_finger') && (
                     <p className="text-xs text-amber-600 dark:text-amber-400 mb-2 animate-pulse">
                       {fp.message}
@@ -1055,9 +1015,9 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                   )}
 
                   {/* Fingerprint preview from FPService */}
-                  {fp.fingerprintImage && (
+                  {fp.image && (
                     <div className="flex justify-center mb-2">
-                      <img src={fp.fingerprintImage} alt="Huella" className="h-24 w-auto rounded border border-border" />
+                      <img src={fp.image} alt="Huella" className="h-24 w-auto rounded border border-border" />
                     </div>
                   )}
 
@@ -1071,7 +1031,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                       {fpBusy ? (
                         <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {fp.message}</>
                       ) : (
-                        <><Fingerprint className="h-4 w-4 mr-2" /> Capturar Huella (FPService)</>
+                        <><Fingerprint className="h-4 w-4 mr-2" /> Capturar Huella</>
                       )}
                     </Button>
                   ) : (
@@ -1094,11 +1054,13 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                     <p className="text-[10px] text-destructive mt-1.5">{fp.message}</p>
                   )}
                   <p className="text-[10px] text-muted-foreground mt-1.5">
-                    Requiere FPService instalado (Android/Windows/Mac)
+                    {fp.mode === 'fpservice'
+                      ? 'Instale Android-FPService.apk y conecte el SHU0809 por Bluetooth'
+                      : 'Instale Lite Client en su PC/Mac y conecte el SHU0809'}
                   </p>
                 </div>
 
-                {/* ── Método 4: Cámara ── */}
+                {/* ── Método 3: Cámara ── */}
                 <div className="rounded-lg border border-border bg-muted/20 p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <Camera className="h-4 w-4 text-muted-foreground" />
@@ -1116,7 +1078,6 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
 
                 {/* ── Diagnósticos colapsables ── */}
                 {!isPreviewOrEmbedded() && <LiteClientDiagnostics />}
-                <BtDiagnostics />
               </div>
             )}
           </div>
@@ -1187,13 +1148,13 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                   Coloque la yema del dedo del paciente en el lector
                 </p>
                 <p className="text-xs text-muted-foreground mt-2">
-                  {btCapturing
-                    ? (btReaderInfo.deviceName || 'Lector Bluetooth')
+                  {fpBusy
+                    ? 'FPService'
                     : (usbReaderInfo.deviceName || 'DigitalPersona U.are.U 4500')}
                 </p>
               </div>
             </div>
-            <Button variant="outline" onClick={() => { cancelUSBCapture(); cancelWebUSBCapture(); cancelBtCapture(); }} className="w-full">
+            <Button variant="outline" onClick={() => { cancelUSBCapture(); cancelWebUSBCapture(); }} className="w-full">
               <RotateCcw className="h-4 w-4 mr-2" /> Cancelar
             </Button>
           </div>
