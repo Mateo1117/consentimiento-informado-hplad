@@ -32,6 +32,8 @@ export class FingerprintService {
   private ws: WebSocket | null = null;
   private callbacks: FpCallbacks;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private wasConnected = false; // only auto-reconnect if we had a successful connection
+  private manualDisconnect = false;
 
   constructor(callbacks: FpCallbacks) {
     this.callbacks = callbacks;
@@ -39,6 +41,7 @@ export class FingerprintService {
 
   connect() {
     if (this.ws?.readyState === WebSocket.OPEN) return;
+    this.manualDisconnect = false;
     this.callbacks.onStatus('connecting', 'Conectando con lector de huella...');
 
     try {
@@ -49,6 +52,7 @@ export class FingerprintService {
     }
 
     this.ws.onopen = () => {
+      this.wasConnected = true;
       this.callbacks.onStatus('ready', 'Lector de huella listo');
     };
 
@@ -62,12 +66,16 @@ export class FingerprintService {
     };
 
     this.ws.onclose = () => {
+      if (this.manualDisconnect) return;
       this.callbacks.onStatus('disconnected', 'Lector desconectado');
-      // Auto-reconnect after 3s
-      this.reconnectTimer = setTimeout(() => this.connect(), 3000);
+      // Only auto-reconnect if we previously had a successful connection
+      if (this.wasConnected) {
+        this.reconnectTimer = setTimeout(() => this.connect(), 3000);
+      }
     };
 
     this.ws.onerror = () => {
+      if (this.manualDisconnect) return;
       this.callbacks.onStatus(
         'error',
         'Servicio FPService no detectado. Instale el servicio en su dispositivo.'
@@ -76,6 +84,8 @@ export class FingerprintService {
   }
 
   disconnect() {
+    this.manualDisconnect = true;
+    this.wasConnected = false;
     if (this.reconnectTimer) clearTimeout(this.reconnectTimer);
     this.reconnectTimer = null;
     this.ws?.close();
