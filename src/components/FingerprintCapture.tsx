@@ -706,6 +706,56 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     setStep('idle');
   }, []);
 
+  // ── FPService (WebSocket): connect and capture ──────────────────────────
+  const connectFpService = useCallback(async () => {
+    setFpConnecting(true);
+    try {
+      const ok = await fpWebSocketService.connect();
+      if (ok) {
+        setFpInfo(fpWebSocketService.getInfo());
+        toast.success('FPService conectado');
+      } else {
+        toast.error(fpWebSocketService.getInfo().message || 'No se pudo conectar con FPService');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al conectar con FPService');
+    } finally {
+      setFpConnecting(false);
+    }
+  }, []);
+
+  const captureWithFpService = useCallback(async () => {
+    setStep('usb-waiting');
+    setFpCapturing(true);
+    try {
+      if (!fpWebSocketService.isConnected()) {
+        const ok = await fpWebSocketService.connect();
+        if (!ok) {
+          toast.error('No se pudo conectar con FPService');
+          setStep('idle');
+          setFpCapturing(false);
+          return;
+        }
+      }
+      const result = await fpWebSocketService.capture(30000);
+      if (result.success && result.imageBase64) {
+        setCapturedImage(result.imageBase64);
+        setSelectedFinger(null);
+        setStep('captured');
+        onFingerprintChange?.(result.imageBase64);
+        toast.success('Huella capturada correctamente vía FPService');
+      } else {
+        toast.error(result.error || 'No se pudo capturar la huella');
+        setStep('idle');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al capturar con FPService');
+      setStep('idle');
+    } finally {
+      setFpCapturing(false);
+    }
+  }, [onFingerprintChange]);
+
   const startCamera = useCallback(async () => {
     setCameraError(null);
     setStep('preview');
