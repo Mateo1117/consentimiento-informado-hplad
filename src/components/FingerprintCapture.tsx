@@ -11,7 +11,7 @@ import { webUsbCaptureService, type WebUsbCaptureStatus } from '@/services/webUs
 import { LiteClientDiagnostics } from '@/components/LiteClientDiagnostics';
 import { bluetoothFingerprintService, type BtReaderInfo, type BtCaptureResult } from '@/services/bluetoothFingerprintService';
 import { BtDiagnostics } from '@/components/BtDiagnostics';
-import { fpWebSocketService, type FpServiceInfo } from '@/services/fpWebSocketService';
+import { useFingerprintReader } from '@/hooks/useFingerprintReader';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 export interface FingerprintCaptureRef {
@@ -447,10 +447,10 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   const [btCapturing, setBtCapturing] = useState(false);
   const btSupported = bluetoothFingerprintService.isSupported();
   const [webUsbCaptureStatus, setWebUsbCaptureStatus] = useState<WebUsbCaptureStatus>(webUsbCaptureService.getStatus());
-  // FPService (WebSocket) state
-  const [fpInfo, setFpInfo] = useState<FpServiceInfo>(fpWebSocketService.getInfo());
-  const [fpConnecting, setFpConnecting] = useState(false);
-  const [fpCapturing, setFpCapturing] = useState(false);
+  // FPService (WebSocket) — hook-based
+  const fp = useFingerprintReader(false);
+  const fpConnected = ['ready', 'success', 'place_finger', 'lift_finger'].includes(fp.status);
+  const fpBusy = ['place_finger', 'lift_finger', 'connecting'].includes(fp.status);
 
   const isPreviewOrEmbedded = useCallback(() => {
     if (typeof window === 'undefined') return false;
@@ -515,18 +515,12 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     };
     bluetoothFingerprintService.on('statusChange', handleBtStatus);
 
-    const handleFpStatus = (info: FpServiceInfo) => {
-      if (!cancelled) setFpInfo(info);
-    };
-    fpWebSocketService.on(handleFpStatus);
-
     return () => {
       cancelled = true;
       digitalPersonaService.off('statusChange', handleStatusChange);
       webUsbDetectionService.offChange(handleWebUsb);
       webUsbCaptureService.offStatusChange(handleWebUsbCapture);
       bluetoothFingerprintService.off('statusChange', handleBtStatus);
-      fpWebSocketService.off(handleFpStatus);
     };
   }, []);
 
@@ -707,54 +701,31 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   }, []);
 
   // ── FPService (WebSocket): connect and capture ──────────────────────────
-  const connectFpService = useCallback(async () => {
-    setFpConnecting(true);
-    try {
-      const ok = await fpWebSocketService.connect();
-      if (ok) {
-        setFpInfo(fpWebSocketService.getInfo());
-        toast.success('FPService conectado');
-      } else {
-        toast.error(fpWebSocketService.getInfo().message || 'No se pudo conectar con FPService');
-      }
-    } catch (err: any) {
-      toast.error(err?.message || 'Error al conectar con FPService');
-    } finally {
-      setFpConnecting(false);
-    }
-  }, []);
+  // ── FPService (WebSocket): connect and capture via hook ───────────────
+  const connectFpService = useCallback(() => {
+    fp.connect();
+  }, [fp]);
 
-  const captureWithFpService = useCallback(async () => {
-    setStep('usb-waiting');
-    setFpCapturing(true);
-    try {
-      if (!fpWebSocketService.isConnected()) {
-        const ok = await fpWebSocketService.connect();
-        if (!ok) {
-          toast.error('No se pudo conectar con FPService');
-          setStep('idle');
-          setFpCapturing(false);
-          return;
-        }
-      }
-      const result = await fpWebSocketService.capture(30000);
-      if (result.success && result.imageBase64) {
-        setCapturedImage(result.imageBase64);
-        setSelectedFinger(null);
-        setStep('captured');
-        onFingerprintChange?.(result.imageBase64);
-        toast.success('Huella capturada correctamente vía FPService');
-      } else {
-        toast.error(result.error || 'No se pudo capturar la huella');
-        setStep('idle');
-      }
-    } catch (err: any) {
-      toast.error(err?.message || 'Error al capturar con FPService');
-      setStep('idle');
-    } finally {
-      setFpCapturing(false);
+  const captureWithFpService = useCallback(() => {
+    if (!fpConnected) {
+      fp.connect();
+      return;
     }
-  }, [onFingerprintChange]);
+    fp.capture();
+    setStep('usb-waiting');
+  }, [fp, fpConnected]);
+
+  // React to FPService image arriving
+  useEffect(() => {
+    if (fp.fingerprintImage && fp.status === 'success') {
+      setCapturedImage(fp.fingerprintImage);
+      setSelectedFinger(null);
+      setStep('captured');
+      onFingerprintChange?.(fp.fingerprintImage);
+      toast.success('Huella capturada correctamente vía FPService');
+      fp.reset();
+    }
+  }, [fp.fingerprintImage, fp.status]);
 
   const startCamera = useCallback(async () => {
     setCameraError(null);
