@@ -515,12 +515,18 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     };
     bluetoothFingerprintService.on('statusChange', handleBtStatus);
 
+    const handleFpStatus = (info: FpServiceInfo) => {
+      if (!cancelled) setFpInfo(info);
+    };
+    fpWebSocketService.on(handleFpStatus);
+
     return () => {
       cancelled = true;
       digitalPersonaService.off('statusChange', handleStatusChange);
       webUsbDetectionService.offChange(handleWebUsb);
       webUsbCaptureService.offStatusChange(handleWebUsbCapture);
       bluetoothFingerprintService.off('statusChange', handleBtStatus);
+      fpWebSocketService.off(handleFpStatus);
     };
   }, []);
 
