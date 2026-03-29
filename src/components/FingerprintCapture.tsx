@@ -3,7 +3,7 @@ import React, {
 } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Usb, Loader2, Bluetooth } from 'lucide-react';
+import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Usb, Loader2, Bluetooth, Wifi } from 'lucide-react';
 import { toast } from 'sonner';
 import { digitalPersonaService, type ReaderInfo, type CaptureResult } from '@/services/digitalPersonaService';
 import { webUsbDetectionService, type WebUsbDeviceInfo } from '@/services/webUsbDetectionService';
@@ -11,6 +11,7 @@ import { webUsbCaptureService, type WebUsbCaptureStatus } from '@/services/webUs
 import { LiteClientDiagnostics } from '@/components/LiteClientDiagnostics';
 import { bluetoothFingerprintService, type BtReaderInfo, type BtCaptureResult } from '@/services/bluetoothFingerprintService';
 import { BtDiagnostics } from '@/components/BtDiagnostics';
+import { fpWebSocketService, type FpServiceInfo } from '@/services/fpWebSocketService';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 export interface FingerprintCaptureRef {
