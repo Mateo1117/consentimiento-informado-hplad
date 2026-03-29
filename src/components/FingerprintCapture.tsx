@@ -1358,7 +1358,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
         {/* Tip footer */}
         {step === 'idle' && (
           <p className="text-[11px] text-muted-foreground text-center">
-            Seleccione un método de captura: USB, Bluetooth o cámara.
+            Seleccione un método de captura: USB, FPService o cámara.
           </p>
         )}
       </CardContent>
