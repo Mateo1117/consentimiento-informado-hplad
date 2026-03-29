@@ -1096,9 +1096,9 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
 
                 {/* ── Método 3: FPService (WebSocket local) ── */}
                 <div className={`rounded-lg border p-3 transition-colors ${
-                  fpInfo.status === 'ready' || fpInfo.status === 'success'
+                  fpConnected
                     ? 'border-green-500/40 bg-green-500/5'
-                    : fpInfo.status === 'connecting' || fpInfo.status === 'place_finger' || fpInfo.status === 'lift_finger'
+                    : fpBusy
                       ? 'border-amber-500/40 bg-amber-500/5'
                       : 'border-border bg-muted/20'
                 }`}>
@@ -1106,16 +1106,16 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                     <div className="flex items-center gap-2">
                       <Wifi className="h-4 w-4 text-primary" />
                       <span className="text-sm font-semibold text-foreground">FPService (Local)</span>
-                      {fpInfo.status === 'ready' && (
+                      {fp.status === 'ready' && (
                         <span className="text-[10px] bg-green-500/15 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium">
-                          ✓ Conectado {fpInfo.deviceSN ? `(${fpInfo.deviceSN})` : ''}
+                          ✓ Conectado {fp.deviceSN ? `(${fp.deviceSN})` : ''}
                         </span>
                       )}
                     </div>
-                    {fpInfo.status === 'ready' && (
+                    {fp.status === 'ready' && (
                       <button
                         type="button"
-                        onClick={() => fpWebSocketService.disconnect()}
+                        onClick={() => fp.disconnect()}
                         className="text-[10px] text-destructive hover:underline"
                       >
                         Desconectar
@@ -1123,21 +1123,28 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                     )}
                   </div>
 
-                  {fpInfo.status === 'place_finger' || fpInfo.status === 'lift_finger' ? (
+                  {(fp.status === 'place_finger' || fp.status === 'lift_finger') && (
                     <p className="text-xs text-amber-600 dark:text-amber-400 mb-2 animate-pulse">
-                      {fpInfo.message}
+                      {fp.message}
                     </p>
-                  ) : null}
+                  )}
 
-                  {fpInfo.status === 'ready' || fpInfo.status === 'success' ? (
+                  {/* Fingerprint preview from FPService */}
+                  {fp.fingerprintImage && (
+                    <div className="flex justify-center mb-2">
+                      <img src={fp.fingerprintImage} alt="Huella" className="h-24 w-auto rounded border border-border" />
+                    </div>
+                  )}
+
+                  {fpConnected ? (
                     <Button
                       onClick={captureWithFpService}
                       className="w-full"
                       size="sm"
-                      disabled={fpCapturing}
+                      disabled={fpBusy}
                     >
-                      {fpCapturing ? (
-                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Capturando...</>
+                      {fpBusy ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> {fp.message}</>
                       ) : (
                         <><Fingerprint className="h-4 w-4 mr-2" /> Capturar Huella (FPService)</>
                       )}
@@ -1148,17 +1155,21 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                       size="sm"
                       className="w-full"
                       onClick={connectFpService}
-                      disabled={fpConnecting}
+                      disabled={fp.status === 'connecting'}
                     >
-                      {fpConnecting ? (
+                      {fp.status === 'connecting' ? (
                         <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Conectando...</>
                       ) : (
                         <><Wifi className="h-4 w-4 mr-2" /> Conectar FPService</>
                       )}
                     </Button>
                   )}
+
+                  {fp.status === 'error' && (
+                    <p className="text-[10px] text-destructive mt-1.5">{fp.message}</p>
+                  )}
                   <p className="text-[10px] text-muted-foreground mt-1.5">
-                    Requiere FPService instalado en el equipo (ws://127.0.0.1:21187)
+                    Requiere FPService instalado (Android/Windows/Mac)
                   </p>
                 </div>
 
