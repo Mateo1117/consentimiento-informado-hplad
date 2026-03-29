@@ -447,6 +447,10 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   const [btCapturing, setBtCapturing] = useState(false);
   const btSupported = bluetoothFingerprintService.isSupported();
   const [webUsbCaptureStatus, setWebUsbCaptureStatus] = useState<WebUsbCaptureStatus>(webUsbCaptureService.getStatus());
+  // FPService (WebSocket) state
+  const [fpInfo, setFpInfo] = useState<FpServiceInfo>(fpWebSocketService.getInfo());
+  const [fpConnecting, setFpConnecting] = useState(false);
+  const [fpCapturing, setFpCapturing] = useState(false);
 
   const isPreviewOrEmbedded = useCallback(() => {
     if (typeof window === 'undefined') return false;
