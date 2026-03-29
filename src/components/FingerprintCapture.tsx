@@ -1123,7 +1123,75 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                   )}
                 </div>
 
-                {/* ── Método 3: Cámara ── */}
+                {/* ── Método 3: FPService (WebSocket local) ── */}
+                <div className={`rounded-lg border p-3 transition-colors ${
+                  fpInfo.status === 'ready' || fpInfo.status === 'success'
+                    ? 'border-green-500/40 bg-green-500/5'
+                    : fpInfo.status === 'connecting' || fpInfo.status === 'place_finger' || fpInfo.status === 'lift_finger'
+                      ? 'border-amber-500/40 bg-amber-500/5'
+                      : 'border-border bg-muted/20'
+                }`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Wifi className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold text-foreground">FPService (Local)</span>
+                      {fpInfo.status === 'ready' && (
+                        <span className="text-[10px] bg-green-500/15 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium">
+                          ✓ Conectado {fpInfo.deviceSN ? `(${fpInfo.deviceSN})` : ''}
+                        </span>
+                      )}
+                    </div>
+                    {fpInfo.status === 'ready' && (
+                      <button
+                        type="button"
+                        onClick={() => fpWebSocketService.disconnect()}
+                        className="text-[10px] text-destructive hover:underline"
+                      >
+                        Desconectar
+                      </button>
+                    )}
+                  </div>
+
+                  {fpInfo.status === 'place_finger' || fpInfo.status === 'lift_finger' ? (
+                    <p className="text-xs text-amber-600 dark:text-amber-400 mb-2 animate-pulse">
+                      {fpInfo.message}
+                    </p>
+                  ) : null}
+
+                  {fpInfo.status === 'ready' || fpInfo.status === 'success' ? (
+                    <Button
+                      onClick={captureWithFpService}
+                      className="w-full"
+                      size="sm"
+                      disabled={fpCapturing}
+                    >
+                      {fpCapturing ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Capturando...</>
+                      ) : (
+                        <><Fingerprint className="h-4 w-4 mr-2" /> Capturar Huella (FPService)</>
+                      )}
+                    </Button>
+                  ) : (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={connectFpService}
+                      disabled={fpConnecting}
+                    >
+                      {fpConnecting ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Conectando...</>
+                      ) : (
+                        <><Wifi className="h-4 w-4 mr-2" /> Conectar FPService</>
+                      )}
+                    </Button>
+                  )}
+                  <p className="text-[10px] text-muted-foreground mt-1.5">
+                    Requiere FPService instalado en el equipo (ws://127.0.0.1:21187)
+                  </p>
+                </div>
+
+                {/* ── Método 4: Cámara ── */}
                 <div className="rounded-lg border border-border bg-muted/20 p-3">
                   <div className="flex items-center gap-2 mb-2">
                     <Camera className="h-4 w-4 text-muted-foreground" />
