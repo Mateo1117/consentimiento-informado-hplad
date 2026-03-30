@@ -650,12 +650,8 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   const connectBluetooth = useCallback(async () => {
     setBtStatus('connecting');
     try {
-      const ok = await bluetoothFingerprintService.connect();
-      if (ok) {
-        toast.success('Lector BLE conectado');
-      } else {
-        toast.error('No se pudo conectar al lector BLE');
-      }
+      await bluetoothFingerprintService.connect();
+      toast.success('Lector BLE conectado');
     } catch (err: any) {
       toast.error(err?.message || 'Error al conectar BLE');
     }
@@ -665,7 +661,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     setBtCapturing(true);
     setStep('usb-waiting');
     try {
-      const result: BtCaptureResult = await bluetoothFingerprintService.capture(30000);
+      const result: BtCaptureResult = await bluetoothFingerprintService.startCapture(30000);
       if (result.success && result.imageBase64) {
         const dataUrl = result.imageBase64.startsWith('data:')
           ? result.imageBase64
