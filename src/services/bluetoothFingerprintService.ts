@@ -86,6 +86,9 @@ type CapturePhase =
   | "waiting_upimage_ack"
   | "receiving_image";
 
+const SHU_NAME_HINTS = ["shu", "shu0809", "bt809", "809", "hbrt", "hb", "starhigh", "synochip", "finger", "fp"];
+const BLOCKED_DEVICE_HINTS = ["digitalpersona", "u.are.u", "persona", "dp"];
+
 class BluetoothFingerprintService {
   private device: BluetoothDevice | null = null;
   private server: BluetoothRemoteGATTServer | null = null;
@@ -139,6 +142,48 @@ class BluetoothFingerprintService {
     return normalized.startsWith("0000") ? normalized.slice(4, 8).toUpperCase() : normalized;
   }
 
+  private looksLikeBlockedDevice(name?: string | null): boolean {
+    const normalized = (name || "").toLowerCase();
+    return BLOCKED_DEVICE_HINTS.some((hint) => normalized.includes(hint));
+  }
+
+  private looksLikeShuDevice(name?: string | null): boolean {
+    const normalized = (name || "").toLowerCase();
+    return SHU_NAME_HINTS.some((hint) => normalized.includes(hint));
+  }
+
+  private async requestBleDevice(): Promise<BluetoothDevice> {
+    const bluetooth = (navigator as any).bluetooth;
+
+    try {
+      this._addDiag("Buscando SHU0809 con filtros conocidos...");
+      return await bluetooth.requestDevice({
+        filters: [
+          { namePrefix: "SHU" },
+          { namePrefix: "BT809" },
+          { namePrefix: "HB" },
+          { namePrefix: "SH-" },
+          { namePrefix: "SHU0809" },
+          ...BLE_SERVICE_UUIDS.map((service) => ({ services: [service] })),
+        ],
+        optionalServices: [...BLE_SERVICE_UUIDS, "battery_service"],
+      });
+    } catch (err: any) {
+      const message = err?.message || "";
+      const name = err?.name || "";
+
+      if (name === "NotFoundError" || /no device selected|chooser|not found/i.test(message)) {
+        this._addDiag("Sin coincidencias por filtro; abriendo búsqueda BLE ampliada...");
+        return await bluetooth.requestDevice({
+          acceptAllDevices: true,
+          optionalServices: [...BLE_SERVICE_UUIDS, "battery_service"],
+        });
+      }
+
+      throw err;
+    }
+  }
+
   async connect(): Promise<boolean> {
     this.lastError = null;
     this._diagLog = [];
@@ -164,16 +209,7 @@ class BluetoothFingerprintService {
     this._addDiag("Solicitando dispositivo Bluetooth...");
 
     try {
-      this.device = await (navigator as any).bluetooth.requestDevice({
-        filters: [
-          { namePrefix: "SHU" },
-          { namePrefix: "BT809" },
-          { namePrefix: "HB" },
-          { namePrefix: "SH-" },
-          { namePrefix: "SHU0809" },
-        ],
-        optionalServices: [...BLE_SERVICE_UUIDS, "battery_service"],
-      });
+      this.device = await this.requestBleDevice();
 
       if (!this.device) {
         this.lastError = "No se seleccionó ningún dispositivo";
@@ -184,6 +220,14 @@ class BluetoothFingerprintService {
 
       this.deviceName = this.device.name || "Lector Bluetooth";
       this._addDiag(`Dispositivo: ${this.deviceName}`);
+
+      if (this.looksLikeBlockedDevice(this.deviceName)) {
+        throw new Error(`Seleccionó ${this.deviceName}. Debe elegir el lector SHU0809, no un dispositivo DigitalPersona.`);
+      }
+
+      if (!this.looksLikeShuDevice(this.deviceName)) {
+        this._addDiag("⚠ El nombre del equipo no coincide exactamente con SHU0809; se intentará conexión BLE de todas formas.");
+      }
 
       this.device.addEventListener("gattserverdisconnected", () => {
         this._addDiag("Dispositivo desconectado");
