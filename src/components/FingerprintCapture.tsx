@@ -646,6 +646,44 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     setStep('idle');
   }, []);
 
+  // ── Bluetooth Direct (Web BLE): connect and capture ──────────────────
+  const connectBluetooth = useCallback(async () => {
+    setBtStatus('connecting');
+    try {
+      const ok = await bluetoothFingerprintService.connect();
+      if (ok) {
+        toast.success('Lector BLE conectado');
+      } else {
+        toast.error('No se pudo conectar al lector BLE');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al conectar BLE');
+    }
+  }, []);
+
+  const captureWithBluetooth = useCallback(async () => {
+    setBtCapturing(true);
+    setStep('usb-waiting');
+    try {
+      const result: BtCaptureResult = await bluetoothFingerprintService.startCapture(30000);
+      if (result.success && result.imageBase64) {
+        setCapturedImage(result.imageBase64);
+        setSelectedFinger(null);
+        setStep('captured');
+        onFingerprintChange?.(result.imageBase64);
+        toast.success('Huella capturada correctamente vía BLE');
+      } else {
+        toast.error(result.error || 'No se pudo capturar la huella por BLE');
+        setStep('idle');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al capturar con BLE');
+      setStep('idle');
+    } finally {
+      setBtCapturing(false);
+    }
+  }, [onFingerprintChange]);
+
   // ── FPService (WebSocket): connect and capture via hook ───────────────
   const connectFpService = useCallback(() => {
     fp.connect();
