@@ -1005,9 +1005,9 @@ export class BasePDFGenerator {
     }
 
     if (data.patientPhoto && typeof data.patientPhoto === 'string' && data.patientPhoto.length > 100) {
-      // Cápsula vertical — misma forma que en drawSignatureSection
-      const capsuleW = halfCol - 6;
-      const capsuleH = signatureHeight - 5;
+      // Cápsula vertical (falange) — misma forma que en drawSignatureSection
+      const capsuleH = signatureHeight - 4;
+      const capsuleW = capsuleH * 0.7;
       const cx = this.margin + halfCol + halfCol / 2;
       const cy = this.currentY + signatureHeight / 2;
       const capX = cx - capsuleW / 2;
