@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -54,6 +54,26 @@ export const ConsentFormHemocomponentes = ({
     name: '',
     document: ''
   });
+
+  // Auto-cargar datos del profesional logueado
+  useEffect(() => {
+    const loadProfessional = async () => {
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: profSig } = await supabase
+          .from('professional_signatures')
+          .select('professional_name, professional_document')
+          .eq('created_by', user.id)
+          .single();
+        if (profSig) {
+          setProfessionalData({ name: profSig.professional_name, document: profSig.professional_document });
+        }
+      } catch { /* silently ignore */ }
+    };
+    loadProfessional();
+  }, []);
 
   // Estados para firmas y foto
   const patientSignatureRef = useRef<SignatureRef>(null);

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -65,6 +65,25 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
     name: '',
     document: ''
   });
+
+  // Auto-cargar datos del profesional logueado
+  useEffect(() => {
+    const loadProfessional = async () => {
+      try {
+        const { data: { user } } = await (await import('@/integrations/supabase/client')).supabase.auth.getUser();
+        if (!user) return;
+        const { data: profSig } = await (await import('@/integrations/supabase/client')).supabase
+          .from('professional_signatures')
+          .select('professional_name, professional_document')
+          .eq('created_by', user.id)
+          .single();
+        if (profSig && (!professionalData.name || !professionalData.document)) {
+          setProfessionalData({ name: profSig.professional_name, document: profSig.professional_document });
+        }
+      } catch { /* silently ignore */ }
+    };
+    loadProfessional();
+  }, []);
   const [isProcedureInfoExpanded, setIsProcedureInfoExpanded] = useState(false);
   const [clinicalRiskNotes, setClinicalRiskNotes] = useState('');
   
