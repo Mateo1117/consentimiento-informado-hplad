@@ -665,7 +665,7 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     setBtCapturing(true);
     setStep('usb-waiting');
     try {
-      const result: BtCaptureResult = await bluetoothFingerprintService.startCapture(30000);
+      const result: BtCaptureResult = await bluetoothFingerprintService.capture(30000);
       if (result.success && result.imageBase64) {
         setCapturedImage(result.imageBase64);
         setSelectedFinger(null);
