@@ -153,9 +153,19 @@ class BluetoothFingerprintService {
     this._addDiag("▶ Solicitando dispositivo BLE...");
 
     try {
-      // Mostrar TODOS los dispositivos BLE para que el usuario seleccione el SHU0809
       const device = await (navigator.bluetooth as any).requestDevice({
-        acceptAllDevices: true,
+        filters: [
+          { namePrefix: "SHBT" },
+          { namePrefix: "SPP"  },
+          { namePrefix: "FSC"  },
+          { namePrefix: "LRB"  },
+          { namePrefix: "SHU"  },
+          { namePrefix: "BT809" },
+          { namePrefix: "HB"  },
+          { namePrefix: "SH-" },
+          { namePrefix: "HBRT" },
+          { services: [SERVICE_UUID] },
+        ],
         optionalServices: [SERVICE_UUID],
       });
 
