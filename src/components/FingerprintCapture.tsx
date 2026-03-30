@@ -3,13 +3,14 @@ import React, {
 } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Usb, Loader2, Wifi, Monitor, Smartphone } from 'lucide-react';
+import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Usb, Loader2, Wifi, Monitor, Smartphone, Bluetooth } from 'lucide-react';
 import { toast } from 'sonner';
 import { digitalPersonaService, type ReaderInfo, type CaptureResult } from '@/services/digitalPersonaService';
 import { webUsbDetectionService, type WebUsbDeviceInfo } from '@/services/webUsbDetectionService';
 import { webUsbCaptureService, type WebUsbCaptureStatus } from '@/services/webUsbCaptureService';
 import { LiteClientDiagnostics } from '@/components/LiteClientDiagnostics';
 import { useFPService } from '@/hooks/useFPService';
+import { bluetoothFingerprintService, type BtStatus, type BtCaptureResult, type BtReaderInfo } from '@/services/bluetoothFingerprintService';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 export interface FingerprintCaptureRef {
@@ -444,6 +445,10 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   const fp = useFPService();
   const fpConnected = fp.connected;
   const fpBusy = ['place_finger', 'lift_finger', 'connecting'].includes(fp.status);
+  // Bluetooth Direct (Web BLE)
+  const [btStatus, setBtStatus] = useState<BtStatus>('disconnected');
+  const [btDeviceName, setBtDeviceName] = useState<string | null>(null);
+  const [btCapturing, setBtCapturing] = useState(false);
 
   const isPreviewOrEmbedded = useCallback(() => {
     if (typeof window === 'undefined') return false;
@@ -503,11 +508,25 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     };
     webUsbCaptureService.onStatusChange(handleWebUsbCapture);
 
+    // Bluetooth Direct status listener
+    const handleBtStatus = (info: BtReaderInfo) => {
+      if (!cancelled) {
+        setBtStatus(info.status);
+        setBtDeviceName(info.deviceName || null);
+      }
+    };
+    bluetoothFingerprintService.on('statusChange', handleBtStatus);
+
     return () => {
       cancelled = true;
       digitalPersonaService.off('statusChange', handleStatusChange);
       webUsbDetectionService.offChange(handleWebUsb);
       webUsbCaptureService.offStatusChange(handleWebUsbCapture);
+      bluetoothFingerprintService.off('statusChange', handleBtStatus);
+      // Cleanup BLE connection on unmount
+      if (bluetoothFingerprintService.getInfo().status !== 'disconnected') {
+        bluetoothFingerprintService.disconnect();
+      }
     };
   }, []);
 
@@ -626,6 +645,44 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     setUsbCapturing(false);
     setStep('idle');
   }, []);
+
+  // ── Bluetooth Direct (Web BLE): connect and capture ──────────────────
+  const connectBluetooth = useCallback(async () => {
+    setBtStatus('connecting');
+    try {
+      const ok = await bluetoothFingerprintService.connect();
+      if (ok) {
+        toast.success('Lector BLE conectado');
+      } else {
+        toast.error('No se pudo conectar al lector BLE');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al conectar BLE');
+    }
+  }, []);
+
+  const captureWithBluetooth = useCallback(async () => {
+    setBtCapturing(true);
+    setStep('usb-waiting');
+    try {
+      const result: BtCaptureResult = await bluetoothFingerprintService.capture(30000);
+      if (result.success && result.imageBase64) {
+        setCapturedImage(result.imageBase64);
+        setSelectedFinger(null);
+        setStep('captured');
+        onFingerprintChange?.(result.imageBase64);
+        toast.success('Huella capturada correctamente vía BLE');
+      } else {
+        toast.error(result.error || 'No se pudo capturar la huella por BLE');
+        setStep('idle');
+      }
+    } catch (err: any) {
+      toast.error(err?.message || 'Error al capturar con BLE');
+      setStep('idle');
+    } finally {
+      setBtCapturing(false);
+    }
+  }, [onFingerprintChange]);
 
   // ── FPService (WebSocket): connect and capture via hook ───────────────
   const connectFpService = useCallback(() => {
@@ -955,7 +1012,61 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                   </div>
                 )}
 
-                {/* ── Método 2: FPService (WebSocket local) ── */}
+                {/* ── Método 2: Bluetooth Directo (Web BLE) ── */}
+                <div className={`rounded-lg border p-3 transition-colors ${
+                  btStatus === 'connected'
+                    ? 'border-blue-500/40 bg-blue-500/5'
+                    : btStatus === 'connecting' || btCapturing
+                      ? 'border-amber-500/40 bg-amber-500/5'
+                      : 'border-border bg-muted/20'
+                }`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Bluetooth className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold text-foreground">Bluetooth Directo (LRB SHU0809)</span>
+                      {btStatus === 'connected' && btDeviceName && (
+                        <span className="text-[10px] bg-green-500/15 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium">
+                          ✓ {btDeviceName}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {btStatus === 'disconnected' || btStatus === 'unavailable' || btStatus === 'error' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={connectBluetooth}
+                    >
+                      <Bluetooth className="h-4 w-4 mr-2" /> Vincular Lector BLE
+                    </Button>
+                  ) : btStatus === 'connecting' || btCapturing ? (
+                    <Button variant="outline" size="sm" className="w-full" disabled>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {btCapturing ? 'Capturando...' : 'Conectando...'}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={captureWithBluetooth}
+                      className="w-full"
+                      size="sm"
+                    >
+                      <Fingerprint className="h-4 w-4 mr-2" /> Capturar Huella BLE
+                    </Button>
+                  )}
+
+                  {btStatus === 'error' && (
+                    <p className="text-[10px] text-destructive mt-1.5">
+                      {bluetoothFingerprintService.getInfo().error || 'Error de conexión BLE'}
+                    </p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground mt-1.5">
+                    Conecta directamente por BLE desde el navegador sin apps adicionales. Requiere Chrome en Android, Mac o Windows.
+                  </p>
+                </div>
+
+                {/* ── Método 3: FPService (WebSocket local) ── */}
                 <div className={`rounded-lg border p-3 transition-colors ${
                   fpConnected
                     ? 'border-primary/40 bg-primary/5'
