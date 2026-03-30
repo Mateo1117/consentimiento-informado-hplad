@@ -1012,7 +1012,61 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
                   </div>
                 )}
 
-                {/* ── Método 2: FPService (WebSocket local) ── */}
+                {/* ── Método 2: Bluetooth Directo (Web BLE) ── */}
+                <div className={`rounded-lg border p-3 transition-colors ${
+                  btStatus === 'connected'
+                    ? 'border-blue-500/40 bg-blue-500/5'
+                    : btStatus === 'connecting' || btCapturing
+                      ? 'border-amber-500/40 bg-amber-500/5'
+                      : 'border-border bg-muted/20'
+                }`}>
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Bluetooth className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-semibold text-foreground">Bluetooth Directo (LRB SHU0809)</span>
+                      {btStatus === 'connected' && btDeviceName && (
+                        <span className="text-[10px] bg-green-500/15 text-green-700 dark:text-green-400 px-1.5 py-0.5 rounded-full font-medium">
+                          ✓ {btDeviceName}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {btStatus === 'disconnected' || btStatus === 'unavailable' || btStatus === 'error' ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full"
+                      onClick={connectBluetooth}
+                    >
+                      <Bluetooth className="h-4 w-4 mr-2" /> Vincular Lector BLE
+                    </Button>
+                  ) : btStatus === 'connecting' || btCapturing ? (
+                    <Button variant="outline" size="sm" className="w-full" disabled>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      {btCapturing ? 'Capturando...' : 'Conectando...'}
+                    </Button>
+                  ) : (
+                    <Button
+                      onClick={captureWithBluetooth}
+                      className="w-full"
+                      size="sm"
+                    >
+                      <Fingerprint className="h-4 w-4 mr-2" /> Capturar Huella BLE
+                    </Button>
+                  )}
+
+                  {btStatus === 'error' && (
+                    <p className="text-[10px] text-destructive mt-1.5">
+                      {bluetoothFingerprintService.getInfo().error || 'Error de conexión BLE'}
+                    </p>
+                  )}
+                  <p className="text-[10px] text-muted-foreground mt-1.5">
+                    Conecta directamente por BLE desde el navegador sin apps adicionales. Requiere Chrome en Android, Mac o Windows.
+                  </p>
+                </div>
+
+                {/* ── Método 3: FPService (WebSocket local) ── */}
                 <div className={`rounded-lg border p-3 transition-colors ${
                   fpConnected
                     ? 'border-primary/40 bg-primary/5'
