@@ -213,25 +213,52 @@ export class BasePDFGenerator {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const SIZE = 600;
+        const W = 420;   // width  — narrower for phalange shape
+        const H = 600;   // height — taller
         const canvas = document.createElement('canvas');
-        canvas.width = canvas.height = SIZE;
+        canvas.width = W;
+        canvas.height = H;
         const ctx = canvas.getContext('2d')!;
+        const cornerR = W / 2; // capsule radius = half width
 
-        // White paper background + circular clip
+        // Helper: draw capsule (rounded rect) path
+        const capsulePath = (cx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
+          cx.beginPath();
+          cx.moveTo(x + r, y);
+          cx.lineTo(x + w - r, y);
+          cx.arcTo(x + w, y, x + w, y + r, r);
+          cx.lineTo(x + w, y + h - r);
+          cx.arcTo(x + w, y + h, x + w - r, y + h, r);
+          cx.lineTo(x + r, y + h);
+          cx.arcTo(x, y + h, x, y + h - r, r);
+          cx.lineTo(x, y + r);
+          cx.arcTo(x, y, x + r, y, r);
+          cx.closePath();
+        };
+
+        // White paper background + capsule clip
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, SIZE, SIZE);
+        ctx.fillRect(0, 0, W, H);
         ctx.save();
-        ctx.beginPath();
-        ctx.arc(SIZE/2, SIZE/2, SIZE/2 - 2, 0, Math.PI * 2);
+        capsulePath(ctx, 2, 2, W - 4, H - 4, cornerR - 2);
         ctx.clip();
-        ctx.drawImage(img, 0, 0, SIZE, SIZE);
+        // Draw image centered/cover within the capsule
+        const imgAspect = img.width / img.height;
+        const capAspect = W / H;
+        let sw: number, sh: number, sx: number, sy: number;
+        if (imgAspect > capAspect) {
+          sh = img.height; sw = sh * capAspect;
+          sx = (img.width - sw) / 2; sy = 0;
+        } else {
+          sw = img.width; sh = sw / capAspect;
+          sx = 0; sy = (img.height - sh) / 2;
+        }
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
         ctx.restore();
 
-        const id = ctx.getImageData(0, 0, SIZE, SIZE);
+        const id = ctx.getImageData(0, 0, W, H);
         const d = id.data;
-        const n = SIZE * SIZE;
-        const half = SIZE / 2;
+        const n = W * H;
 
         // ── 1. Grayscale ──────────────────────────────────────────────────
         const gray = new Float32Array(n);
@@ -240,11 +267,11 @@ export class BasePDFGenerator {
         }
 
         // ── 2. CLAHE ──────────────────────────────────────────────────────
-        const cl = clahe(gray, SIZE, SIZE, 24, 2.5);
+        const cl = clahe(gray, W, H, 24, 2.5);
 
         // ── 3. DoG (σ1=0.8, σ2=2.5) ──────────────────────────────────────
-        const g1 = gaussBlur(cl, SIZE, SIZE, 0.8);
-        const g2 = gaussBlur(cl, SIZE, SIZE, 2.5);
+        const g1 = gaussBlur(cl, W, H, 0.8);
+        const g2 = gaussBlur(cl, W, H, 2.5);
         const dogRaw = new Float32Array(n);
         let dMin = Infinity, dMax = -Infinity;
         for (let i = 0; i < n; i++) { dogRaw[i]=g1[i]-g2[i]; if(dogRaw[i]<dMin)dMin=dogRaw[i]; if(dogRaw[i]>dMax)dMax=dogRaw[i]; }
@@ -253,7 +280,7 @@ export class BasePDFGenerator {
         for (let i = 0; i < n; i++) dogN[i] = ((dogRaw[i]-dMin)/dRange)*255;
 
         // ── 4. Sobel ──────────────────────────────────────────────────────
-        const sb = sobel(cl, SIZE, SIZE);
+        const sb = sobel(cl, W, H);
 
         // ── 5. Fusion: 55% CLAHE + 30% DoG + 15% Sobel ───────────────────
         const fused = new Float32Array(n);
@@ -262,17 +289,34 @@ export class BasePDFGenerator {
         }
 
         // ── 6. Niblack adaptive threshold (15×15, k=-0.12) ───────────────
+        // Capsule mask: pixels outside the capsule shape → white
+        const halfW = W / 2, halfH = H / 2;
+        const capR = W / 2 - 2; // capsule corner radius
+        const isInsideCapsule = (px: number, py: number): boolean => {
+          // Top semicircle
+          if (py < capR) {
+            const dx = px - halfW, dy = py - capR;
+            return dx * dx + dy * dy <= capR * capR;
+          }
+          // Bottom semicircle
+          if (py > H - capR) {
+            const dx = px - halfW, dy = py - (H - capR);
+            return dx * dx + dy * dy <= capR * capR;
+          }
+          // Middle rectangle
+          return px >= (halfW - capR) && px <= (halfW + capR);
+        };
+
         const hw = 7, k = -0.12;
         const result = new Uint8ClampedArray(n);
-        for (let py = 0; py < SIZE; py++) {
-          for (let px = 0; px < SIZE; px++) {
-            const idx = py*SIZE+px;
-            const dx = px-half, dy = py-half;
-            if (dx*dx+dy*dy > (half-2)*(half-2)) { result[idx]=255; continue; }
+        for (let py = 0; py < H; py++) {
+          for (let px = 0; px < W; px++) {
+            const idx = py * W + px;
+            if (!isInsideCapsule(px, py)) { result[idx] = 255; continue; }
             let sum=0, sumSq=0, cnt=0;
-            for (let ky=Math.max(0,py-hw); ky<=Math.min(SIZE-1,py+hw); ky++)
-              for (let kx=Math.max(0,px-hw); kx<=Math.min(SIZE-1,px+hw); kx++) {
-                const v=fused[ky*SIZE+kx]; sum+=v; sumSq+=v*v; cnt++;
+            for (let ky=Math.max(0,py-hw); ky<=Math.min(H-1,py+hw); ky++)
+              for (let kx=Math.max(0,px-hw); kx<=Math.min(W-1,px+hw); kx++) {
+                const v=fused[ky*W+kx]; sum+=v; sumSq+=v*v; cnt++;
               }
             const mean=sum/cnt;
             const stddev=Math.sqrt(Math.max(0,sumSq/cnt-mean*mean));
