@@ -166,13 +166,11 @@ class BluetoothFingerprintService {
     try {
       this.device = await (navigator as any).bluetooth.requestDevice({
         filters: [
-          { services: [BLE_SERVICE_UUIDS[0]] },
-          { services: [BLE_SERVICE_UUIDS[1]] },
-          { services: [BLE_SERVICE_UUIDS[2]] },
-          { namePrefix: "SH" },
-          { namePrefix: "FP" },
+          { namePrefix: "SHU" },
           { namePrefix: "BT809" },
           { namePrefix: "HB" },
+          { namePrefix: "SH-" },
+          { namePrefix: "SHU0809" },
         ],
         optionalServices: [...BLE_SERVICE_UUIDS, "battery_service"],
       });
