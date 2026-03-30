@@ -153,16 +153,32 @@ class BluetoothFingerprintService {
     this._addDiag("▶ Solicitando dispositivo BLE...");
 
     try {
-      const device = await (navigator.bluetooth as any).requestDevice({
-        filters: [
-          { namePrefix: "SHBT" },
-          { namePrefix: "SPP"  },
-          { namePrefix: "FSC"  },
-          { namePrefix: "LRB"  },
-          { namePrefix: "SHU"  },
-        ],
-        optionalServices: [SERVICE_UUID],
-      });
+      let device: BluetoothDevice;
+      try {
+        // Fase 1: intentar con filtros conocidos del SHU0809
+        device = await (navigator.bluetooth as any).requestDevice({
+          filters: [
+            { namePrefix: "SHBT" },
+            { namePrefix: "SPP"  },
+            { namePrefix: "FSC"  },
+            { namePrefix: "LRB"  },
+            { namePrefix: "SHU"  },
+            { namePrefix: "BT809" },
+            { namePrefix: "HB"  },
+            { namePrefix: "SH-" },
+            { namePrefix: "HBRT" },
+            { services: [SERVICE_UUID] },
+          ],
+          optionalServices: [SERVICE_UUID],
+        });
+      } catch (filterErr: any) {
+        // Fase 2: si no aparece, mostrar TODOS los dispositivos BLE
+        this._addDiag("! Filtros no encontraron dispositivo, mostrando todos...");
+        device = await (navigator.bluetooth as any).requestDevice({
+          acceptAllDevices: true,
+          optionalServices: [SERVICE_UUID],
+        });
+      }
 
       this.device     = device;
       this.deviceName = device.name ?? "SHU0809";
