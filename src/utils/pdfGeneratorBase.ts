@@ -213,25 +213,52 @@ export class BasePDFGenerator {
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const SIZE = 600;
+        const W = 420;   // width  — narrower for phalange shape
+        const H = 600;   // height — taller
         const canvas = document.createElement('canvas');
-        canvas.width = canvas.height = SIZE;
+        canvas.width = W;
+        canvas.height = H;
         const ctx = canvas.getContext('2d')!;
+        const cornerR = W / 2; // capsule radius = half width
 
-        // White paper background + circular clip
+        // Helper: draw capsule (rounded rect) path
+        const capsulePath = (cx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
+          cx.beginPath();
+          cx.moveTo(x + r, y);
+          cx.lineTo(x + w - r, y);
+          cx.arcTo(x + w, y, x + w, y + r, r);
+          cx.lineTo(x + w, y + h - r);
+          cx.arcTo(x + w, y + h, x + w - r, y + h, r);
+          cx.lineTo(x + r, y + h);
+          cx.arcTo(x, y + h, x, y + h - r, r);
+          cx.lineTo(x, y + r);
+          cx.arcTo(x, y, x + r, y, r);
+          cx.closePath();
+        };
+
+        // White paper background + capsule clip
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, SIZE, SIZE);
+        ctx.fillRect(0, 0, W, H);
         ctx.save();
-        ctx.beginPath();
-        ctx.arc(SIZE/2, SIZE/2, SIZE/2 - 2, 0, Math.PI * 2);
+        capsulePath(ctx, 2, 2, W - 4, H - 4, cornerR - 2);
         ctx.clip();
-        ctx.drawImage(img, 0, 0, SIZE, SIZE);
+        // Draw image centered/cover within the capsule
+        const imgAspect = img.width / img.height;
+        const capAspect = W / H;
+        let sw: number, sh: number, sx: number, sy: number;
+        if (imgAspect > capAspect) {
+          sh = img.height; sw = sh * capAspect;
+          sx = (img.width - sw) / 2; sy = 0;
+        } else {
+          sw = img.width; sh = sw / capAspect;
+          sx = 0; sy = (img.height - sh) / 2;
+        }
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
         ctx.restore();
 
-        const id = ctx.getImageData(0, 0, SIZE, SIZE);
+        const id = ctx.getImageData(0, 0, W, H);
         const d = id.data;
-        const n = SIZE * SIZE;
-        const half = SIZE / 2;
+        const n = W * H;
 
         // ── 1. Grayscale ──────────────────────────────────────────────────
         const gray = new Float32Array(n);
