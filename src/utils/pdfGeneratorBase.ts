@@ -267,11 +267,11 @@ export class BasePDFGenerator {
         }
 
         // ── 2. CLAHE ──────────────────────────────────────────────────────
-        const cl = clahe(gray, SIZE, SIZE, 24, 2.5);
+        const cl = clahe(gray, W, H, 24, 2.5);
 
         // ── 3. DoG (σ1=0.8, σ2=2.5) ──────────────────────────────────────
-        const g1 = gaussBlur(cl, SIZE, SIZE, 0.8);
-        const g2 = gaussBlur(cl, SIZE, SIZE, 2.5);
+        const g1 = gaussBlur(cl, W, H, 0.8);
+        const g2 = gaussBlur(cl, W, H, 2.5);
         const dogRaw = new Float32Array(n);
         let dMin = Infinity, dMax = -Infinity;
         for (let i = 0; i < n; i++) { dogRaw[i]=g1[i]-g2[i]; if(dogRaw[i]<dMin)dMin=dogRaw[i]; if(dogRaw[i]>dMax)dMax=dogRaw[i]; }
@@ -280,7 +280,7 @@ export class BasePDFGenerator {
         for (let i = 0; i < n; i++) dogN[i] = ((dogRaw[i]-dMin)/dRange)*255;
 
         // ── 4. Sobel ──────────────────────────────────────────────────────
-        const sb = sobel(cl, SIZE, SIZE);
+        const sb = sobel(cl, W, H);
 
         // ── 5. Fusion: 55% CLAHE + 30% DoG + 15% Sobel ───────────────────
         const fused = new Float32Array(n);
@@ -289,17 +289,34 @@ export class BasePDFGenerator {
         }
 
         // ── 6. Niblack adaptive threshold (15×15, k=-0.12) ───────────────
+        // Capsule mask: pixels outside the capsule shape → white
+        const halfW = W / 2, halfH = H / 2;
+        const capR = W / 2 - 2; // capsule corner radius
+        const isInsideCapsule = (px: number, py: number): boolean => {
+          // Top semicircle
+          if (py < capR) {
+            const dx = px - halfW, dy = py - capR;
+            return dx * dx + dy * dy <= capR * capR;
+          }
+          // Bottom semicircle
+          if (py > H - capR) {
+            const dx = px - halfW, dy = py - (H - capR);
+            return dx * dx + dy * dy <= capR * capR;
+          }
+          // Middle rectangle
+          return px >= (halfW - capR) && px <= (halfW + capR);
+        };
+
         const hw = 7, k = -0.12;
         const result = new Uint8ClampedArray(n);
-        for (let py = 0; py < SIZE; py++) {
-          for (let px = 0; px < SIZE; px++) {
-            const idx = py*SIZE+px;
-            const dx = px-half, dy = py-half;
-            if (dx*dx+dy*dy > (half-2)*(half-2)) { result[idx]=255; continue; }
+        for (let py = 0; py < H; py++) {
+          for (let px = 0; px < W; px++) {
+            const idx = py * W + px;
+            if (!isInsideCapsule(px, py)) { result[idx] = 255; continue; }
             let sum=0, sumSq=0, cnt=0;
-            for (let ky=Math.max(0,py-hw); ky<=Math.min(SIZE-1,py+hw); ky++)
-              for (let kx=Math.max(0,px-hw); kx<=Math.min(SIZE-1,px+hw); kx++) {
-                const v=fused[ky*SIZE+kx]; sum+=v; sumSq+=v*v; cnt++;
+            for (let ky=Math.max(0,py-hw); ky<=Math.min(H-1,py+hw); ky++)
+              for (let kx=Math.max(0,px-hw); kx<=Math.min(W-1,px+hw); kx++) {
+                const v=fused[ky*W+kx]; sum+=v; sumSq+=v*v; cnt++;
               }
             const mean=sum/cnt;
             const stddev=Math.sqrt(Math.max(0,sumSq/cnt-mean*mean));
