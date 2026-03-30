@@ -3,13 +3,14 @@ import React, {
 } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Usb, Loader2, Wifi, Monitor, Smartphone } from 'lucide-react';
+import { Fingerprint, Camera, RotateCcw, Check, Lightbulb, Usb, Loader2, Wifi, Monitor, Smartphone, Bluetooth } from 'lucide-react';
 import { toast } from 'sonner';
 import { digitalPersonaService, type ReaderInfo, type CaptureResult } from '@/services/digitalPersonaService';
 import { webUsbDetectionService, type WebUsbDeviceInfo } from '@/services/webUsbDetectionService';
 import { webUsbCaptureService, type WebUsbCaptureStatus } from '@/services/webUsbCaptureService';
 import { LiteClientDiagnostics } from '@/components/LiteClientDiagnostics';
 import { useFPService } from '@/hooks/useFPService';
+import { bluetoothFingerprintService, type BtStatus, type BtCaptureResult, type BtReaderInfo } from '@/services/bluetoothFingerprintService';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 export interface FingerprintCaptureRef {
@@ -444,6 +445,10 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
   const fp = useFPService();
   const fpConnected = fp.connected;
   const fpBusy = ['place_finger', 'lift_finger', 'connecting'].includes(fp.status);
+  // Bluetooth Direct (Web BLE)
+  const [btStatus, setBtStatus] = useState<BtStatus>('disconnected');
+  const [btDeviceName, setBtDeviceName] = useState<string | null>(null);
+  const [btCapturing, setBtCapturing] = useState(false);
 
   const isPreviewOrEmbedded = useCallback(() => {
     if (typeof window === 'undefined') return false;
