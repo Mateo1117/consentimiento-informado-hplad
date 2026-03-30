@@ -508,11 +508,25 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     };
     webUsbCaptureService.onStatusChange(handleWebUsbCapture);
 
+    // Bluetooth Direct status listener
+    const handleBtStatus = (info: BtReaderInfo) => {
+      if (!cancelled) {
+        setBtStatus(info.status);
+        setBtDeviceName(info.deviceName || null);
+      }
+    };
+    bluetoothFingerprintService.on('statusChange', handleBtStatus);
+
     return () => {
       cancelled = true;
       digitalPersonaService.off('statusChange', handleStatusChange);
       webUsbDetectionService.offChange(handleWebUsb);
       webUsbCaptureService.offStatusChange(handleWebUsbCapture);
+      bluetoothFingerprintService.off('statusChange', handleBtStatus);
+      // Cleanup BLE connection on unmount
+      if (bluetoothFingerprintService.getInfo().status !== 'disconnected') {
+        bluetoothFingerprintService.disconnect();
+      }
     };
   }, []);
 
