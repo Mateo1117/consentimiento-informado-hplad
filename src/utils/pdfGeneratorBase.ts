@@ -847,9 +847,9 @@ export class BasePDFGenerator {
 
       // ── Primera columna derecha: Huella dactilar (forma de cápsula/falange vertical)
       if (data.patientPhoto && typeof data.patientPhoto === 'string' && data.patientPhoto.length > 100) {
-        // Cápsula vertical: más alta que ancha, igual que la foto del paciente
-        const capsuleW = halfCol - 6;
-        const capsuleH = signatureHeight - 5;
+        // Cápsula vertical (falange): relación 7:10 (ancho:alto) para forma alargada
+        const capsuleH = signatureHeight - 4;  // usar casi todo el alto disponible
+        const capsuleW = capsuleH * 0.7;       // 70% del alto → forma de falange alargada
         const cx = this.margin + halfCol + halfCol / 2;  // centro X de la sub-columna
         const cy = this.currentY + signatureHeight / 2;  // centro Y del recuadro
         const capX = cx - capsuleW / 2;
