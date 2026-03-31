@@ -145,10 +145,26 @@ export class BasePDFGenerator {
   }
 
   /**
-   * Normaliza la huella usando el mismo procesamiento visual de la captura.
+   * Para el PDF, si la huella ya viene procesada en formato cápsula 480x680
+   * se reutiliza tal cual para evitar doble procesamiento e inversión.
    */
-  protected applyInkStampEffect(dataUrl: string): Promise<string> {
-    return processFingerprint(dataUrl);
+  protected async applyInkStampEffect(dataUrl: string): Promise<string> {
+    try {
+      const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+        const el = new Image();
+        el.onload = () => resolve(el);
+        el.onerror = () => reject(new Error('No se pudo cargar la huella para PDF'));
+        el.src = dataUrl;
+      });
+
+      const width = img.naturalWidth || img.width;
+      const height = img.naturalHeight || img.height;
+      const isAlreadyProcessedCapsule = width === 480 && height === 680;
+
+      return isAlreadyProcessedCapsule ? dataUrl : processFingerprint(dataUrl);
+    } catch {
+      return processFingerprint(dataUrl);
+    }
   }
 
   async generate(data: BasePDFData): Promise<jsPDF> {
