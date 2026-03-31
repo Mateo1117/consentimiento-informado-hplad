@@ -175,13 +175,9 @@ export function processFingerprint(dataUrl: string): Promise<string> {
         dy = (H - dh) / 2;
       }
 
-      // Rotar 180° para corregir imagen invertida del lector
-      ctx.save();
-      ctx.translate(W / 2, H / 2);
-      ctx.rotate(Math.PI);
-      ctx.translate(-W / 2, -H / 2);
+      // El servicio BLE ya entrega la imagen con orientación corregida;
+      // aquí solo la dibujamos centrada dentro de la cápsula.
       ctx.drawImage(img, 0, 0, iw, ih, dx, dy, dw, dh);
-      ctx.restore();
       ctx.restore();
 
       const id = ctx.getImageData(0, 0, W, H);
