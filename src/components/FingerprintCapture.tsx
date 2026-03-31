@@ -11,6 +11,7 @@ import { webUsbCaptureService, type WebUsbCaptureStatus } from '@/services/webUs
 import { LiteClientDiagnostics } from '@/components/LiteClientDiagnostics';
 import { useFPService } from '@/hooks/useFPService';
 import { bluetoothFingerprintService, type BtStatus, type BtCaptureResult, type BtReaderInfo } from '@/services/bluetoothFingerprintService';
+import { processFingerprint } from '@/utils/fingerprintCapsuleProcessor';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 export interface FingerprintCaptureRef {
