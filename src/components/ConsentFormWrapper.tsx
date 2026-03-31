@@ -273,7 +273,8 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       }
     } catch (error) {
       console.error('Error al procesar consentimiento:', error);
-      toast.error('Error al procesar el consentimiento');
+      const message = error instanceof Error ? error.message : 'Error al procesar el consentimiento';
+      toast.error(message);
     }
   };
 
