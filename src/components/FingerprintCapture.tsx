@@ -11,6 +11,7 @@ import { webUsbCaptureService, type WebUsbCaptureStatus } from '@/services/webUs
 import { LiteClientDiagnostics } from '@/components/LiteClientDiagnostics';
 import { useFPService } from '@/hooks/useFPService';
 import { bluetoothFingerprintService, type BtStatus, type BtCaptureResult, type BtReaderInfo } from '@/services/bluetoothFingerprintService';
+import { processFingerprint } from '@/utils/fingerprintCapsuleProcessor';
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 export interface FingerprintCaptureRef {
@@ -537,10 +538,11 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     try {
       const result: CaptureResult = await digitalPersonaService.startCapture();
       if (result.success && result.imageBase64) {
-        setCapturedImage(result.imageBase64);
+        const processed = await processFingerprint(result.imageBase64);
+        setCapturedImage(processed);
         setSelectedFinger(null);
         setStep('captured');
-        onFingerprintChange?.(result.imageBase64);
+        onFingerprintChange?.(processed);
         toast.success('Huella capturada correctamente con el lector USB');
       } else {
         toast.error(result.error || 'No se pudo capturar la huella');
@@ -575,10 +577,11 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
 
       const result: CaptureResult = await digitalPersonaService.startCapture();
       if (result.success && result.imageBase64) {
-        setCapturedImage(result.imageBase64);
+        const processed = await processFingerprint(result.imageBase64);
+        setCapturedImage(processed);
         setSelectedFinger(null);
         setStep('captured');
-        onFingerprintChange?.(result.imageBase64);
+        onFingerprintChange?.(processed);
         toast.success('Huella capturada correctamente vía Lite Client');
       } else {
         toast.error(result.error || 'No se pudo capturar la huella');
@@ -620,10 +623,11 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
 
       const result = await webUsbCaptureService.capture(30000);
       if (result.success && result.imageBase64) {
-        setCapturedImage(result.imageBase64);
+        const processed = await processFingerprint(result.imageBase64);
+        setCapturedImage(processed);
         setSelectedFinger(null);
         setStep('captured');
-        onFingerprintChange?.(result.imageBase64);
+        onFingerprintChange?.(processed);
         toast.success('Huella capturada correctamente vía WebUSB');
       } else {
         toast.error(result.error || 'No se pudo capturar la huella');
@@ -666,10 +670,11 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
         const dataUrl = result.imageBase64.startsWith('data:')
           ? result.imageBase64
           : `data:image/png;base64,${result.imageBase64}`;
-        setCapturedImage(dataUrl);
+        const processed = await processFingerprint(dataUrl);
+        setCapturedImage(processed);
         setSelectedFinger(null);
         setStep('captured');
-        onFingerprintChange?.(dataUrl);
+        onFingerprintChange?.(processed);
         toast.success('Huella capturada por Bluetooth');
       } else {
         toast.error(result.error || 'No se pudo capturar la huella por BLE');
