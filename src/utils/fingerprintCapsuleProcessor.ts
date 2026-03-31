@@ -62,13 +62,16 @@ export function processFingerprint(dataUrl: string): Promise<string> {
       drawCapsulePath(ctx, 2, 2, W - 4, H - 4, cornerR - 2);
       ctx.clip();
 
+      // "cover" mode: la huella llena toda la cápsula sin espacios blancos
       const imgAspect = img.width / img.height;
       const capAspect = W / H;
       let dw: number, dh: number, dx: number, dy: number;
       if (imgAspect > capAspect) {
-        dw = W; dh = W / imgAspect; dx = 0; dy = (H - dh) / 2;
-      } else {
+        // Imagen más ancha: ajustar al alto, recortar lados
         dh = H; dw = H * imgAspect; dx = (W - dw) / 2; dy = 0;
+      } else {
+        // Imagen más alta: ajustar al ancho, recortar arriba/abajo
+        dw = W; dh = W / imgAspect; dx = 0; dy = (H - dh) / 2;
       }
       ctx.drawImage(img, dx, dy, dw, dh);
       ctx.restore();
