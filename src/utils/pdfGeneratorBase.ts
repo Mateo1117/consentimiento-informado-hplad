@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import { getLogoBase64 } from './pdfLogoHelper';
+import { processFingerprint } from './fingerprintCapsuleProcessor';
 
 // Interface for patient data
 export interface BasePDFPatientData {
