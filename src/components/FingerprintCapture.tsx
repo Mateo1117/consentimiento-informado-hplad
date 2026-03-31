@@ -538,10 +538,11 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     try {
       const result: CaptureResult = await digitalPersonaService.startCapture();
       if (result.success && result.imageBase64) {
-        setCapturedImage(result.imageBase64);
+        const processed = await processFingerprint(result.imageBase64);
+        setCapturedImage(processed);
         setSelectedFinger(null);
         setStep('captured');
-        onFingerprintChange?.(result.imageBase64);
+        onFingerprintChange?.(processed);
         toast.success('Huella capturada correctamente con el lector USB');
       } else {
         toast.error(result.error || 'No se pudo capturar la huella');
