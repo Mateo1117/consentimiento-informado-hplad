@@ -161,16 +161,17 @@ export function processFingerprint(dataUrl: string): Promise<string> {
       let dx: number;
       let dy: number;
 
+      // "contain" – muestra la huella completa sin recortar
       if (srcAspect > capAspect) {
-        dh = H;
-        dw = H * srcAspect;
-        dx = (W - dw) / 2;
-        dy = 0;
-      } else {
         dw = W;
         dh = W / srcAspect;
         dx = 0;
         dy = (H - dh) / 2;
+      } else {
+        dh = H;
+        dw = H * srcAspect;
+        dx = (W - dw) / 2;
+        dy = 0;
       }
 
       ctx.drawImage(img, bounds.sx, bounds.sy, bounds.sw, bounds.sh, dx, dy, dw, dh);
