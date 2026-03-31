@@ -145,8 +145,6 @@ export function processFingerprint(dataUrl: string): Promise<string> {
       }
 
       const cornerR = W / 2;
-      const bounds = detectFingerprintBounds(img);
-
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, W, H);
 
@@ -154,24 +152,27 @@ export function processFingerprint(dataUrl: string): Promise<string> {
       drawCapsulePath(ctx, 2, 2, W - 4, H - 4, cornerR - 2);
       ctx.clip();
 
-      const srcAspect = bounds.sw / bounds.sh;
+      // Usar imagen completa sin crop/zoom
+      const iw = img.naturalWidth || img.width;
+      const ih = img.naturalHeight || img.height;
+      const srcAspect = iw / ih;
       const capAspect = W / H;
       let dw: number;
       let dh: number;
       let dx: number;
       let dy: number;
 
-      // "contain" – muestra la huella completa sin recortar
+      // "cover" – llena toda la cápsula sin espacios blancos
       if (srcAspect > capAspect) {
-        dw = W;
-        dh = W / srcAspect;
-        dx = 0;
-        dy = (H - dh) / 2;
-      } else {
         dh = H;
         dw = H * srcAspect;
         dx = (W - dw) / 2;
         dy = 0;
+      } else {
+        dw = W;
+        dh = W / srcAspect;
+        dx = 0;
+        dy = (H - dh) / 2;
       }
 
       // Rotar 180° para corregir imagen invertida del lector
@@ -179,7 +180,7 @@ export function processFingerprint(dataUrl: string): Promise<string> {
       ctx.translate(W / 2, H / 2);
       ctx.rotate(Math.PI);
       ctx.translate(-W / 2, -H / 2);
-      ctx.drawImage(img, bounds.sx, bounds.sy, bounds.sw, bounds.sh, dx, dy, dw, dh);
+      ctx.drawImage(img, 0, 0, iw, ih, dx, dy, dw, dh);
       ctx.restore();
       ctx.restore();
 
