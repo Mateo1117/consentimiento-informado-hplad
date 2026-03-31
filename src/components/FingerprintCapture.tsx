@@ -670,10 +670,11 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
         const dataUrl = result.imageBase64.startsWith('data:')
           ? result.imageBase64
           : `data:image/png;base64,${result.imageBase64}`;
-        setCapturedImage(dataUrl);
+        const processed = await processFingerprint(dataUrl);
+        setCapturedImage(processed);
         setSelectedFinger(null);
         setStep('captured');
-        onFingerprintChange?.(dataUrl);
+        onFingerprintChange?.(processed);
         toast.success('Huella capturada por Bluetooth');
       } else {
         toast.error(result.error || 'No se pudo capturar la huella por BLE');
