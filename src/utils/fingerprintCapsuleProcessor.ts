@@ -174,7 +174,13 @@ export function processFingerprint(dataUrl: string): Promise<string> {
         dy = 0;
       }
 
+      // Rotar 180° para corregir imagen invertida del lector
+      ctx.save();
+      ctx.translate(W / 2, H / 2);
+      ctx.rotate(Math.PI);
+      ctx.translate(-W / 2, -H / 2);
       ctx.drawImage(img, bounds.sx, bounds.sy, bounds.sw, bounds.sh, dx, dy, dw, dh);
+      ctx.restore();
       ctx.restore();
 
       const id = ctx.getImageData(0, 0, W, H);
