@@ -144,84 +144,26 @@ export class BasePDFGenerator {
   }
 
   /**
-   * Full dactyloscopic ink-stamp pipeline for PDF (600×600 px):
-   *  1. BT.709 grayscale
-   *  2. CLAHE  (24px tiles, clip=2.5)
-   *  3. DoG    (σ1=0.8, σ2=2.5)  — ridge band-pass
-   *  4. Sobel  gradient magnitude — edge emphasis
-   *  5. Fusion: 55% CLAHE + 30% DoG + 15% Sobel
-   *  6. Niblack adaptive threshold (15×15 window, k=-0.12)
-   *  7. 0.25px anti-jaggies blur
+   * Procesa la huella dactilar para el PDF: mejora contraste sin destruir detalles.
+   * Pipeline ligero:
+   *  1. Escala la imagen preservando relación de aspecto dentro de cápsula
+   *  2. Conversión a escala de grises
+   *  3. Mejora de contraste (stretch + leve curva)
+   *  4. Recorte en forma de cápsula/falange
    */
   protected applyInkStampEffect(dataUrl: string): Promise<string> {
-    // ── Local DSP helpers (self-contained, no external deps) ────────────────
-    const gaussBlur = (src: Float32Array, w: number, h: number, sigma: number): Float32Array => {
-      const r = Math.ceil(sigma * 3);
-      const ks = 2 * r + 1;
-      const ker = new Float32Array(ks);
-      let ksum = 0;
-      for (let i = 0; i < ks; i++) { const x = i - r; ker[i] = Math.exp(-(x*x)/(2*sigma*sigma)); ksum += ker[i]; }
-      for (let i = 0; i < ks; i++) ker[i] /= ksum;
-      const tmp = new Float32Array(w * h);
-      const n = w * h;
-      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-        let v = 0;
-        for (let k = -r; k <= r; k++) { const xi = Math.max(0, Math.min(w-1, x+k)); v += src[y*w+xi]*ker[k+r]; }
-        tmp[y*w+x] = v;
-      }
-      const dst = new Float32Array(n);
-      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-        let v = 0;
-        for (let k = -r; k <= r; k++) { const yi = Math.max(0, Math.min(h-1, y+k)); v += tmp[yi*w+x]*ker[k+r]; }
-        dst[y*w+x] = v;
-      }
-      return dst;
-    };
-
-    const clahe = (src: Float32Array, w: number, h: number, bs = 24, cl = 2.5): Float32Array => {
-      const out = new Float32Array(w * h);
-      const bw = Math.ceil(w / bs), bh = Math.ceil(h / bs);
-      for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
-        const x0 = bx*bs, y0 = by*bs, x1 = Math.min(x0+bs, w), y1 = Math.min(y0+bs, h);
-        const hist = new Float32Array(256); let count = 0;
-        for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) { hist[Math.round(Math.min(255,Math.max(0,src[y*w+x])))]++; count++; }
-        const clip = cl * (count / 256); let excess = 0;
-        for (let i = 0; i < 256; i++) { if (hist[i] > clip) { excess += hist[i]-clip; hist[i]=clip; } }
-        const add = excess / 256;
-        for (let i = 0; i < 256; i++) hist[i] = Math.min(clip, hist[i]+add);
-        const lut = new Float32Array(256); let cdf = 0;
-        for (let i = 0; i < 256; i++) { cdf += hist[i]; lut[i] = (cdf/count)*255; }
-        for (let y = y0; y < y1; y++) for (let x = x0; x < x1; x++) {
-          out[y*w+x] = lut[Math.round(Math.min(255,Math.max(0,src[y*w+x])))];
-        }
-      }
-      return out;
-    };
-
-    const sobel = (src: Float32Array, w: number, h: number): Float32Array => {
-      const mag = new Float32Array(w * h); let mx = 0;
-      for (let y = 1; y < h-1; y++) for (let x = 1; x < w-1; x++) {
-        const p = (r: number, c: number) => src[(y+r)*w+(x+c)];
-        const gx = -p(-1,-1)-2*p(0,-1)-p(1,-1)+p(-1,1)+2*p(0,1)+p(1,1);
-        const gy = -p(-1,-1)-2*p(-1,0)-p(-1,1)+p(1,-1)+2*p(1,0)+p(1,1);
-        const m = Math.sqrt(gx*gx+gy*gy); mag[y*w+x]=m; if (m>mx) mx=m;
-      }
-      if (mx>0) for (let i=0; i<mag.length; i++) mag[i]=(mag[i]/mx)*255;
-      return mag;
-    };
-
     return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
-        const W = 420;   // width  — narrower for phalange shape
-        const H = 600;   // height — taller
+        const W = 480;
+        const H = 680;
         const canvas = document.createElement('canvas');
         canvas.width = W;
         canvas.height = H;
         const ctx = canvas.getContext('2d')!;
-        const cornerR = W / 2; // capsule radius = half width
+        const cornerR = W / 2;
 
-        // Helper: draw capsule (rounded rect) path
+        // Helper: draw capsule path
         const capsulePath = (cx: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) => {
           cx.beginPath();
           cx.moveTo(x + r, y);
@@ -236,102 +178,92 @@ export class BasePDFGenerator {
           cx.closePath();
         };
 
-        // White paper background + capsule clip
+        // White background
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, W, H);
+
+        // Clip to capsule and draw image (contain mode to show FULL fingerprint)
         ctx.save();
         capsulePath(ctx, 2, 2, W - 4, H - 4, cornerR - 2);
         ctx.clip();
-        // Draw image centered/cover within the capsule
+
+        // Use "contain" mode so the entire fingerprint is visible
         const imgAspect = img.width / img.height;
         const capAspect = W / H;
-        let sw: number, sh: number, sx: number, sy: number;
+        let dw: number, dh: number, dx: number, dy: number;
         if (imgAspect > capAspect) {
-          sh = img.height; sw = sh * capAspect;
-          sx = (img.width - sw) / 2; sy = 0;
+          // Image is wider: fit to width
+          dw = W;
+          dh = W / imgAspect;
+          dx = 0;
+          dy = (H - dh) / 2;
         } else {
-          sw = img.width; sh = sw / capAspect;
-          sx = 0; sy = (img.height - sh) / 2;
+          // Image is taller: fit to height
+          dh = H;
+          dw = H * imgAspect;
+          dx = (W - dw) / 2;
+          dy = 0;
         }
-        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, W, H);
+        ctx.drawImage(img, dx, dy, dw, dh);
         ctx.restore();
 
+        // Get pixel data for grayscale + contrast enhancement
         const id = ctx.getImageData(0, 0, W, H);
         const d = id.data;
         const n = W * H;
 
-        // ── 1. Grayscale ──────────────────────────────────────────────────
-        const gray = new Float32Array(n);
+        // 1. Grayscale
+        const gray = new Uint8Array(n);
         for (let i = 0; i < n; i++) {
-          gray[i] = 0.2126*d[i*4] + 0.7152*d[i*4+1] + 0.0722*d[i*4+2];
+          gray[i] = Math.round(0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2]);
         }
 
-        // ── 2. CLAHE ──────────────────────────────────────────────────────
-        const cl = clahe(gray, W, H, 24, 2.5);
-
-        // ── 3. DoG (σ1=0.8, σ2=2.5) ──────────────────────────────────────
-        const g1 = gaussBlur(cl, W, H, 0.8);
-        const g2 = gaussBlur(cl, W, H, 2.5);
-        const dogRaw = new Float32Array(n);
-        let dMin = Infinity, dMax = -Infinity;
-        for (let i = 0; i < n; i++) { dogRaw[i]=g1[i]-g2[i]; if(dogRaw[i]<dMin)dMin=dogRaw[i]; if(dogRaw[i]>dMax)dMax=dogRaw[i]; }
-        const dRange = dMax - dMin || 1;
-        const dogN = new Float32Array(n);
-        for (let i = 0; i < n; i++) dogN[i] = ((dogRaw[i]-dMin)/dRange)*255;
-
-        // ── 4. Sobel ──────────────────────────────────────────────────────
-        const sb = sobel(cl, W, H);
-
-        // ── 5. Fusion: 55% CLAHE + 30% DoG + 15% Sobel ───────────────────
-        const fused = new Float32Array(n);
-        for (let i = 0; i < n; i++) {
-          fused[i] = Math.min(255, Math.max(0, 0.55*cl[i] + 0.30*dogN[i] + 0.15*sb[i]));
-        }
-
-        // ── 6. Niblack adaptive threshold (15×15, k=-0.12) ───────────────
-        // Capsule mask: pixels outside the capsule shape → white
-        const halfW = W / 2, halfH = H / 2;
-        const capR = W / 2 - 2; // capsule corner radius
+        // 2. Find min/max within capsule for contrast stretch
+        const halfW = W / 2;
+        const capR = W / 2 - 2;
         const isInsideCapsule = (px: number, py: number): boolean => {
-          // Top semicircle
           if (py < capR) {
-            const dx = px - halfW, dy = py - capR;
-            return dx * dx + dy * dy <= capR * capR;
+            const ddx = px - halfW, ddy = py - capR;
+            return ddx * ddx + ddy * ddy <= capR * capR;
           }
-          // Bottom semicircle
           if (py > H - capR) {
-            const dx = px - halfW, dy = py - (H - capR);
-            return dx * dx + dy * dy <= capR * capR;
+            const ddx = px - halfW, ddy = py - (H - capR);
+            return ddx * ddx + ddy * ddy <= capR * capR;
           }
-          // Middle rectangle
           return px >= (halfW - capR) && px <= (halfW + capR);
         };
 
-        const hw = 7, k = -0.12;
-        const result = new Uint8ClampedArray(n);
+        let gMin = 255, gMax = 0;
         for (let py = 0; py < H; py++) {
           for (let px = 0; px < W; px++) {
-            const idx = py * W + px;
-            if (!isInsideCapsule(px, py)) { result[idx] = 255; continue; }
-            let sum=0, sumSq=0, cnt=0;
-            for (let ky=Math.max(0,py-hw); ky<=Math.min(H-1,py+hw); ky++)
-              for (let kx=Math.max(0,px-hw); kx<=Math.min(W-1,px+hw); kx++) {
-                const v=fused[ky*W+kx]; sum+=v; sumSq+=v*v; cnt++;
-              }
-            const mean=sum/cnt;
-            const stddev=Math.sqrt(Math.max(0,sumSq/cnt-mean*mean));
-            result[idx] = fused[idx] < mean + k*stddev ? 0 : 255;
+            if (isInsideCapsule(px, py)) {
+              const v = gray[py * W + px];
+              if (v < gMin) gMin = v;
+              if (v > gMax) gMax = v;
+            }
           }
         }
 
-        // ── Write back ────────────────────────────────────────────────────
-        for (let i = 0; i < n; i++) { d[i*4]=d[i*4+1]=d[i*4+2]=result[i]; d[i*4+3]=255; }
-        ctx.putImageData(id, 0, 0);
-        ctx.filter = 'blur(0.25px)';
-        ctx.drawImage(canvas, 0, 0);
-        ctx.filter = 'none';
+        // 3. Contrast stretch + slight gamma to darken ridges
+        const range = gMax - gMin || 1;
+        const gamma = 0.7; // < 1 darkens mid-tones, making ridges more visible
+        for (let i = 0; i < n; i++) {
+          const py = Math.floor(i / W);
+          const px = i % W;
+          if (!isInsideCapsule(px, py)) {
+            d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = 255;
+          } else {
+            const norm = (gray[i] - gMin) / range; // 0..1
+            const corrected = Math.pow(norm, gamma) * 255;
+            const val = Math.round(Math.min(255, Math.max(0, corrected)));
+            d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = val;
+          }
+          d[i * 4 + 3] = 255;
+        }
 
-        console.log('[PDF] applyInkStampEffect — CLAHE+DoG+Sobel+Niblack completado');
+        ctx.putImageData(id, 0, 0);
+
+        console.log('[PDF] applyInkStampEffect — contraste mejorado, huella completa preservada');
         resolve(canvas.toDataURL('image/png', 1.0));
       };
       img.onerror = () => {
