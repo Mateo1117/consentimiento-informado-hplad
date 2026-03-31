@@ -408,26 +408,17 @@ class BluetoothFingerprintService {
       }
     }
 
-    // Rotar 180° para que la orientación final coincida con la plataforma
-    const orientedPixels = new Uint8Array(width * height);
-    for (let y = 0; y < height; y++) {
-      for (let x = 0; x < width; x++) {
-        const srcIdx = y * width + x;
-        const dstIdx = (height - 1 - y) * width + (width - 1 - x);
-        orientedPixels[dstIdx] = pixels[srcIdx];
-      }
-    }
-
-    // Draw to canvas and export as PNG base64
+    // Draw to canvas and export as PNG base64 sin rotaciones adicionales.
+    // El pipeline posterior ya trabaja sobre esta orientación base.
     const canvas  = document.createElement("canvas");
     canvas.width  = width;
     canvas.height = height;
     const ctx = canvas.getContext("2d")!;
     const imgData = ctx.createImageData(width, height);
-    for (let i = 0; i < orientedPixels.length; i++) {
-      imgData.data[i * 4]     = orientedPixels[i]; // R
-      imgData.data[i * 4 + 1] = orientedPixels[i]; // G
-      imgData.data[i * 4 + 2] = orientedPixels[i]; // B
+    for (let i = 0; i < pixels.length; i++) {
+      imgData.data[i * 4]     = pixels[i]; // R
+      imgData.data[i * 4 + 1] = pixels[i]; // G
+      imgData.data[i * 4 + 2] = pixels[i]; // B
       imgData.data[i * 4 + 3] = 255;               // A
     }
     ctx.putImageData(imgData, 0, 0);
