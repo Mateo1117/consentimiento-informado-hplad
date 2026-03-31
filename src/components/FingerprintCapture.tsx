@@ -623,10 +623,11 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
 
       const result = await webUsbCaptureService.capture(30000);
       if (result.success && result.imageBase64) {
-        setCapturedImage(result.imageBase64);
+        const processed = await processFingerprint(result.imageBase64);
+        setCapturedImage(processed);
         setSelectedFinger(null);
         setStep('captured');
-        onFingerprintChange?.(result.imageBase64);
+        onFingerprintChange?.(processed);
         toast.success('Huella capturada correctamente vía WebUSB');
       } else {
         toast.error(result.error || 'No se pudo capturar la huella');
