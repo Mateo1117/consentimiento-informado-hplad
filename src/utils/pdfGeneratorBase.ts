@@ -187,22 +187,14 @@ export class BasePDFGenerator {
         capsulePath(ctx, 2, 2, W - 4, H - 4, cornerR - 2);
         ctx.clip();
 
-        // Use "contain" mode so the entire fingerprint is visible
+        // "cover" mode: la huella llena toda la cápsula sin espacios blancos
         const imgAspect = img.width / img.height;
         const capAspect = W / H;
         let dw: number, dh: number, dx: number, dy: number;
         if (imgAspect > capAspect) {
-          // Image is wider: fit to width
-          dw = W;
-          dh = W / imgAspect;
-          dx = 0;
-          dy = (H - dh) / 2;
+          dh = H; dw = H * imgAspect; dx = (W - dw) / 2; dy = 0;
         } else {
-          // Image is taller: fit to height
-          dh = H;
-          dw = H * imgAspect;
-          dx = (W - dw) / 2;
-          dy = 0;
+          dw = W; dh = W / imgAspect; dx = 0; dy = (H - dh) / 2;
         }
         ctx.drawImage(img, dx, dy, dw, dh);
         ctx.restore();
