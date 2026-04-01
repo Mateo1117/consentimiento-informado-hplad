@@ -59,17 +59,17 @@ export function TopHeader({ onMenuClick }: TopHeaderProps) {
   };
 
   return (
-    <header className="h-14 bg-primary text-primary-foreground flex items-center justify-between px-4 shrink-0">
-      {/* Left side - Menu button for mobile */}
-      <div className="flex items-center gap-3">
+    <header className="h-14 bg-primary text-primary-foreground flex items-center justify-between px-3 md:px-4 shrink-0">
+      {/* Left side - Menu button */}
+      <div className="flex items-center gap-2">
         <Button 
           variant="ghost" 
           size="sm" 
           onClick={onMenuClick}
-          className="text-primary-foreground hover:bg-primary-foreground/10 lg:flex"
+          className="text-primary-foreground hover:bg-primary-foreground/10 min-h-[44px] min-w-[44px]"
         >
           <Menu className="h-5 w-5" />
-          <span className="ml-2 font-medium">MENÚ</span>
+          <span className="ml-2 font-medium hidden sm:inline">MENÚ</span>
         </Button>
       </div>
 
