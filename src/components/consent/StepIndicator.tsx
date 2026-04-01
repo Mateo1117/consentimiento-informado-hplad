@@ -16,19 +16,18 @@ export function StepIndicator({ steps, currentStep, completedSteps = [] }: StepI
   const currentIndex = steps.findIndex(s => s.id === currentStep);
   
   return (
-    <div className="flex items-center justify-center py-4 px-6 bg-card border-b border-border">
-      <div className="flex items-center gap-2">
+    <div className="flex items-center justify-center py-3 md:py-4 px-4 md:px-6 bg-card border-b border-border">
+      <div className="flex items-center gap-1 md:gap-2">
         {steps.map((step, index) => {
           const isCompleted = completedSteps.includes(step.id) || index < currentIndex;
           const isCurrent = step.id === currentStep;
           
           return (
             <div key={step.id} className="flex items-center">
-              {/* Step indicator */}
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 md:gap-2">
                 <div
                   className={cn(
-                    "w-7 h-7 rounded-full flex items-center justify-center text-sm font-semibold transition-all",
+                    "w-8 h-8 md:w-9 md:h-9 rounded-full flex items-center justify-center text-sm font-semibold transition-all",
                     isCompleted 
                       ? "bg-accent text-accent-foreground" 
                       : isCurrent 
@@ -44,7 +43,7 @@ export function StepIndicator({ steps, currentStep, completedSteps = [] }: StepI
                 </div>
                 <span
                   className={cn(
-                    "text-sm font-medium transition-colors",
+                    "text-xs md:text-sm font-medium transition-colors",
                     isCompleted 
                       ? "text-accent" 
                       : isCurrent 
@@ -56,11 +55,10 @@ export function StepIndicator({ steps, currentStep, completedSteps = [] }: StepI
                 </span>
               </div>
               
-              {/* Connector line */}
               {index < steps.length - 1 && (
                 <div 
                   className={cn(
-                    "w-20 h-0.5 mx-4 transition-colors",
+                    "w-10 md:w-20 h-0.5 mx-2 md:mx-4 transition-colors",
                     isCompleted ? "bg-accent" : "bg-border"
                   )}
                 />

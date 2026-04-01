@@ -190,7 +190,7 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(
               ref={sigCanvas}
               onEnd={handleSignatureEnd}
               canvasProps={{
-                className: "w-full h-48 rounded-lg cursor-crosshair",
+                className: "w-full h-52 md:h-56 rounded-lg cursor-crosshair",
                 style: { 
                   background: 'white',
                   touchAction: 'none',
