@@ -589,6 +589,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
                   <SignaturePad 
                     ref={professionalSignatureRef}
                     title="Firma del Profesional" 
+                    required
                     onSignatureChange={setProfessionalSignature}
                     isProfessional={true}
                     professionalName={professionalData.name}

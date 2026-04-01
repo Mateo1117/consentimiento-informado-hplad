@@ -711,6 +711,7 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
                   <SignaturePad
                     ref={professionalSignatureRef}
                     title="Firma del Profesional"
+                    required
                     onSignatureChange={handleProfessionalSignatureChange}
                     isProfessional={true}
                     professionalName={professionalName}

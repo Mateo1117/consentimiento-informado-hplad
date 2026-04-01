@@ -628,6 +628,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
                   <SignaturePad 
                     ref={professionalSignatureRef}
                     title="Firma del Profesional" 
+                    required
                     onSignatureChange={handleProfessionalSignatureChange}
                     isProfessional={true}
                     professionalName={professionalName}

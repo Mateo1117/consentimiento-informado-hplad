@@ -634,6 +634,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
                     <SignaturePad
                       ref={professionalSignatureRef}
                       title="Firma del Profesional"
+                      required
                       onSignatureChange={setProfessionalSignature}
                       isProfessional={true}
                       professionalName={professionalData.name}
