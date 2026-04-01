@@ -53,7 +53,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
     document: ''
   });
 
-  // Auto-cargar datos del profesional logueado
+  // Auto-cargar datos del profesional logueado (incluida la firma)
   useEffect(() => {
     const loadProfessional = async () => {
       try {
@@ -62,11 +62,14 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
         if (!user) return;
         const { data: profSig } = await supabase
           .from('professional_signatures')
-          .select('professional_name, professional_document')
+          .select('professional_name, professional_document, signature_data')
           .eq('created_by', user.id)
           .single();
         if (profSig) {
           setProfessionalData({ name: profSig.professional_name, document: profSig.professional_document });
+          if (profSig.signature_data && !professionalSignature) {
+            setProfessionalSignature(profSig.signature_data);
+          }
         }
       } catch { /* silently ignore */ }
     };
