@@ -732,9 +732,6 @@ export function UserManagement() {
                         />
                       </div>
                     </TableCell>
-                        />
-                      </div>
-                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
