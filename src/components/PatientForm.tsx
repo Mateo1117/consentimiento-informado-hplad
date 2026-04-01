@@ -315,7 +315,7 @@ export const PatientForm = ({ onPatientSelect, onSignPendingConsent }: PatientFo
                 htmlFor="hasDisability" 
                 className="cursor-pointer text-sm text-foreground"
               >
-                El paciente tiene alguna discapacidad que le impide firmar por sí mismo
+                El paciente tiene alguna discapacidad, es adulto mayor o presenta algún impedimento que le impide firmar por sí mismo
               </Label>
             </div>
           </div>
