@@ -59,6 +59,29 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(
       }
     }, [isProfessional]);
 
+    // Auto-load signature when professional document changes
+    useEffect(() => {
+      if (isProfessional && professionalDocument) {
+        const autoLoadSignature = async () => {
+          try {
+            const signature = await ProfessionalSignatureService.getSignature(professionalDocument);
+            if (signature?.signature_data && sigCanvas.current) {
+              sigCanvas.current.clear();
+              // Small delay to ensure canvas is ready
+              setTimeout(() => {
+                sigCanvas.current?.fromDataURL(signature.signature_data);
+                onSignatureChange?.(signature.signature_data);
+                console.log('✅ Firma del profesional cargada automáticamente');
+              }, 200);
+            }
+          } catch (error) {
+            console.error('Error auto-loading professional signature:', error);
+          }
+        };
+        autoLoadSignature();
+      }
+    }, [professionalDocument]);
+
     const loadSavedSignatures = async () => {
       try {
         const signatures = await ProfessionalSignatureService.getAllSignatures();
