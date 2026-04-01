@@ -689,7 +689,7 @@ export function UserManagement() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -700,6 +700,17 @@ export function UserManagement() {
                           title="Editar perfil"
                         >
                           <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenSignatureDialog(user)}
+                          title="Gestionar firma"
+                          className={userSignatures[user.user_id] 
+                            ? "text-green-600 hover:text-green-700 hover:bg-green-50" 
+                            : "text-muted-foreground hover:text-foreground"}
+                        >
+                          <FileSignature className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -718,6 +729,9 @@ export function UserManagement() {
                         <Switch
                           checked={user.is_active}
                           onCheckedChange={() => handleToggleActive(user)}
+                        />
+                      </div>
+                    </TableCell>
                         />
                       </div>
                     </TableCell>
