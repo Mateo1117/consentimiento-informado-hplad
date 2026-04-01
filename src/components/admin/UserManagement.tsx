@@ -118,16 +118,168 @@ export function UserManagement() {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.rpc('get_users_with_roles');
-      
       if (error) throw error;
-      
       setUsers(data || []);
       setFilteredUsers(data || []);
+
+      // Load which users have signatures
+      const { data: signatures } = await supabase
+        .from('professional_signatures')
+        .select('created_by');
+      
+      const sigMap: Record<string, boolean> = {};
+      signatures?.forEach(s => {
+        if (s.created_by) sigMap[s.created_by] = true;
+      });
+      setUserSignatures(sigMap);
     } catch (error: any) {
       console.error('Error loading users:', error);
       toast.error("Error al cargar usuarios: " + error.message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleOpenSignatureDialog = async (user: UserWithRole) => {
+    setSelectedUser(user);
+    setSignaturePreview(null);
+    setExistingSignature(null);
+    setIsSignatureDialogOpen(true);
+
+    // Load existing signature for this user
+    const { data } = await supabase
+      .from('professional_signatures')
+      .select('signature_data')
+      .eq('created_by', user.user_id)
+      .single();
+    
+    if (data?.signature_data) {
+      setExistingSignature(data.signature_data);
+    }
+  };
+
+  const handleSignatureFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Formato no soportado. Use PNG, JPG o PDF.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("El archivo no debe exceder 5MB");
+      return;
+    }
+
+    if (file.type === 'application/pdf') {
+      // For PDF: read as data URL and render to canvas
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        try {
+          const pdfData = ev.target?.result as string;
+          // Use pdfjsLib if available, otherwise store as-is
+          // Simple approach: store the PDF base64 directly
+          setSignaturePreview(pdfData);
+          toast.success("PDF cargado. Se usará como firma.");
+        } catch {
+          toast.error("Error al procesar el PDF");
+        }
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Image file: convert to base64
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new window.Image();
+        img.onload = () => {
+          // Resize to reasonable dimensions for signature
+          const canvas = document.createElement('canvas');
+          const maxW = 600;
+          const maxH = 300;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxW) { h = h * maxW / w; w = maxW; }
+          if (h > maxH) { w = w * maxH / h; h = maxH; }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/png');
+            setSignaturePreview(dataUrl);
+          }
+        };
+        img.src = ev.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveSignature = async () => {
+    if (!selectedUser || !signaturePreview) return;
+    setIsUploadingSignature(true);
+
+    try {
+      // Check if signature already exists for this user
+      const { data: existing } = await supabase
+        .from('professional_signatures')
+        .select('id')
+        .eq('created_by', selectedUser.user_id)
+        .single();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('professional_signatures')
+          .update({
+            professional_name: selectedUser.full_name || selectedUser.email,
+            professional_document: selectedUser.document_number || '',
+            signature_data: signaturePreview,
+            updated_at: new Date().toISOString()
+          })
+          .eq('created_by', selectedUser.user_id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('professional_signatures')
+          .insert({
+            professional_name: selectedUser.full_name || selectedUser.email,
+            professional_document: selectedUser.document_number || '',
+            signature_data: signaturePreview,
+            created_by: selectedUser.user_id
+          });
+        if (error) throw error;
+      }
+
+      toast.success("Firma asignada exitosamente al usuario");
+      setUserSignatures(prev => ({ ...prev, [selectedUser.user_id]: true }));
+      setIsSignatureDialogOpen(false);
+      setSignaturePreview(null);
+    } catch (error: any) {
+      console.error('Error saving signature:', error);
+      toast.error("Error al guardar firma: " + error.message);
+    } finally {
+      setIsUploadingSignature(false);
+    }
+  };
+
+  const handleDeleteSignature = async () => {
+    if (!selectedUser) return;
+    try {
+      const { error } = await supabase
+        .from('professional_signatures')
+        .delete()
+        .eq('created_by', selectedUser.user_id);
+      if (error) throw error;
+
+      toast.success("Firma eliminada");
+      setExistingSignature(null);
+      setUserSignatures(prev => ({ ...prev, [selectedUser.user_id]: false }));
+    } catch (error: any) {
+      toast.error("Error al eliminar firma: " + error.message);
     }
   };
 
