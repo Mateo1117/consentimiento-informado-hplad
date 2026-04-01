@@ -92,6 +92,7 @@ export const SignaturePad = forwardRef<SignatureRef, SignaturePadProps>(
 
     const handleClear = () => {
       sigCanvas.current?.clear();
+      onSignatureChange?.(null);
     };
 
     const handleSaveSignature = async () => {
