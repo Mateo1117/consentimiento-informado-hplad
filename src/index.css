@@ -298,3 +298,23 @@
     @apply medical-text-sm font-medium text-medical-gray;
   }
 }
+
+/* Tablet-optimized touch targets and spacing */
+@media (min-width: 768px) and (max-width: 1023px) {
+  /* Larger touch targets for tablet */
+  button, [role="button"], a, .cursor-pointer {
+    min-height: 44px;
+  }
+
+  /* Better form spacing on tablet */
+  input, select, textarea {
+    min-height: 44px;
+    font-size: 16px; /* Prevent zoom on iOS */
+  }
+
+  /* Checkbox and radio bigger on tablet */
+  [role="checkbox"], [role="radio"] {
+    min-width: 22px;
+    min-height: 22px;
+  }
+}
