@@ -625,6 +625,7 @@ export function UserManagement() {
                   <TableHead>Contacto</TableHead>
                   <TableHead>Departamento</TableHead>
                   <TableHead>Rol</TableHead>
+                  <TableHead>Firma</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Acciones</TableHead>
                 </TableRow>
