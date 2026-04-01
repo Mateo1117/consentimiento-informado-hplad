@@ -176,10 +176,11 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
 
   const handleSaveAndGenerate = async () => {
     try {
-      // Obtener firma y foto justo antes de guardar (usando callbacks si están disponibles)
-      const currentPatientSignature = getPatientSignature?.() || patientSignature;
-      const currentPatientPhoto = getPatientPhoto?.() || patientPhotoUrl;
-      const currentGuardianSignature = getGuardianSignature?.() || guardianSignature;
+      // Obtener firma y foto ACTUALES del canvas (no usar valores en caché/estado anterior)
+      // Si hay callback, usarlo EXCLUSIVAMENTE (ignorar prop que puede tener datos viejos)
+      const currentPatientSignature = getPatientSignature ? getPatientSignature() : patientSignature;
+      const currentPatientPhoto = getPatientPhoto ? getPatientPhoto() : patientPhotoUrl;
+      const currentGuardianSignature = getGuardianSignature ? getGuardianSignature() : guardianSignature;
       const currentConsentDecision = consentDecision;
       
       // Determinar si requiere firma del acudiente en lugar del paciente
