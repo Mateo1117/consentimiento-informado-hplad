@@ -912,6 +912,130 @@ export function UserManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Signature Upload Dialog */}
+      <Dialog open={isSignatureDialogOpen} onOpenChange={setIsSignatureDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSignature className="h-5 w-5 text-primary" />
+              Gestionar Firma del Profesional
+            </DialogTitle>
+            <DialogDescription>
+              Asigne una firma digitalizada a: <strong>{selectedUser?.full_name || selectedUser?.email}</strong>
+              {selectedUser?.document_number && (
+                <span className="block text-xs mt-1">Documento: {selectedUser.document_number}</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Existing signature */}
+            {existingSignature && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-green-700">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Firma actual registrada
+                </Label>
+                <div className="border rounded-lg p-3 bg-muted/30 flex items-center justify-center">
+                  <img 
+                    src={existingSignature} 
+                    alt="Firma actual" 
+                    className="max-h-32 object-contain"
+                  />
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteSignature}
+                  className="w-full"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar firma actual
+                </Button>
+              </div>
+            )}
+
+            {!existingSignature && !signaturePreview && (
+              <div className="text-center text-muted-foreground text-sm flex items-center justify-center gap-2">
+                <XCircle className="h-4 w-4" />
+                Este usuario no tiene firma registrada
+              </div>
+            )}
+
+            {/* Upload new */}
+            <div className="space-y-2">
+              <Label>{existingSignature ? 'Reemplazar firma' : 'Subir firma'}</Label>
+              <div 
+                className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/20 transition-colors"
+                onClick={() => signatureFileRef.current?.click()}
+              >
+                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Haga clic para seleccionar un archivo
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  PNG, JPG o PDF (máx. 5MB)
+                </p>
+              </div>
+              <input
+                ref={signatureFileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
+                className="hidden"
+                onChange={handleSignatureFileChange}
+              />
+            </div>
+
+            {/* Preview */}
+            {signaturePreview && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Vista previa de la nueva firma
+                </Label>
+                <div className="border rounded-lg p-3 bg-muted/30 flex items-center justify-center">
+                  {signaturePreview.startsWith('data:application/pdf') ? (
+                    <div className="text-center text-sm text-muted-foreground">
+                      <FileSignature className="h-12 w-12 mx-auto mb-2" />
+                      Archivo PDF cargado
+                    </div>
+                  ) : (
+                    <img 
+                      src={signaturePreview} 
+                      alt="Preview firma" 
+                      className="max-h-32 object-contain"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSignatureDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveSignature}
+              disabled={!signaturePreview || isUploadingSignature}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {isUploadingSignature ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <FileSignature className="h-4 w-4 mr-2" />
+                  Asignar Firma
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
