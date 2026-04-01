@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,7 +25,12 @@ import {
   Briefcase,
   Key,
   Eye,
-  EyeOff
+  EyeOff,
+  FileSignature,
+  Upload,
+  CheckCircle2,
+  XCircle,
+  Image as ImageIcon
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
@@ -68,11 +73,17 @@ export function UserManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isSignatureDialogOpen, setIsSignatureDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<UserWithRole | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [isResettingPassword, setIsResettingPassword] = useState(false);
+  const [signaturePreview, setSignaturePreview] = useState<string | null>(null);
+  const [existingSignature, setExistingSignature] = useState<string | null>(null);
+  const [isUploadingSignature, setIsUploadingSignature] = useState(false);
+  const [userSignatures, setUserSignatures] = useState<Record<string, boolean>>({});
+  const signatureFileRef = useRef<HTMLInputElement>(null);
   
   const [newUser, setNewUser] = useState({
     email: "",
@@ -107,16 +118,168 @@ export function UserManagement() {
     setIsLoading(true);
     try {
       const { data, error } = await supabase.rpc('get_users_with_roles');
-      
       if (error) throw error;
-      
       setUsers(data || []);
       setFilteredUsers(data || []);
+
+      // Load which users have signatures
+      const { data: signatures } = await supabase
+        .from('professional_signatures')
+        .select('created_by');
+      
+      const sigMap: Record<string, boolean> = {};
+      signatures?.forEach(s => {
+        if (s.created_by) sigMap[s.created_by] = true;
+      });
+      setUserSignatures(sigMap);
     } catch (error: any) {
       console.error('Error loading users:', error);
       toast.error("Error al cargar usuarios: " + error.message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleOpenSignatureDialog = async (user: UserWithRole) => {
+    setSelectedUser(user);
+    setSignaturePreview(null);
+    setExistingSignature(null);
+    setIsSignatureDialogOpen(true);
+
+    // Load existing signature for this user
+    const { data } = await supabase
+      .from('professional_signatures')
+      .select('signature_data')
+      .eq('created_by', user.user_id)
+      .single();
+    
+    if (data?.signature_data) {
+      setExistingSignature(data.signature_data);
+    }
+  };
+
+  const handleSignatureFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'application/pdf'];
+    if (!validTypes.includes(file.type)) {
+      toast.error("Formato no soportado. Use PNG, JPG o PDF.");
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("El archivo no debe exceder 5MB");
+      return;
+    }
+
+    if (file.type === 'application/pdf') {
+      // For PDF: read as data URL and render to canvas
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        try {
+          const pdfData = ev.target?.result as string;
+          // Use pdfjsLib if available, otherwise store as-is
+          // Simple approach: store the PDF base64 directly
+          setSignaturePreview(pdfData);
+          toast.success("PDF cargado. Se usará como firma.");
+        } catch {
+          toast.error("Error al procesar el PDF");
+        }
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Image file: convert to base64
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new window.Image();
+        img.onload = () => {
+          // Resize to reasonable dimensions for signature
+          const canvas = document.createElement('canvas');
+          const maxW = 600;
+          const maxH = 300;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxW) { h = h * maxW / w; w = maxW; }
+          if (h > maxH) { w = w * maxH / h; h = maxH; }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(0, 0, w, h);
+            ctx.drawImage(img, 0, 0, w, h);
+            const dataUrl = canvas.toDataURL('image/png');
+            setSignaturePreview(dataUrl);
+          }
+        };
+        img.src = ev.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveSignature = async () => {
+    if (!selectedUser || !signaturePreview) return;
+    setIsUploadingSignature(true);
+
+    try {
+      // Check if signature already exists for this user
+      const { data: existing } = await supabase
+        .from('professional_signatures')
+        .select('id')
+        .eq('created_by', selectedUser.user_id)
+        .single();
+
+      if (existing) {
+        const { error } = await supabase
+          .from('professional_signatures')
+          .update({
+            professional_name: selectedUser.full_name || selectedUser.email,
+            professional_document: selectedUser.document_number || '',
+            signature_data: signaturePreview,
+            updated_at: new Date().toISOString()
+          })
+          .eq('created_by', selectedUser.user_id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from('professional_signatures')
+          .insert({
+            professional_name: selectedUser.full_name || selectedUser.email,
+            professional_document: selectedUser.document_number || '',
+            signature_data: signaturePreview,
+            created_by: selectedUser.user_id
+          });
+        if (error) throw error;
+      }
+
+      toast.success("Firma asignada exitosamente al usuario");
+      setUserSignatures(prev => ({ ...prev, [selectedUser.user_id]: true }));
+      setIsSignatureDialogOpen(false);
+      setSignaturePreview(null);
+    } catch (error: any) {
+      console.error('Error saving signature:', error);
+      toast.error("Error al guardar firma: " + error.message);
+    } finally {
+      setIsUploadingSignature(false);
+    }
+  };
+
+  const handleDeleteSignature = async () => {
+    if (!selectedUser) return;
+    try {
+      const { error } = await supabase
+        .from('professional_signatures')
+        .delete()
+        .eq('created_by', selectedUser.user_id);
+      if (error) throw error;
+
+      toast.success("Firma eliminada");
+      setExistingSignature(null);
+      setUserSignatures(prev => ({ ...prev, [selectedUser.user_id]: false }));
+    } catch (error: any) {
+      toast.error("Error al eliminar firma: " + error.message);
     }
   };
 
@@ -462,6 +625,7 @@ export function UserManagement() {
                   <TableHead>Contacto</TableHead>
                   <TableHead>Departamento</TableHead>
                   <TableHead>Rol</TableHead>
+                  <TableHead>Firma</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Acciones</TableHead>
                 </TableRow>
@@ -520,13 +684,26 @@ export function UserManagement() {
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="text-center">
+                      {userSignatures[user.user_id] ? (
+                        <Badge className="bg-green-100 text-green-800 border-green-200">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Registrada
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Sin firma
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge className={user.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
                         {user.is_active ? "Activo" : "Inactivo"}
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
@@ -537,6 +714,17 @@ export function UserManagement() {
                           title="Editar perfil"
                         >
                           <Edit2 className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleOpenSignatureDialog(user)}
+                          title="Gestionar firma"
+                          className={userSignatures[user.user_id] 
+                            ? "text-green-600 hover:text-green-700 hover:bg-green-50" 
+                            : "text-muted-foreground hover:text-foreground"}
+                        >
+                          <FileSignature className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
@@ -732,6 +920,130 @@ export function UserManagement() {
                 <>
                   <Key className="h-4 w-4 mr-2" />
                   Cambiar Contraseña
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Signature Upload Dialog */}
+      <Dialog open={isSignatureDialogOpen} onOpenChange={setIsSignatureDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileSignature className="h-5 w-5 text-primary" />
+              Gestionar Firma del Profesional
+            </DialogTitle>
+            <DialogDescription>
+              Asigne una firma digitalizada a: <strong>{selectedUser?.full_name || selectedUser?.email}</strong>
+              {selectedUser?.document_number && (
+                <span className="block text-xs mt-1">Documento: {selectedUser.document_number}</span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Existing signature */}
+            {existingSignature && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2 text-green-700">
+                  <CheckCircle2 className="h-4 w-4" />
+                  Firma actual registrada
+                </Label>
+                <div className="border rounded-lg p-3 bg-muted/30 flex items-center justify-center">
+                  <img 
+                    src={existingSignature} 
+                    alt="Firma actual" 
+                    className="max-h-32 object-contain"
+                  />
+                </div>
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={handleDeleteSignature}
+                  className="w-full"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Eliminar firma actual
+                </Button>
+              </div>
+            )}
+
+            {!existingSignature && !signaturePreview && (
+              <div className="text-center text-muted-foreground text-sm flex items-center justify-center gap-2">
+                <XCircle className="h-4 w-4" />
+                Este usuario no tiene firma registrada
+              </div>
+            )}
+
+            {/* Upload new */}
+            <div className="space-y-2">
+              <Label>{existingSignature ? 'Reemplazar firma' : 'Subir firma'}</Label>
+              <div 
+                className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/20 transition-colors"
+                onClick={() => signatureFileRef.current?.click()}
+              >
+                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground">
+                  Haga clic para seleccionar un archivo
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  PNG, JPG o PDF (máx. 5MB)
+                </p>
+              </div>
+              <input
+                ref={signatureFileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
+                className="hidden"
+                onChange={handleSignatureFileChange}
+              />
+            </div>
+
+            {/* Preview */}
+            {signaturePreview && (
+              <div className="space-y-2">
+                <Label className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4" />
+                  Vista previa de la nueva firma
+                </Label>
+                <div className="border rounded-lg p-3 bg-muted/30 flex items-center justify-center">
+                  {signaturePreview.startsWith('data:application/pdf') ? (
+                    <div className="text-center text-sm text-muted-foreground">
+                      <FileSignature className="h-12 w-12 mx-auto mb-2" />
+                      Archivo PDF cargado
+                    </div>
+                  ) : (
+                    <img 
+                      src={signaturePreview} 
+                      alt="Preview firma" 
+                      className="max-h-32 object-contain"
+                    />
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsSignatureDialogOpen(false)}>
+              Cancelar
+            </Button>
+            <Button
+              onClick={handleSaveSignature}
+              disabled={!signaturePreview || isUploadingSignature}
+              className="bg-primary hover:bg-primary/90"
+            >
+              {isUploadingSignature ? (
+                <>
+                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                <>
+                  <FileSignature className="h-4 w-4 mr-2" />
+                  Asignar Firma
                 </>
               )}
             </Button>
