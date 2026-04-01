@@ -201,21 +201,24 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         return;
       }
 
-      // Validación de firma: depende de si requiere acudiente o no
+      // Validación de firma/huella: depende de si requiere acudiente o no
+      const hasPatientSignature = currentPatientSignature && currentPatientSignature.length >= 100;
+      const hasFingerprint = currentPatientPhoto && currentPatientPhoto.length > 100;
+
       if (requiresGuardian) {
         // Si tiene discapacidad o es menor, se requiere firma del acudiente
         if (!currentGuardianSignature || currentGuardianSignature.length < 100) {
           toast.error('Falta la firma del acudiente', {
-            description: 'La firma del acudiente es obligatoria cuando el paciente tiene discapacidad o es menor de edad.',
+            description: 'La firma del acudiente es obligatoria cuando el paciente tiene discapacidad, es adulto mayor o presenta algún impedimento.',
             duration: 5000,
           });
           return;
         }
       } else {
-        // Si no requiere acudiente, se requiere firma del paciente
-        if (!currentPatientSignature || currentPatientSignature.length < 100) {
-          toast.error('Falta la firma del paciente', {
-            description: 'La firma del paciente es obligatoria antes de guardar el consentimiento.',
+        // Se requiere al menos firma del paciente O huella dactilar
+        if (!hasPatientSignature && !hasFingerprint) {
+          toast.error('Falta firma o huella del paciente', {
+            description: 'Debe proporcionar al menos la firma digital o la huella dactilar del paciente para generar el consentimiento.',
             duration: 5000,
           });
           return;
