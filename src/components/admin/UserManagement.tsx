@@ -684,6 +684,19 @@ export function UserManagement() {
                         )}
                       </div>
                     </TableCell>
+                    <TableCell className="text-center">
+                      {userSignatures[user.user_id] ? (
+                        <Badge className="bg-green-100 text-green-800 border-green-200">
+                          <CheckCircle2 className="h-3 w-3 mr-1" />
+                          Registrada
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-muted-foreground">
+                          <XCircle className="h-3 w-3 mr-1" />
+                          Sin firma
+                        </Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge className={user.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
                         {user.is_active ? "Activo" : "Inactivo"}
