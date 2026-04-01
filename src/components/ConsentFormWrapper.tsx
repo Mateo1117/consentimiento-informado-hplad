@@ -101,6 +101,15 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         .eq('created_by', user.id)
         .single();
 
+      if (!profSig?.signature_data) {
+        toast.error('Falta la firma del profesional', {
+          description: 'Debe registrar su firma profesional antes de generar cualquier consentimiento. Vaya a "Registro de Firma" en el menú.',
+          duration: 6000,
+        });
+        setIsPreDiligenciando(false);
+        return;
+      }
+
       // Normalizar firma profesional a URL si viene en base64
       let profSigUrl: string | null = profSig?.signature_data || null;
       if (profSigUrl && profSigUrl.startsWith('data:image')) {
