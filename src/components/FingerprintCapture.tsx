@@ -661,6 +661,20 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
     }
   }, []);
 
+  // ── Auto-connect Bluetooth on mount (skip in preview/iframe) ──────────
+  const autoConnectAttempted = useRef(false);
+  useEffect(() => {
+    if (autoConnectAttempted.current) return;
+    if (isPreviewOrEmbedded()) return;
+    if (btStatus !== 'disconnected') return;
+    autoConnectAttempted.current = true;
+    // Small delay to let the component settle
+    const timer = setTimeout(() => {
+      connectBluetooth();
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [btStatus, connectBluetooth, isPreviewOrEmbedded]);
+
   const captureWithBluetooth = useCallback(async () => {
     setBtCapturing(true);
     setStep('usb-waiting');
