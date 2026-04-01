@@ -202,25 +202,34 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         isMinor
       });
 
-      // Validación de firma del profesional (obligatoria siempre)
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profSig } = await supabase
-          .from('professional_signatures')
-          .select('signature_data')
-          .eq('created_by', user.id)
-          .single();
+      // ═══ VALIDACIÓN ESTRICTA PARA CONSENTIMIENTO COMPLETO ═══
+      // Requiere: (firma O huella del paciente) + firma del profesional
 
-        if (!profSig?.signature_data) {
-          toast.error('Falta la firma del profesional', {
-            description: 'Debe registrar su firma profesional antes de generar cualquier consentimiento. Vaya a "Registro de Firma" en el menú.',
-            duration: 6000,
-          });
-          return;
-        }
+      // 1. Validar usuario autenticado
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error('Usuario no autenticado', {
+          description: 'Debe iniciar sesión para generar consentimientos.',
+        });
+        return;
       }
 
-      // Validación de riesgos clínicos (obligatorio)
+      // 2. Validar firma del profesional (OBLIGATORIA siempre para consentimiento completo)
+      const { data: profSig } = await supabase
+        .from('professional_signatures')
+        .select('signature_data')
+        .eq('created_by', user.id)
+        .single();
+
+      if (!profSig?.signature_data) {
+        toast.error('Falta la firma del profesional', {
+          description: 'Debe registrar su firma profesional antes de generar cualquier consentimiento. Vaya a "Registro de Firma" en el menú.',
+          duration: 6000,
+        });
+        return;
+      }
+
+      // 3. Validar riesgos clínicos (obligatorio)
       if (!clinicalRiskNotes || clinicalRiskNotes.trim().length === 0) {
         toast.error('Campo obligatorio', {
           description: 'Debe diligenciar los riesgos en función de la situación clínica del paciente.',
@@ -229,12 +238,12 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         return;
       }
 
-      // Validación de firma/huella: depende de si requiere acudiente o no
+      // 4. Validar firma/huella del paciente (OBLIGATORIA siempre para consentimiento completo)
       const hasPatientSignature = currentPatientSignature && currentPatientSignature.length >= 100;
       const hasFingerprint = currentPatientPhoto && currentPatientPhoto.length > 100;
 
       if (requiresGuardian) {
-        // Si tiene discapacidad o es menor, se requiere firma del acudiente
+        // Si requiere acudiente, se necesita firma del acudiente
         if (!currentGuardianSignature || currentGuardianSignature.length < 100) {
           toast.error('Falta la firma del acudiente', {
             description: 'La firma del acudiente es obligatoria cuando el paciente tiene discapacidad, es adulto mayor o presenta algún impedimento.',
