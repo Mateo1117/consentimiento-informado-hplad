@@ -66,7 +66,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
     document: ''
   });
 
-  // Auto-cargar datos del profesional logueado
+  // Auto-cargar datos del profesional logueado (incluida la firma)
   useEffect(() => {
     const loadProfessional = async () => {
       try {
@@ -74,11 +74,16 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
         if (!user) return;
         const { data: profSig } = await (await import('@/integrations/supabase/client')).supabase
           .from('professional_signatures')
-          .select('professional_name, professional_document')
+          .select('professional_name, professional_document, signature_data')
           .eq('created_by', user.id)
           .single();
-        if (profSig && (!professionalData.name || !professionalData.document)) {
-          setProfessionalData({ name: profSig.professional_name, document: profSig.professional_document });
+        if (profSig) {
+          if (!professionalData.name || !professionalData.document) {
+            setProfessionalData({ name: profSig.professional_name, document: profSig.professional_document });
+          }
+          if (profSig.signature_data && !professionalSignature) {
+            setProfessionalSignature(profSig.signature_data);
+          }
         }
       } catch { /* silently ignore */ }
     };

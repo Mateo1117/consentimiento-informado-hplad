@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -65,6 +65,28 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
   const professionalSignatureRef = useRef<SignatureRef>(null);
   const cameraCaptureRef = useRef<FingerprintCaptureRef>(null);
   const guardianSignatureRef = useRef<GuardianSignatureRef>(null);
+
+  // Auto-cargar firma del profesional desde BD
+  useEffect(() => {
+    const loadProfessionalSignature = async () => {
+      try {
+        const { supabase } = await import('@/integrations/supabase/client');
+        const { data: { user } } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: profSig } = await supabase
+          .from('professional_signatures')
+          .select('professional_name, professional_document, signature_data')
+          .eq('created_by', user.id)
+          .single();
+        if (profSig) {
+          if (!professionalName) setProfessionalName(profSig.professional_name);
+          if (!professionalDocument) setProfessionalDocument(profSig.professional_document);
+          if (profSig.signature_data) setProfessionalSignature(profSig.signature_data);
+        }
+      } catch { /* silently ignore */ }
+    };
+    loadProfessionalSignature();
+  }, []);
 
   // Determinar si requiere firma de acudiente
   const requiresGuardian = isMinor || hasDisability;
