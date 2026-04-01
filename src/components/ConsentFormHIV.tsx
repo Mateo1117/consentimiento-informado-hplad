@@ -123,10 +123,15 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
     }
 
     try {
-      // Get captured photo and signature — use ref first, fallback to state
+      // Get captured photo and signatures — use ref first, fallback to state
       const capturedPhoto = cameraRef.current?.getFingerprintData() ?? patientPhoto ?? undefined;
-      const patientSignatureData = signatureRef.current?.getSignatureData();
-      const guardianSignatureData = guardianSignatureRef.current?.getSignatureData();
+      const patientSignatureData = signatureRef.current?.getSignatureData() || patientSignature;
+      const guardianSignatureData = guardianSignatureRef.current?.getSignatureData() || guardianSignature;
+      const professionalSignatureData = professionalSignatureRef.current?.getSignatureData() || professionalSignature;
+
+      if (!professionalSignatureData || professionalSignatureData.length < 100) {
+        throw new Error('La firma del profesional es obligatoria');
+      }
 
       const pdfData = {
         patientData,
@@ -142,7 +147,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
         patientSignature: requiresGuardian ? null : patientSignatureData,
         // Firma del acudiente: solo cuando hay acudiente
         guardianSignature: requiresGuardian ? guardianSignatureData : null,
-        professionalSignature,
+        professionalSignature: professionalSignatureData,
         patientPhoto: capturedPhoto ?? null,
         consentDecision,
         date: formData.fecha,
@@ -584,6 +589,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
                   <SignaturePad 
                     ref={professionalSignatureRef}
                     title="Firma del Profesional" 
+                    required
                     onSignatureChange={setProfessionalSignature}
                     isProfessional={true}
                     professionalName={professionalData.name}

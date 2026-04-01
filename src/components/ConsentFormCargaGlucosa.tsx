@@ -210,70 +210,74 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
   };
 
   const generatePDF = async (): Promise<Blob> => {
-    console.log("🚀 INICIANDO GENERACIÓN DE PDF - FORZADO");
+    if (!professionalName.trim()) {
+      throw new Error('El nombre del profesional es obligatorio');
+    }
+
+    if (!professionalDocument.trim()) {
+      throw new Error('El documento del profesional es obligatorio');
+    }
+
+    if (!agreedToConsent) {
+      throw new Error('Debe aceptar los términos del consentimiento');
+    }
+
+    // Si tiene discapacidad o es menor, validar datos del acudiente
+    if (requiresGuardian) {
+      if (!guardianName.trim()) {
+        throw new Error('El nombre del acudiente es obligatorio');
+      }
+      if (!guardianDocument.trim()) {
+        throw new Error('El documento del acudiente es obligatorio');
+      }
+      if (!guardianRelationship.trim()) {
+        throw new Error('El parentesco del acudiente es obligatorio');
+      }
+      if (!guardianSignatureRef.current?.getSignatureData() && !guardianSignature) {
+        throw new Error('La firma del acudiente es obligatoria');
+      }
+    }
+
+    const professionalSignatureData = professionalSignatureRef.current?.getSignatureData() || professionalSignature;
+    if (!professionalSignatureData || professionalSignatureData.length < 100) {
+      throw new Error('La firma del profesional es obligatoria');
+    }
 
     try {
       const currentDate = new Date();
       const date = currentDate.toLocaleDateString('es-CO');
       const time = currentDate.toLocaleTimeString('es-CO');
 
-      console.log("📋 Verificando estado de las firmas...");
-      console.log("🖊️ Firma del paciente:", patientSignature ? "SÍ EXISTE" : "NO EXISTE");
-      console.log("👨‍⚕️ Firma del profesional:", professionalSignature ? "SÍ EXISTE" : "NO EXISTE");
-      
-      if (patientSignature) {
-        console.log("📏 Longitud firma paciente:", patientSignature.length);
-        console.log("🔍 Preview firma paciente:", patientSignature.substring(0, 100));
-      }
-      
-      if (professionalSignature) {
-        console.log("📏 Longitud firma profesional:", professionalSignature.length);
-        console.log("🔍 Preview firma profesional:", professionalSignature.substring(0, 100));
-      }
-      
-      // Determinar si requiere firma del acudiente
-      const requiresGuardian = isMinor || hasDisability;
-      
-      // Datos para el PDF - usar datos reales si existen
+      const patientSignatureData = patientSignatureRef.current?.getSignatureData() || patientSignature || null;
+      const guardianSignatureData = guardianSignatureRef.current?.getSignatureData() || guardianSignature || null;
+      const capturedPhoto = cameraCaptureRef.current?.getFingerprintData() ?? patientPhoto ?? null;
+
       const pdfData = {
         patientData: { ...patientData, sexo: patientData.sexo || 'N/D' },
         guardianData: requiresGuardian ? {
-          name: guardianName || "ACUDIENTE TEST",
-          document: guardianDocument || "87654321",
-          relationship: guardianRelationship || "PADRE/MADRE",
-          phone: guardianPhone || "3009876543"
+          name: guardianName,
+          document: guardianDocument,
+          relationship: guardianRelationship,
+          phone: guardianPhone
         } : null,
-        professionalName: professionalName || "DR. PROFESIONAL DE PRUEBA",
-        professionalDocument: professionalDocument || "12345678",
+        professionalName,
+        professionalDocument,
         // Firma del paciente: solo cuando NO hay acudiente
-        patientSignature: requiresGuardian ? null : patientSignature,
+        patientSignature: requiresGuardian ? null : patientSignatureData,
         // Firma del acudiente: solo cuando hay acudiente
-        guardianSignature: requiresGuardian ? guardianSignature : null,
-        professionalSignature: professionalSignature, // Usar firma real si existe
-        patientPhoto: patientPhoto,
-        consentDecision: consentDecision || "aprobar",
+        guardianSignature: requiresGuardian ? guardianSignatureData : null,
+        professionalSignature: professionalSignatureData,
+        patientPhoto: capturedPhoto,
+        consentDecision,
         date,
         time,
         clinicalRiskNotes
       };
 
-      console.log("🔧 Generando PDF con datos:", {
-        patientName: pdfData.patientData.nombre,
-        professionalName: pdfData.professionalName,
-        hasPatientSignature: !!pdfData.patientSignature,
-        hasProfessionalSignature: !!pdfData.professionalSignature,
-        consentDecision: pdfData.consentDecision
-      });
-      
       const pdf = await generateCargaGlucosaPDF(pdfData);
-      
-      console.log("📄 PDF generado exitosamente");
-      
-      // Return the blob instead of downloading directly
       return pdf.output('blob');
-
     } catch (error) {
-      console.error("❌ Error detallado al generar PDF:", error);
+      console.error('Error al generar PDF:', error);
       throw error;
     }
   };
@@ -707,6 +711,7 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
                   <SignaturePad
                     ref={professionalSignatureRef}
                     title="Firma del Profesional"
+                    required
                     onSignatureChange={handleProfessionalSignatureChange}
                     isProfessional={true}
                     professionalName={professionalName}

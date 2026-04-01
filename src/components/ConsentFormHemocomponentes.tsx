@@ -125,9 +125,13 @@ export const ConsentFormHemocomponentes = ({
 
     try {
       const capturedPhoto = cameraCaptureRef.current?.getFingerprintData() ?? patientPhoto ?? undefined;
-      const patientSignatureData = patientSignatureRef.current?.getSignatureData();
-      const guardianSignatureData = guardianSignatureRef.current?.getSignatureData();
-      const professionalSignatureData = professionalSignatureRef.current?.getSignatureData();
+      const patientSignatureData = patientSignatureRef.current?.getSignatureData() || patientSignature;
+      const guardianSignatureData = guardianSignatureRef.current?.getSignatureData() || guardianSignature;
+      const professionalSignatureData = professionalSignatureRef.current?.getSignatureData() || professionalSignature;
+
+      if (!professionalSignatureData || professionalSignatureData.length < 100) {
+        throw new Error('La firma del profesional es obligatoria');
+      }
 
       const { generateHemocomponentesPDF } = await import('@/utils/pdfGeneratorHemocomponentes');
 
@@ -157,7 +161,7 @@ export const ConsentFormHemocomponentes = ({
         patientSignature: requiresGuardian ? null : patientSignatureData,
         // Firma del acudiente: solo cuando hay acudiente
         guardianSignature: requiresGuardian ? guardianSignatureData : null,
-        professionalSignature: professionalSignatureData || null,
+        professionalSignature: professionalSignatureData,
         patientPhoto: capturedPhoto,
         consentDecision,
         date: new Date().toISOString().split('T')[0],
@@ -607,6 +611,7 @@ export const ConsentFormHemocomponentes = ({
                     <SignaturePad
                       ref={professionalSignatureRef}
                       title="Firma del Profesional"
+                      required
                       onSignatureChange={setProfessionalSignature}
                       isProfessional={true}
                       professionalName={professionalData.name}

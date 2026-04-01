@@ -123,7 +123,9 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
     if (!professionalDocument.trim()) {
       throw new Error("El documento del profesional es obligatorio");
     }
-    if (!professionalSignature) {
+
+    const professionalSignatureData = professionalSignatureRef.current?.getSignatureData() || professionalSignature;
+    if (!professionalSignatureData || professionalSignatureData.length < 100) {
       throw new Error("La firma del profesional es obligatoria");
     }
 
@@ -139,11 +141,11 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
       if (!guardianRelationship.trim()) {
         throw new Error("El parentesco del acudiente es obligatorio");
       }
-      if (!guardianSignature) {
+      if (!guardianSignatureRef.current?.getSignatureData() && !guardianSignature) {
         throw new Error("La firma del acudiente es obligatoria");
       }
     } else {
-      if (!patientSignature) {
+      if (!patientSignatureRef.current?.getSignatureData() && !patientSignature) {
         throw new Error("La firma del paciente es obligatoria");
       }
     }
@@ -153,11 +155,9 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
       const date = currentDate.toLocaleDateString('es-CO');
       const time = currentDate.toLocaleTimeString('es-CO');
 
-      console.log("📋 Verificando estado de las firmas...");
-      console.log("🖊️ Firma del paciente:", patientSignature ? "SÍ EXISTE" : "NO EXISTE");
-      console.log("👨‍⚕️ Firma del profesional:", professionalSignature ? "SÍ EXISTE" : "NO EXISTE");
-      console.log("👨‍👧 Firma del acudiente:", guardianSignature ? "SÍ EXISTE" : "NO EXISTE");
-      
+      const patientSignatureData = patientSignatureRef.current?.getSignatureData() || patientSignature;
+      const guardianSignatureData = guardianSignatureRef.current?.getSignatureData() || guardianSignature;
+
       // Datos para el PDF
       const pdfData = {
         patientData: { ...patientData, sexo: patientData.sexo || 'N/D' },
@@ -170,10 +170,10 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
         professionalName: professionalName,
         professionalDocument: professionalDocument,
         // Firma del paciente: solo cuando NO hay acudiente
-        patientSignature: requiresGuardian ? null : patientSignature,
+        patientSignature: requiresGuardian ? null : patientSignatureData,
         // Firma del acudiente: solo cuando hay acudiente
-        guardianSignature: requiresGuardian ? guardianSignature : null,
-        professionalSignature: professionalSignature,
+        guardianSignature: requiresGuardian ? guardianSignatureData : null,
+        professionalSignature: professionalSignatureData,
         patientPhoto: patientPhoto,
         consentDecision: consentDecision || "aprobar",
         date,
@@ -628,6 +628,7 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
                   <SignaturePad 
                     ref={professionalSignatureRef}
                     title="Firma del Profesional" 
+                    required
                     onSignatureChange={handleProfessionalSignatureChange}
                     isProfessional={true}
                     professionalName={professionalName}
