@@ -201,6 +201,24 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         isMinor
       });
 
+      // Validación de firma del profesional (obligatoria siempre)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profSig } = await supabase
+          .from('professional_signatures')
+          .select('signature_data')
+          .eq('created_by', user.id)
+          .single();
+
+        if (!profSig?.signature_data) {
+          toast.error('Falta la firma del profesional', {
+            description: 'Debe registrar su firma profesional antes de generar cualquier consentimiento. Vaya a "Registro de Firma" en el menú.',
+            duration: 6000,
+          });
+          return;
+        }
+      }
+
       // Validación de riesgos clínicos (obligatorio)
       if (!clinicalRiskNotes || clinicalRiskNotes.trim().length === 0) {
         toast.error('Campo obligatorio', {
