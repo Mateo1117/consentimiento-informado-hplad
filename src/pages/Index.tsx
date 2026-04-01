@@ -151,7 +151,7 @@ const Index = () => {
         completedSteps={getCompletedSteps()}
       />
 
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         {/* Header Card */}
         <div className="mb-6">
           <Card className="border-border shadow-sm">
