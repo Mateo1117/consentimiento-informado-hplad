@@ -436,9 +436,13 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
                       <Textarea
                         value={clinicalRiskNotes}
                         onChange={(e) => setClinicalRiskNotes(e.target.value)}
-                        placeholder="Escriba aquí los riesgos específicos según la situación clínica del paciente, o deje en blanco si no aplica..."
-                        className="min-h-[60px] bg-white border-amber-300 focus:border-amber-500 text-sm"
+                        placeholder="Escriba aquí los riesgos específicos según la situación clínica del paciente..."
+                        className={`min-h-[60px] bg-white border-amber-300 focus:border-amber-500 text-sm ${!clinicalRiskNotes.trim() ? 'border-red-400' : ''}`}
+                        required
                       />
+                      {!clinicalRiskNotes.trim() && (
+                        <p className="text-xs text-red-500 mt-1">* Este campo es obligatorio</p>
+                      )}
                     </div>
 
                     {/* Declaración final */}

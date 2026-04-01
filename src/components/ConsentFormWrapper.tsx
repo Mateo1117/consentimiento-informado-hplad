@@ -192,6 +192,15 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         isMinor
       });
 
+      // Validación de riesgos clínicos (obligatorio)
+      if (!clinicalRiskNotes || clinicalRiskNotes.trim().length === 0) {
+        toast.error('Campo obligatorio', {
+          description: 'Debe diligenciar los riesgos en función de la situación clínica del paciente.',
+          duration: 5000,
+        });
+        return;
+      }
+
       // Validación de firma: depende de si requiere acudiente o no
       if (requiresGuardian) {
         // Si tiene discapacidad o es menor, se requiere firma del acudiente
