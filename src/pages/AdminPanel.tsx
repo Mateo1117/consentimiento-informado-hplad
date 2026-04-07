@@ -236,10 +236,10 @@ export default function AdminPanel() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-medical-blue-light to-background">
       <AuthenticatedHeader />
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
         {/* Page Header */}
-        <div className="flex items-center justify-between mb-8">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 md:mb-8">
+          <div className="flex items-center gap-3 md:gap-4 flex-wrap">
             <Button
               variant="outline"
               onClick={() => navigate("/")}
@@ -250,30 +250,31 @@ export default function AdminPanel() {
             </Button>
             
             <div>
-              <h1 className="text-3xl font-bold text-medical-blue flex items-center gap-3">
-                <Shield className="h-8 w-8" />
+              <h1 className="text-xl md:text-3xl font-bold text-medical-blue flex items-center gap-2 md:gap-3">
+                <Shield className="h-6 w-6 md:h-8 md:w-8" />
                 Panel de Administración
               </h1>
-              <p className="text-medical-gray mt-2">
+              <p className="text-medical-gray mt-1 md:mt-2 text-xs md:text-sm">
                 Gestión y monitoreo del sistema de consentimientos informados
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-4">
-            <Button onClick={loadData} variant="outline" disabled={isLoading}>
+          <div className="flex items-center gap-2 md:gap-4 w-full sm:w-auto">
+            <Button onClick={loadData} variant="outline" disabled={isLoading} size="sm" className="flex-1 sm:flex-none">
               <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              Actualizar
+              <span className="hidden sm:inline">Actualizar</span>
             </Button>
-            <Button onClick={exportData} className="bg-medical-blue hover:bg-medical-blue/90">
+            <Button onClick={exportData} className="bg-medical-blue hover:bg-medical-blue/90 flex-1 sm:flex-none" size="sm">
               <Download className="h-4 w-4 mr-2" />
-              Exportar
+              <span className="hidden sm:inline">Exportar</span>
             </Button>
           </div>
         </div>
 
-        <Tabs defaultValue="dashboard" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-11">
+        <Tabs defaultValue="dashboard" className="space-y-4 md:space-y-6">
+          <ScrollArea className="w-full">
+            <TabsList className="inline-flex w-auto min-w-full md:grid md:w-full md:grid-cols-11">
             <TabsTrigger value="dashboard" className="flex items-center gap-2">
               <BarChart3 className="h-4 w-4" />
               <span className="hidden lg:inline">Dashboard</span>
@@ -319,6 +320,7 @@ export default function AdminPanel() {
               <span className="hidden lg:inline">Sistema</span>
             </TabsTrigger>
           </TabsList>
+          </ScrollArea>
 
           {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="space-y-6">
