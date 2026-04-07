@@ -336,6 +336,22 @@ export function UserManagement() {
         if (roleError) {
           console.error('Role error:', roleError);
         }
+
+        // Save signature if provided
+        if (newUserSignaturePreview) {
+          const { error: sigError } = await supabase
+            .from('professional_signatures')
+            .insert({
+              professional_name: newUser.full_name,
+              professional_document: newUser.document_number || '',
+              signature_data: newUserSignaturePreview,
+              created_by: authData.user.id
+            });
+          if (sigError) {
+            console.error('Signature error:', sigError);
+            toast.error("Usuario creado pero hubo error al guardar la firma");
+          }
+        }
       }
 
       toast.success("Usuario creado exitosamente. Se ha enviado un correo de confirmación.");
