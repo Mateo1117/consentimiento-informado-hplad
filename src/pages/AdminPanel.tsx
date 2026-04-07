@@ -238,38 +238,41 @@ export default function AdminPanel() {
       <AuthenticatedHeader />
       <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
         {/* Page Header */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 md:mb-8">
-          <div className="flex items-center gap-3 md:gap-4 flex-wrap">
-            <Button
-              variant="outline"
-              onClick={() => navigate("/")}
-              className="border-medical-blue/30 hover:bg-medical-blue/10"
-            >
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Volver
-            </Button>
-            
-            <div>
-              <h1 className="text-xl md:text-3xl font-bold text-medical-blue flex items-center gap-2 md:gap-3">
-                <Shield className="h-6 w-6 md:h-8 md:w-8" />
-                Panel de Administración
-              </h1>
-              <p className="text-medical-gray mt-1 md:mt-2 text-xs md:text-sm">
-                Gestión y monitoreo del sistema de consentimientos informados
-              </p>
+        <div className="flex flex-col gap-3 mb-4 md:mb-8">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <Button
+                variant="outline"
+                onClick={() => navigate("/")}
+                className="border-medical-blue/30 hover:bg-medical-blue/10"
+                size="sm"
+              >
+                <ArrowLeft className="h-4 w-4 mr-1" />
+                Volver
+              </Button>
+              
+              <div>
+                <h1 className="text-lg md:text-2xl lg:text-3xl font-bold text-medical-blue flex items-center gap-2">
+                  <Shield className="h-5 w-5 md:h-7 md:w-7" />
+                  Panel de Administración
+                </h1>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button onClick={loadData} variant="outline" disabled={isLoading} size="sm" className="flex-1 sm:flex-none min-h-[44px]">
+                <RefreshCw className={`h-4 w-4 mr-1 ${isLoading ? 'animate-spin' : ''}`} />
+                Actualizar
+              </Button>
+              <Button onClick={exportData} className="bg-medical-blue hover:bg-medical-blue/90 flex-1 sm:flex-none min-h-[44px]" size="sm">
+                <Download className="h-4 w-4 mr-1" />
+                Exportar
+              </Button>
             </div>
           </div>
-
-          <div className="flex items-center gap-2 md:gap-4 w-full sm:w-auto">
-            <Button onClick={loadData} variant="outline" disabled={isLoading} size="sm" className="flex-1 sm:flex-none">
-              <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Actualizar</span>
-            </Button>
-            <Button onClick={exportData} className="bg-medical-blue hover:bg-medical-blue/90 flex-1 sm:flex-none" size="sm">
-              <Download className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Exportar</span>
-            </Button>
-          </div>
+          <p className="text-muted-foreground text-xs md:text-sm">
+            Gestión y monitoreo del sistema de consentimientos informados
+          </p>
         </div>
 
         <Tabs defaultValue="dashboard" className="space-y-4 md:space-y-6">
