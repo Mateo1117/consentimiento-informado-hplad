@@ -84,6 +84,8 @@ export function UserManagement() {
   const [isUploadingSignature, setIsUploadingSignature] = useState(false);
   const [userSignatures, setUserSignatures] = useState<Record<string, boolean>>({});
   const signatureFileRef = useRef<HTMLInputElement>(null);
+  const createSignatureFileRef = useRef<HTMLInputElement>(null);
+  const [newUserSignaturePreview, setNewUserSignaturePreview] = useState<string | null>(null);
   
   const [newUser, setNewUser] = useState({
     email: "",
