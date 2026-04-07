@@ -236,7 +236,7 @@ export default function AdminPanel() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-medical-blue-light to-background">
       <AuthenticatedHeader />
-      <div className="container mx-auto px-4 py-8">
+      <div className="container mx-auto px-3 md:px-4 py-4 md:py-8">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 md:mb-8">
           <div className="flex items-center gap-3 md:gap-4 flex-wrap">
