@@ -291,70 +291,29 @@ export function UserManagement() {
 
   const handleCreateUser = async () => {
     try {
-      // Create user via Supabase Auth Admin (this requires service role)
-      // For now, we'll create the user with signUp and then update their profile
-      const { data: authData, error: authError } = await supabase.auth.signUp({
-        email: newUser.email,
-        password: newUser.password,
-        options: {
-          data: {
-            full_name: newUser.full_name
-          },
-          emailRedirectTo: `${window.location.origin}/`
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData?.session?.access_token;
+      if (!token) throw new Error('No hay sesión activa');
+
+      const response = await supabase.functions.invoke('create-user', {
+        body: {
+          email: newUser.email,
+          password: newUser.password,
+          full_name: newUser.full_name,
+          document_type: newUser.document_type,
+          document_number: newUser.document_number,
+          phone: newUser.phone,
+          department: newUser.department,
+          job_title: newUser.job_title,
+          role: newUser.role,
+          signature_data: newUserSignaturePreview || null
         }
       });
 
-      if (authError) throw authError;
-      
-      if (authData.user) {
-        // Update profile with additional info
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .upsert({
-            user_id: authData.user.id,
-            full_name: newUser.full_name,
-            document_type: newUser.document_type,
-            document_number: newUser.document_number,
-            phone: newUser.phone,
-            department: newUser.department,
-            job_title: newUser.job_title,
-            is_active: true
-          });
-        
-        if (profileError) {
-          console.error('Profile error:', profileError);
-        }
+      if (response.error) throw new Error(response.error.message || 'Error al crear usuario');
+      if (response.data?.error) throw new Error(response.data.error);
 
-        // Assign role
-        const { error: roleError } = await supabase
-          .from('user_roles')
-          .insert({
-            user_id: authData.user.id,
-            role: newUser.role as any
-          });
-
-        if (roleError) {
-          console.error('Role error:', roleError);
-        }
-
-        // Save signature if provided
-        if (newUserSignaturePreview) {
-          const { error: sigError } = await supabase
-            .from('professional_signatures')
-            .insert({
-              professional_name: newUser.full_name,
-              professional_document: newUser.document_number || '',
-              signature_data: newUserSignaturePreview,
-              created_by: authData.user.id
-            });
-          if (sigError) {
-            console.error('Signature error:', sigError);
-            toast.error("Usuario creado pero hubo error al guardar la firma");
-          }
-        }
-      }
-
-      toast.success("Usuario creado exitosamente. Se ha enviado un correo de confirmación.");
+      toast.success("Usuario creado exitosamente");
       setIsCreateDialogOpen(false);
       setNewUser({
         email: "",
