@@ -320,6 +320,7 @@ export default function AdminPanel() {
               <span className="hidden lg:inline">Sistema</span>
             </TabsTrigger>
           </TabsList>
+          </ScrollArea>
 
           {/* Dashboard Tab */}
           <TabsContent value="dashboard" className="space-y-6">
