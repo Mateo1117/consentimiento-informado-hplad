@@ -84,6 +84,8 @@ export function UserManagement() {
   const [isUploadingSignature, setIsUploadingSignature] = useState(false);
   const [userSignatures, setUserSignatures] = useState<Record<string, boolean>>({});
   const signatureFileRef = useRef<HTMLInputElement>(null);
+  const createSignatureFileRef = useRef<HTMLInputElement>(null);
+  const [newUserSignaturePreview, setNewUserSignaturePreview] = useState<string | null>(null);
   
   const [newUser, setNewUser] = useState({
     email: "",
@@ -158,10 +160,7 @@ export function UserManagement() {
     }
   };
 
-  const handleSignatureFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleSignatureFileProcess = (file: File, setPreview: (data: string | null) => void) => {
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'application/pdf'];
     if (!validTypes.includes(file.type)) {
       toast.error("Formato no soportado. Use PNG, JPG o PDF.");
@@ -174,14 +173,11 @@ export function UserManagement() {
     }
 
     if (file.type === 'application/pdf') {
-      // For PDF: read as data URL and render to canvas
       const reader = new FileReader();
       reader.onload = async (ev) => {
         try {
           const pdfData = ev.target?.result as string;
-          // Use pdfjsLib if available, otherwise store as-is
-          // Simple approach: store the PDF base64 directly
-          setSignaturePreview(pdfData);
+          setPreview(pdfData);
           toast.success("PDF cargado. Se usará como firma.");
         } catch {
           toast.error("Error al procesar el PDF");
@@ -189,12 +185,10 @@ export function UserManagement() {
       };
       reader.readAsDataURL(file);
     } else {
-      // Image file: convert to base64
       const reader = new FileReader();
       reader.onload = (ev) => {
         const img = new window.Image();
         img.onload = () => {
-          // Resize to reasonable dimensions for signature
           const canvas = document.createElement('canvas');
           const maxW = 600;
           const maxH = 300;
@@ -210,13 +204,25 @@ export function UserManagement() {
             ctx.fillRect(0, 0, w, h);
             ctx.drawImage(img, 0, 0, w, h);
             const dataUrl = canvas.toDataURL('image/png');
-            setSignaturePreview(dataUrl);
+            setPreview(dataUrl);
           }
         };
         img.src = ev.target?.result as string;
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleSignatureFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleSignatureFileProcess(file, setSignaturePreview);
+  };
+
+  const handleCreateSignatureFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleSignatureFileProcess(file, setNewUserSignaturePreview);
   };
 
   const handleSaveSignature = async () => {
@@ -330,6 +336,22 @@ export function UserManagement() {
         if (roleError) {
           console.error('Role error:', roleError);
         }
+
+        // Save signature if provided
+        if (newUserSignaturePreview) {
+          const { error: sigError } = await supabase
+            .from('professional_signatures')
+            .insert({
+              professional_name: newUser.full_name,
+              professional_document: newUser.document_number || '',
+              signature_data: newUserSignaturePreview,
+              created_by: authData.user.id
+            });
+          if (sigError) {
+            console.error('Signature error:', sigError);
+            toast.error("Usuario creado pero hubo error al guardar la firma");
+          }
+        }
       }
 
       toast.success("Usuario creado exitosamente. Se ha enviado un correo de confirmación.");
@@ -345,6 +367,7 @@ export function UserManagement() {
         job_title: "",
         role: "viewer"
       });
+      setNewUserSignaturePreview(null);
       loadUsers();
     } catch (error: any) {
       console.error('Error creating user:', error);
@@ -579,6 +602,55 @@ export function UserManagement() {
                           placeholder="Bacteriólogo"
                         />
                       </div>
+                    </div>
+
+                    {/* Firma del profesional */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <FileSignature className="h-4 w-4" />
+                        Firma del Profesional (opcional)
+                      </Label>
+                      <div 
+                        className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/20 transition-colors"
+                        onClick={() => createSignatureFileRef.current?.click()}
+                      >
+                        {newUserSignaturePreview ? (
+                          <div className="space-y-2">
+                            {newUserSignaturePreview.startsWith('data:application/pdf') ? (
+                              <div className="text-sm text-muted-foreground">
+                                <FileSignature className="h-8 w-8 mx-auto mb-1" />
+                                PDF de firma cargado
+                              </div>
+                            ) : (
+                              <img src={newUserSignaturePreview} alt="Firma" className="max-h-20 mx-auto object-contain" />
+                            )}
+                            <p className="text-xs text-muted-foreground">Clic para cambiar</p>
+                          </div>
+                        ) : (
+                          <>
+                            <Upload className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
+                            <p className="text-xs text-muted-foreground">PNG, JPG o PDF (máx. 5MB)</p>
+                          </>
+                        )}
+                      </div>
+                      <input
+                        ref={createSignatureFileRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
+                        className="hidden"
+                        onChange={handleCreateSignatureFileChange}
+                      />
+                      {newUserSignaturePreview && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={(e) => { e.stopPropagation(); setNewUserSignaturePreview(null); }}
+                          className="text-destructive text-xs w-full"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Quitar firma
+                        </Button>
+                      )}
                     </div>
                   </div>
                   <DialogFooter>
