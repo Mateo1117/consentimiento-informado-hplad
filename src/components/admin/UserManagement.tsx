@@ -160,10 +160,7 @@ export function UserManagement() {
     }
   };
 
-  const handleSignatureFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+  const handleSignatureFileProcess = (file: File, setPreview: (data: string | null) => void) => {
     const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'application/pdf'];
     if (!validTypes.includes(file.type)) {
       toast.error("Formato no soportado. Use PNG, JPG o PDF.");
@@ -176,14 +173,11 @@ export function UserManagement() {
     }
 
     if (file.type === 'application/pdf') {
-      // For PDF: read as data URL and render to canvas
       const reader = new FileReader();
       reader.onload = async (ev) => {
         try {
           const pdfData = ev.target?.result as string;
-          // Use pdfjsLib if available, otherwise store as-is
-          // Simple approach: store the PDF base64 directly
-          setSignaturePreview(pdfData);
+          setPreview(pdfData);
           toast.success("PDF cargado. Se usará como firma.");
         } catch {
           toast.error("Error al procesar el PDF");
@@ -191,12 +185,10 @@ export function UserManagement() {
       };
       reader.readAsDataURL(file);
     } else {
-      // Image file: convert to base64
       const reader = new FileReader();
       reader.onload = (ev) => {
         const img = new window.Image();
         img.onload = () => {
-          // Resize to reasonable dimensions for signature
           const canvas = document.createElement('canvas');
           const maxW = 600;
           const maxH = 300;
@@ -212,13 +204,25 @@ export function UserManagement() {
             ctx.fillRect(0, 0, w, h);
             ctx.drawImage(img, 0, 0, w, h);
             const dataUrl = canvas.toDataURL('image/png');
-            setSignaturePreview(dataUrl);
+            setPreview(dataUrl);
           }
         };
         img.src = ev.target?.result as string;
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const handleSignatureFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleSignatureFileProcess(file, setSignaturePreview);
+  };
+
+  const handleCreateSignatureFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    handleSignatureFileProcess(file, setNewUserSignaturePreview);
   };
 
   const handleSaveSignature = async () => {
