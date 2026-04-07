@@ -603,6 +603,55 @@ export function UserManagement() {
                         />
                       </div>
                     </div>
+
+                    {/* Firma del profesional */}
+                    <div className="space-y-2">
+                      <Label className="flex items-center gap-2">
+                        <FileSignature className="h-4 w-4" />
+                        Firma del Profesional (opcional)
+                      </Label>
+                      <div 
+                        className="border-2 border-dashed rounded-lg p-4 text-center cursor-pointer hover:border-primary/50 hover:bg-muted/20 transition-colors"
+                        onClick={() => createSignatureFileRef.current?.click()}
+                      >
+                        {newUserSignaturePreview ? (
+                          <div className="space-y-2">
+                            {newUserSignaturePreview.startsWith('data:application/pdf') ? (
+                              <div className="text-sm text-muted-foreground">
+                                <FileSignature className="h-8 w-8 mx-auto mb-1" />
+                                PDF de firma cargado
+                              </div>
+                            ) : (
+                              <img src={newUserSignaturePreview} alt="Firma" className="max-h-20 mx-auto object-contain" />
+                            )}
+                            <p className="text-xs text-muted-foreground">Clic para cambiar</p>
+                          </div>
+                        ) : (
+                          <>
+                            <Upload className="h-6 w-6 mx-auto mb-1 text-muted-foreground" />
+                            <p className="text-xs text-muted-foreground">PNG, JPG o PDF (máx. 5MB)</p>
+                          </>
+                        )}
+                      </div>
+                      <input
+                        ref={createSignatureFileRef}
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf"
+                        className="hidden"
+                        onChange={handleCreateSignatureFileChange}
+                      />
+                      {newUserSignaturePreview && (
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          onClick={(e) => { e.stopPropagation(); setNewUserSignaturePreview(null); }}
+                          className="text-destructive text-xs w-full"
+                        >
+                          <Trash2 className="h-3 w-3 mr-1" />
+                          Quitar firma
+                        </Button>
+                      )}
+                    </div>
                   </div>
                   <DialogFooter>
                     <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
