@@ -478,23 +478,23 @@ export function UserManagement() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <CardTitle className="flex items-center gap-2">
+        <CardHeader className="p-4 md:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <CardTitle className="flex items-center gap-2 text-base md:text-lg">
               <User className="h-5 w-5" />
-              Gestión de Usuarios del Sistema
+              Gestión de Usuarios
             </CardTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" onClick={loadUsers} disabled={isLoading}>
-                <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
-                Actualizar
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <Button variant="outline" onClick={loadUsers} disabled={isLoading} size="sm" className="flex-1 sm:flex-none">
+                <RefreshCw className={`h-4 w-4 mr-1 md:mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Actualizar</span>
               </Button>
               <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
                 <DialogTrigger asChild>
-                  <Button className="bg-medical-blue hover:bg-medical-blue/90">
-                    <UserPlus className="h-4 w-4 mr-2" />
+                  <Button className="bg-medical-blue hover:bg-medical-blue/90 flex-1 sm:flex-none" size="sm">
+                    <UserPlus className="h-4 w-4 mr-1 md:mr-2" />
                     Nuevo Usuario
                   </Button>
                 </DialogTrigger>
