@@ -876,7 +876,7 @@ export function UserManagement() {
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] md:max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Usuario</DialogTitle>
           </DialogHeader>
@@ -893,7 +893,7 @@ export function UserManagement() {
                   onChange={(e) => setSelectedUser({...selectedUser, full_name: e.target.value})}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                 <div className="space-y-2">
                   <Label>Tipo Documento</Label>
                   <Select 
