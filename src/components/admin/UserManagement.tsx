@@ -367,6 +367,7 @@ export function UserManagement() {
         job_title: "",
         role: "viewer"
       });
+      setNewUserSignaturePreview(null);
       loadUsers();
     } catch (error: any) {
       console.error('Error creating user:', error);
