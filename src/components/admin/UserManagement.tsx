@@ -670,11 +670,11 @@ export function UserManagement() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-4 md:p-6">
           {/* Search */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 mb-4 md:mb-6">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nombre, correo o documento..."
                 value={searchTerm}
@@ -682,147 +682,195 @@ export function UserManagement() {
                 className="pl-10"
               />
             </div>
-            <Badge variant="outline">
+            <Badge variant="outline" className="self-start sm:self-auto whitespace-nowrap">
               {filteredUsers.length} usuarios
             </Badge>
           </div>
 
-          {/* Users Table */}
-          <ScrollArea className="h-[500px]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Usuario</TableHead>
-                  <TableHead>Documento</TableHead>
-                  <TableHead>Contacto</TableHead>
-                  <TableHead>Departamento</TableHead>
-                  <TableHead>Rol</TableHead>
-                  <TableHead>Firma</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredUsers.map((user) => (
-                  <TableRow key={user.user_id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{user.full_name || 'Sin nombre'}</p>
-                        <p className="text-sm text-gray-500">{user.email}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <p>{user.document_type || '-'}</p>
-                        <p className="text-gray-500">{user.document_number || '-'}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {user.phone && (
-                          <div className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {user.phone}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        {user.department && (
-                          <div className="flex items-center gap-1">
-                            <Building className="h-3 w-3" />
-                            {user.department}
-                          </div>
-                        )}
-                        {user.job_title && (
-                          <div className="flex items-center gap-1 text-gray-500">
-                            <Briefcase className="h-3 w-3" />
-                            {user.job_title}
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-wrap gap-1">
-                        {user.roles && user.roles.length > 0 ? (
-                          user.roles.map((role, idx) => (
-                            <Badge key={idx} className={ROLE_COLORS[role] || ROLE_COLORS.viewer}>
-                              {ROLE_LABELS[role] || role}
-                            </Badge>
-                          ))
-                        ) : (
-                          <Badge className={ROLE_COLORS.viewer}>Sin rol</Badge>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-center">
-                      {userSignatures[user.user_id] ? (
-                        <Badge className="bg-green-100 text-green-800 border-green-200">
-                          <CheckCircle2 className="h-3 w-3 mr-1" />
-                          Registrada
+          {/* Mobile/Tablet Card View */}
+          <div className="block lg:hidden space-y-3">
+            <ScrollArea className="h-[500px]">
+              {filteredUsers.map((user) => (
+                <div key={user.user_id} className="border rounded-xl p-4 mb-3 bg-card">
+                  <div className="flex items-start justify-between gap-3 mb-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-sm truncate">{user.full_name || 'Sin nombre'}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                    </div>
+                    <Badge className={user.is_active ? "bg-green-100 text-green-800 shrink-0" : "bg-gray-100 text-gray-800 shrink-0"}>
+                      {user.is_active ? "Activo" : "Inactivo"}
+                    </Badge>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                    <div>
+                      <span className="text-muted-foreground">Documento:</span>
+                      <p className="font-medium">{user.document_type || '-'} {user.document_number || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Teléfono:</span>
+                      <p className="font-medium">{user.phone || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Departamento:</span>
+                      <p className="font-medium">{user.department || '-'}</p>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Cargo:</span>
+                      <p className="font-medium">{user.job_title || '-'}</p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 mb-3">
+                    {user.roles && user.roles.length > 0 ? (
+                      user.roles.map((role, idx) => (
+                        <Badge key={idx} className={`text-xs ${ROLE_COLORS[role] || ROLE_COLORS.viewer}`}>
+                          {ROLE_LABELS[role] || role}
                         </Badge>
-                      ) : (
-                        <Badge variant="outline" className="text-muted-foreground">
-                          <XCircle className="h-3 w-3 mr-1" />
-                          Sin firma
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge className={user.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
-                        {user.is_active ? "Activo" : "Inactivo"}
+                      ))
+                    ) : (
+                      <Badge className={`text-xs ${ROLE_COLORS.viewer}`}>Sin rol</Badge>
+                    )}
+                    {userSignatures[user.user_id] ? (
+                      <Badge className="bg-green-100 text-green-800 border-green-200 text-xs">
+                        <CheckCircle2 className="h-3 w-3 mr-1" />
+                        Firma
                       </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setIsEditDialogOpen(true);
-                          }}
-                          title="Editar perfil"
-                        >
-                          <Edit2 className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenSignatureDialog(user)}
-                          title="Gestionar firma"
-                          className={userSignatures[user.user_id] 
-                            ? "text-green-600 hover:text-green-700 hover:bg-green-50" 
-                            : "text-muted-foreground hover:text-foreground"}
-                        >
-                          <FileSignature className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedUser(user);
-                            setNewPassword("");
-                            setConfirmPassword("");
-                            setIsPasswordDialogOpen(true);
-                          }}
-                          title="Cambiar contraseña"
-                          className="text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                        >
-                          <Key className="h-4 w-4" />
-                        </Button>
-                        <Switch
-                          checked={user.is_active}
-                          onCheckedChange={() => handleToggleActive(user)}
-                        />
-                      </div>
-                    </TableCell>
+                    ) : (
+                      <Badge variant="outline" className="text-muted-foreground text-xs">
+                        <XCircle className="h-3 w-3 mr-1" />
+                        Sin firma
+                      </Badge>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-1 border-t pt-3">
+                    <Button variant="ghost" size="sm" className="flex-1 min-h-[44px]" onClick={() => { setSelectedUser(user); setIsEditDialogOpen(true); }}>
+                      <Edit2 className="h-4 w-4 mr-1" /> Editar
+                    </Button>
+                    <Button variant="ghost" size="sm" className="flex-1 min-h-[44px]" onClick={() => handleOpenSignatureDialog(user)}>
+                      <FileSignature className="h-4 w-4 mr-1" /> Firma
+                    </Button>
+                    <Button variant="ghost" size="sm" className="flex-1 min-h-[44px] text-orange-600" onClick={() => { setSelectedUser(user); setNewPassword(""); setConfirmPassword(""); setIsPasswordDialogOpen(true); }}>
+                      <Key className="h-4 w-4 mr-1" /> Clave
+                    </Button>
+                    <Switch checked={user.is_active} onCheckedChange={() => handleToggleActive(user)} />
+                  </div>
+                </div>
+              ))}
+            </ScrollArea>
+          </div>
+
+          {/* Desktop Table View */}
+          <div className="hidden lg:block">
+            <ScrollArea className="h-[500px]">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Usuario</TableHead>
+                    <TableHead>Documento</TableHead>
+                    <TableHead>Contacto</TableHead>
+                    <TableHead>Departamento</TableHead>
+                    <TableHead>Rol</TableHead>
+                    <TableHead>Firma</TableHead>
+                    <TableHead>Estado</TableHead>
+                    <TableHead>Acciones</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </ScrollArea>
+                </TableHeader>
+                <TableBody>
+                  {filteredUsers.map((user) => (
+                    <TableRow key={user.user_id}>
+                      <TableCell>
+                        <div>
+                          <p className="font-medium">{user.full_name || 'Sin nombre'}</p>
+                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          <p>{user.document_type || '-'}</p>
+                          <p className="text-muted-foreground">{user.document_number || '-'}</p>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {user.phone && (
+                            <div className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {user.phone}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm">
+                          {user.department && (
+                            <div className="flex items-center gap-1">
+                              <Building className="h-3 w-3" />
+                              {user.department}
+                            </div>
+                          )}
+                          {user.job_title && (
+                            <div className="flex items-center gap-1 text-muted-foreground">
+                              <Briefcase className="h-3 w-3" />
+                              {user.job_title}
+                            </div>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap gap-1">
+                          {user.roles && user.roles.length > 0 ? (
+                            user.roles.map((role, idx) => (
+                              <Badge key={idx} className={ROLE_COLORS[role] || ROLE_COLORS.viewer}>
+                                {ROLE_LABELS[role] || role}
+                              </Badge>
+                            ))
+                          ) : (
+                            <Badge className={ROLE_COLORS.viewer}>Sin rol</Badge>
+                          )}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-center">
+                        {userSignatures[user.user_id] ? (
+                          <Badge className="bg-green-100 text-green-800 border-green-200">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            Registrada
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Sin firma
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className={user.is_active ? "bg-green-100 text-green-800" : "bg-gray-100 text-gray-800"}>
+                          {user.is_active ? "Activo" : "Inactivo"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-1">
+                          <Button variant="ghost" size="sm" onClick={() => { setSelectedUser(user); setIsEditDialogOpen(true); }} title="Editar perfil">
+                            <Edit2 className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => handleOpenSignatureDialog(user)} title="Gestionar firma"
+                            className={userSignatures[user.user_id] ? "text-green-600 hover:text-green-700 hover:bg-green-50" : "text-muted-foreground hover:text-foreground"}>
+                            <FileSignature className="h-4 w-4" />
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => { setSelectedUser(user); setNewPassword(""); setConfirmPassword(""); setIsPasswordDialogOpen(true); }}
+                            title="Cambiar contraseña" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50">
+                            <Key className="h-4 w-4" />
+                          </Button>
+                          <Switch checked={user.is_active} onCheckedChange={() => handleToggleActive(user)} />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </ScrollArea>
+          </div>
         </CardContent>
       </Card>
 
