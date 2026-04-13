@@ -348,8 +348,7 @@ export function UserManagement() {
     try {
       const { error } = await supabase
         .from('profiles')
-        .upsert({
-          user_id: selectedUser.user_id,
+        .update({
           full_name: selectedUser.full_name,
           document_type: selectedUser.document_type,
           document_number: selectedUser.document_number,
@@ -357,7 +356,8 @@ export function UserManagement() {
           department: selectedUser.department,
           job_title: selectedUser.job_title,
           is_active: selectedUser.is_active
-        });
+        })
+        .eq('user_id', selectedUser.user_id);
 
       if (error) throw error;
 
