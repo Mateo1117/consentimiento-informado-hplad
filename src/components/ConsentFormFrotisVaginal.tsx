@@ -231,7 +231,7 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
       onGeneratePDF={generatePDF}
       onGetHTMLContent={getHTMLContent}
       onBack={onBack}
-      professionalData={professionalData}
+      professionalData={{ ...professionalData, signatureData: professionalSignature || undefined }}
       patientSignature={patientSignature}
       patientPhotoUrl={patientPhoto}
       getPatientSignature={() => patientSignatureRef.current?.getSignatureData() || null}

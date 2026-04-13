@@ -211,7 +211,7 @@ export const ConsentFormHIV: React.FC<ConsentFormHIVProps> = ({ patientData, onB
       onGeneratePDF={generatePDF}
       onGetHTMLContent={getHTMLContent}
       onBack={onBack}
-      professionalData={professionalData}
+      professionalData={{ ...professionalData, signatureData: professionalSignature || undefined }}
       patientSignature={patientSignature}
       patientPhotoUrl={patientPhoto}
       getPatientSignature={() => signatureRef.current?.getSignatureData() || null}
