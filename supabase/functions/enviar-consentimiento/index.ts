@@ -169,7 +169,7 @@ serve(async (req: Request) => {
       fecha_documento: new Date().toISOString().split('T')[0], // Siempre fecha actual en formato YYYY-MM-DD
       
       // Datos del profesional
-      profesional_nombre_completo: body.profesional_nombre_completo || "",
+      profesional_nombre_completo: (body.profesional_nombre_completo || "").toUpperCase(),
       profesional_documento: body.profesional_documento || null,
       profesional_firma: body.profesional_firma || null,
       
