@@ -256,7 +256,8 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
       onBack={onBack}
       professionalData={{
         name: professionalName,
-        document: professionalDocument
+        document: professionalDocument,
+        signatureData: professionalSignature || undefined
       }}
       patientSignature={patientSignature}
       patientPhotoUrl={patientPhoto}

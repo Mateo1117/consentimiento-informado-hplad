@@ -328,7 +328,8 @@ export const ConsentFormCargaGlucosa = ({ patientData, onBack }: ConsentFormProp
       onBack={onBack}
       professionalData={{
         name: professionalName,
-        document: professionalDocument
+        document: professionalDocument,
+        signatureData: professionalSignature || undefined
       }}
       patientSignature={patientSignature}
       patientPhotoUrl={patientPhoto}

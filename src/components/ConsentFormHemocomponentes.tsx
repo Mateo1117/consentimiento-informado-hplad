@@ -222,7 +222,7 @@ export const ConsentFormHemocomponentes = ({
       onGeneratePDF={generatePDF}
       onGetHTMLContent={getHTMLContent}
       onBack={onBack}
-      professionalData={professionalData}
+      professionalData={{ ...professionalData, signatureData: professionalSignature || undefined }}
       patientSignature={patientSignature}
       patientPhotoUrl={patientPhoto}
       getPatientSignature={() => patientSignatureRef.current?.getSignatureData() || null}

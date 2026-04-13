@@ -37,6 +37,7 @@ interface ConsentFormWrapperProps {
   professionalData?: {
     name: string;
     document: string;
+    signatureData?: string;
   };
   patientSignature?: string | null;
   patientPhotoUrl?: string | null;
@@ -94,12 +95,23 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuario no autenticado');
 
-      // Obtener firma profesional
-      const { data: profSig } = await supabase
-        .from('professional_signatures')
-        .select('signature_data, professional_name, professional_document')
-        .eq('created_by', user.id)
-        .single();
+      // Usar datos del profesional seleccionado si están disponibles, sino buscar en BD
+      let profSig: { signature_data: string; professional_name: string; professional_document: string } | null = null;
+      
+      if (professionalData?.signatureData && professionalData?.name) {
+        profSig = {
+          signature_data: professionalData.signatureData,
+          professional_name: professionalData.name,
+          professional_document: professionalData.document
+        };
+      } else {
+        const { data: dbSig } = await supabase
+          .from('professional_signatures')
+          .select('signature_data, professional_name, professional_document')
+          .eq('created_by', user.id)
+          .single();
+        profSig = dbSig;
+      }
 
       if (!profSig?.signature_data) {
         toast.error('Falta la firma del profesional', {
@@ -291,6 +303,7 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         },
         professionalName: professionalData?.name,
         professionalDocument: professionalData?.document,
+        professionalSignatureData: professionalData?.signatureData,
         pdfContent: htmlContent,
         patientSignature: currentPatientSignature || undefined,
         patientPhotoUrl: currentPatientPhoto || undefined,
