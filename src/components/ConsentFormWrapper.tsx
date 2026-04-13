@@ -37,6 +37,7 @@ interface ConsentFormWrapperProps {
   professionalData?: {
     name: string;
     document: string;
+    signatureData?: string;
   };
   patientSignature?: string | null;
   patientPhotoUrl?: string | null;
