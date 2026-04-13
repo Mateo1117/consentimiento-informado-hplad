@@ -14,6 +14,7 @@ export interface AppConsentData {
   payload: any;
   professionalName?: string;
   professionalDocument?: string;
+  professionalSignatureData?: string; // base64 de la firma del profesional seleccionado
   pdfContent?: string; // HTML content for PDF generation
   patientSignature?: string; // base64 de la firma del paciente
   patientPhotoUrl?: string; // URL de la foto del paciente
@@ -45,12 +46,26 @@ class AppConsentService {
         throw new Error('Usuario no autenticado');
       }
 
-      // Get professional signature if exists
-      const { data: professionalSignature } = await supabase
-        .from('professional_signatures')
-        .select('signature_data, professional_name, professional_document')
-        .eq('created_by', user.id)
-        .single();
+      // Use professional data passed from the form (selected professional) if available,
+      // otherwise fall back to the logged-in user's signature
+      let professionalSignature: { signature_data: string; professional_name: string; professional_document: string } | null = null;
+      
+      if (data.professionalName && data.professionalDocument && data.professionalSignatureData) {
+        // Use the selected professional's data directly
+        professionalSignature = {
+          signature_data: data.professionalSignatureData,
+          professional_name: data.professionalName,
+          professional_document: data.professionalDocument
+        };
+      } else {
+        // Fallback: fetch from DB by logged-in user
+        const { data: dbSignature } = await supabase
+          .from('professional_signatures')
+          .select('signature_data, professional_name, professional_document')
+          .eq('created_by', user.id)
+          .single();
+        professionalSignature = dbSignature;
+      }
 
       logger.info('Saving app consent', { 
         patientName: data.patientName,
