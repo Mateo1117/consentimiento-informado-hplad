@@ -17,6 +17,9 @@ export interface ConsentData {
   consentType: string;
   payload: any;
   shareExpiresAt?: string;
+  professionalName?: string;
+  professionalDocument?: string;
+  professionalSignatureData?: string;
 }
 
 export interface ShareableConsent {
@@ -35,12 +38,24 @@ class ConsentService {
         return null;
       }
 
-      // Get professional signature data for the authenticated user
-      const { data: professionalSignature } = await supabase
-        .from('professional_signatures')
-        .select('*')
-        .eq('created_by', user.user.id)
-        .single();
+      // Use professional data passed from caller if available, otherwise fallback to logged-in user
+      let professionalName: string | null = data.professionalName || null;
+      let professionalDocument: string | null = data.professionalDocument || null;
+      let professionalSignatureData: string | null = data.professionalSignatureData || null;
+
+      if (!professionalName || !professionalSignatureData) {
+        const { data: professionalSignature } = await supabase
+          .from('professional_signatures')
+          .select('*')
+          .eq('created_by', user.user.id)
+          .single();
+        
+        if (professionalSignature) {
+          professionalName = professionalName || professionalSignature.professional_name;
+          professionalDocument = professionalDocument || professionalSignature.professional_document;
+          professionalSignatureData = professionalSignatureData || professionalSignature.signature_data;
+        }
+      }
 
       const expiresAt = data.shareExpiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // Default: 7 días
 
@@ -57,10 +72,9 @@ class ConsentService {
           payload: data.payload,
           share_expires_at: expiresAt,
           status: 'sent',
-          // Automatically include professional data if available
-          professional_name: professionalSignature?.professional_name || null,
-          professional_document: professionalSignature?.professional_document || null,
-          professional_signature_data: professionalSignature?.signature_data || null
+          professional_name: professionalName,
+          professional_document: professionalDocument,
+          professional_signature_data: professionalSignatureData
         })
         .select('id, share_token, share_expires_at')
         .single();
