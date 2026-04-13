@@ -432,7 +432,7 @@ class AppConsentService {
           aceptacion_procedimiento: aceptacionProcedimiento,
           fecha_firma: data.signedAt || new Date().toISOString(),
           fecha_documento: new Date().toISOString().split('T')[0],
-          profesional_nombre_completo: data.professionalName || '',
+          profesional_nombre_completo: (data.professionalName || '').toUpperCase(),
           profesional_documento: data.professionalDocument || null,
           profesional_firma: data.professionalSignature || null,
           pdf_url: data.pdfUrl || null,
