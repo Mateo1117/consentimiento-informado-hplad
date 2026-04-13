@@ -303,6 +303,7 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         },
         professionalName: professionalData?.name,
         professionalDocument: professionalData?.document,
+        professionalSignatureData: professionalData?.signatureData,
         pdfContent: htmlContent,
         patientSignature: currentPatientSignature || undefined,
         patientPhotoUrl: currentPatientPhoto || undefined,
