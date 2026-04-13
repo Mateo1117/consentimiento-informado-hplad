@@ -90,6 +90,10 @@ export function UserManagement() {
   const [newUser, setNewUser] = useState({
     email: "",
     password: "",
+    primer_apellido: "",
+    segundo_apellido: "",
+    primer_nombre: "",
+    segundo_nombre: "",
     full_name: "",
     document_type: "CC",
     document_number: "",
@@ -318,6 +322,10 @@ export function UserManagement() {
       setNewUser({
         email: "",
         password: "",
+        primer_apellido: "",
+        segundo_apellido: "",
+        primer_nombre: "",
+        segundo_nombre: "",
         full_name: "",
         document_type: "CC",
         document_number: "",
@@ -482,13 +490,57 @@ export function UserManagement() {
                         />
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label>Nombre Completo *</Label>
-                      <Input
-                        value={newUser.full_name}
-                        onChange={(e) => setNewUser({...newUser, full_name: e.target.value})}
-                        placeholder="Nombre del usuario"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                      <div className="space-y-2">
+                        <Label>Primer Apellido *</Label>
+                        <Input
+                          value={newUser.primer_apellido}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const fullName = `${val} ${newUser.segundo_apellido} ${newUser.primer_nombre} ${newUser.segundo_nombre}`.replace(/\s+/g, ' ').trim();
+                            setNewUser({...newUser, primer_apellido: val, full_name: fullName});
+                          }}
+                          placeholder="Ej: COLLAZOS"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Segundo Apellido</Label>
+                        <Input
+                          value={newUser.segundo_apellido}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const fullName = `${newUser.primer_apellido} ${val} ${newUser.primer_nombre} ${newUser.segundo_nombre}`.replace(/\s+/g, ' ').trim();
+                            setNewUser({...newUser, segundo_apellido: val, full_name: fullName});
+                          }}
+                          placeholder="Ej: QUINTERO"
+                        />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
+                      <div className="space-y-2">
+                        <Label>Primer Nombre *</Label>
+                        <Input
+                          value={newUser.primer_nombre}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const fullName = `${newUser.primer_apellido} ${newUser.segundo_apellido} ${val} ${newUser.segundo_nombre}`.replace(/\s+/g, ' ').trim();
+                            setNewUser({...newUser, primer_nombre: val, full_name: fullName});
+                          }}
+                          placeholder="Ej: KAREN"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Segundo Nombre</Label>
+                        <Input
+                          value={newUser.segundo_nombre}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const fullName = `${newUser.primer_apellido} ${newUser.segundo_apellido} ${newUser.primer_nombre} ${val}`.replace(/\s+/g, ' ').trim();
+                            setNewUser({...newUser, segundo_nombre: val, full_name: fullName});
+                          }}
+                          placeholder="Ej: SOFIA"
+                        />
+                      </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
                       <div className="space-y-2">
