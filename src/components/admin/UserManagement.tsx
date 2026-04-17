@@ -346,12 +346,16 @@ export function UserManagement() {
     if (!selectedUser) return;
 
     try {
+      // Normalizar nombre profesional a MAYÚSCULAS según estándar
+      const normalizedName = (selectedUser.full_name || '').toUpperCase().replace(/\s+/g, ' ').trim();
+      const normalizedDoc = (selectedUser.document_number || '').trim();
+
       const { error } = await supabase
         .from('profiles')
         .update({
-          full_name: selectedUser.full_name,
+          full_name: normalizedName || selectedUser.full_name,
           document_type: selectedUser.document_type,
-          document_number: selectedUser.document_number,
+          document_number: normalizedDoc,
           phone: selectedUser.phone,
           department: selectedUser.department,
           job_title: selectedUser.job_title,
@@ -361,7 +365,31 @@ export function UserManagement() {
 
       if (error) throw error;
 
-      toast.success("Perfil actualizado exitosamente");
+      // Sincronizar nombre y documento en la firma profesional asociada (si existe)
+      if (normalizedName) {
+        const { error: sigError } = await supabase
+          .from('professional_signatures')
+          .update({
+            professional_name: normalizedName,
+            professional_document: normalizedDoc,
+            updated_at: new Date().toISOString()
+          })
+          .eq('created_by', selectedUser.user_id);
+        if (sigError) console.error('Error syncing professional_signatures:', sigError);
+
+        // Sincronizar en consentimientos previos creados por este usuario
+        const { error: consentsError } = await supabase
+          .from('consents')
+          .update({
+            professional_name: normalizedName,
+            professional_document: normalizedDoc,
+            updated_at: new Date().toISOString()
+          })
+          .eq('created_by', selectedUser.user_id);
+        if (consentsError) console.error('Error syncing consents:', consentsError);
+      }
+
+      toast.success("Perfil actualizado y sincronizado en firmas y consentimientos");
       setIsEditDialogOpen(false);
       loadUsers();
     } catch (error: any) {
