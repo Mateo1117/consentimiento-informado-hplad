@@ -41,15 +41,13 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { consentService, type ConsentForm } from "@/services/legacy-consent";
-import { supabase } from "@/integrations/supabase/client";
-import { format, subDays, subWeeks, subMonths } from "date-fns";
+import { consentManagementService, type ConsentManagementData } from "@/services/consentManagementService";
+import { format, subWeeks, subMonths } from "date-fns";
 import { es } from "date-fns/locale";
 
 interface DashboardStats {
   totalConsents: number;
-  approvedConsents: number;
-  deniedConsents: number;
+  signedConsents: number;
   todayConsents: number;
   weeklyGrowth: number;
   monthlyGrowth: number;
@@ -62,15 +60,96 @@ interface SystemHealth {
   activeUsers: number;
 }
 
+type AdminConsent = ConsentManagementData;
+type ConsentDisplayStatus = 'signed' | 'sent' | 'pending' | 'expired';
+
+const getNestedValue = (value: unknown, path: string): unknown => {
+  return path.split('.').reduce<unknown>((current, key) => {
+    if (current && typeof current === 'object' && key in (current as Record<string, unknown>)) {
+      return (current as Record<string, unknown>)[key];
+    }
+
+    return undefined;
+  }, value);
+};
+
+const pickText = (...values: unknown[]): string => {
+  for (const value of values) {
+    if (typeof value === 'string' && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return '';
+};
+
+const getDisplayPatientName = (consent: AdminConsent) =>
+  pickText(consent.patient_full_name, consent.patient_name) || 'No disponible';
+
+const getConsentDocumentType = (consent: AdminConsent) =>
+  pickText(
+    consent.patient_document_type,
+    getNestedValue(consent.payload, 'patientData.tipoDocumento'),
+    getNestedValue(consent.payload, 'tipoDocumento')
+  ) || 'No disponible';
+
+const getConsentDocumentNumber = (consent: AdminConsent) =>
+  pickText(
+    consent.patient_document_number,
+    getNestedValue(consent.payload, 'patientData.numeroDocumento'),
+    getNestedValue(consent.payload, 'numeroDocumento')
+  ) || 'No disponible';
+
+const getConsentHealthcareCenter = (consent: AdminConsent) =>
+  pickText(
+    getNestedValue(consent.payload, 'patientData.centroSalud'),
+    getNestedValue(consent.payload, 'centroSalud'),
+    getNestedValue(consent.payload, 'healthcare_center'),
+    getNestedValue(consent.payload, 'healthcareCenter')
+  ) || 'No disponible';
+
+const getConsentEps = (consent: AdminConsent) =>
+  pickText(
+    getNestedValue(consent.payload, 'patientData.eps'),
+    getNestedValue(consent.payload, 'eps'),
+    getNestedValue(consent.payload, 'patientData.entidadSalud')
+  ) || 'No disponible';
+
+const getConsentDisplayStatus = (consent: AdminConsent): ConsentDisplayStatus => {
+  if (consent.status === 'signed') return 'signed';
+
+  if (consent.share_expires_at && new Date(consent.share_expires_at).getTime() < Date.now()) {
+    return 'expired';
+  }
+
+  if (consent.status === 'pending') return 'pending';
+
+  return 'sent';
+};
+
+const getConsentStatusLabel = (status: ConsentDisplayStatus) => {
+  switch (status) {
+    case 'signed':
+      return 'Firmado';
+    case 'sent':
+      return 'Enviado';
+    case 'pending':
+      return 'Pendiente';
+    case 'expired':
+      return 'Expirado';
+    default:
+      return 'No disponible';
+  }
+};
+
 export default function AdminPanel() {
   const navigate = useNavigate();
-  const [consents, setConsents] = useState<ConsentForm[]>([]);
-  const [filteredConsents, setFilteredConsents] = useState<ConsentForm[]>([]);
+  const [consents, setConsents] = useState<AdminConsent[]>([]);
+  const [filteredConsents, setFilteredConsents] = useState<AdminConsent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats>({
     totalConsents: 0,
-    approvedConsents: 0,
-    deniedConsents: 0,
+    signedConsents: 0,
     todayConsents: 0,
     weeklyGrowth: 0,
     monthlyGrowth: 0
@@ -100,17 +179,17 @@ export default function AdminPanel() {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const data = await consentService.getAllConsents();
+      const data = await consentManagementService.getAllConsents();
       setConsents(data);
       calculateStats(data);
-    } catch (error) {
-      toast.error("Error al cargar los datos");
+    } catch (error: any) {
+      toast.error(error?.message || "Error al cargar los datos");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const calculateStats = (data: ConsentForm[]) => {
+  const calculateStats = (data: AdminConsent[]) => {
     const today = new Date();
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
     const weekAgo = subWeeks(today, 1);
@@ -128,13 +207,11 @@ export default function AdminPanel() {
       new Date(c.created_at || '') >= monthAgo
     ).length;
 
-    const approved = data.filter(c => c.consent_decision === 'aprobar').length;
-    const denied = data.filter(c => c.consent_decision === 'disentir').length;
+    const signedConsents = data.filter(c => getConsentDisplayStatus(c) === 'signed').length;
 
     setStats({
       totalConsents: data.length,
-      approvedConsents: approved,
-      deniedConsents: denied,
+      signedConsents,
       todayConsents,
       weeklyGrowth: weeklyConsents,
       monthlyGrowth: monthlyConsents
@@ -170,17 +247,18 @@ export default function AdminPanel() {
 
     // Filtro por estado
     if (filters.status !== "all") {
-      filtered = filtered.filter(consent => consent.consent_decision === filters.status);
+      filtered = filtered.filter(consent => getConsentDisplayStatus(consent) === filters.status);
     }
 
     // Filtro por búsqueda
     if (filters.searchTerm) {
       const searchLower = filters.searchTerm.toLowerCase();
       filtered = filtered.filter(consent =>
-        consent.patient_name.toLowerCase().includes(searchLower) ||
-        consent.patient_surname.toLowerCase().includes(searchLower) ||
-        consent.document_number.toLowerCase().includes(searchLower) ||
-        consent.eps.toLowerCase().includes(searchLower)
+        getDisplayPatientName(consent).toLowerCase().includes(searchLower) ||
+        getConsentDocumentNumber(consent).toLowerCase().includes(searchLower) ||
+        getConsentEps(consent).toLowerCase().includes(searchLower) ||
+        getConsentHealthcareCenter(consent).toLowerCase().includes(searchLower) ||
+        (consent.professional_name || '').toLowerCase().includes(searchLower)
       );
     }
 
@@ -192,11 +270,11 @@ export default function AdminPanel() {
     const headers = ["Fecha", "Paciente", "Documento", "Estado", "EPS", "Centro de Salud"];
     const csvData = filteredConsents.map(consent => [
       format(new Date(consent.created_at || ''), "dd/MM/yyyy HH:mm"),
-      `${consent.patient_name} ${consent.patient_surname}`,
-      `${consent.document_type} ${consent.document_number}`,
-      consent.consent_decision === 'aprobar' ? 'Aprobado' : 'Denegado',
-      consent.eps,
-      consent.healthcare_center
+      getDisplayPatientName(consent),
+      `${getConsentDocumentType(consent)} ${getConsentDocumentNumber(consent)}`,
+      getConsentStatusLabel(getConsentDisplayStatus(consent)),
+      getConsentEps(consent),
+      getConsentHealthcareCenter(consent)
     ]);
 
     const csvContent = [headers, ...csvData]
@@ -215,14 +293,34 @@ export default function AdminPanel() {
     toast.success("Datos exportados exitosamente");
   };
 
-  const getStatusBadge = (decision: string) => {
-    return decision === "aprobar" ? (
+  const getStatusBadge = (status: ConsentDisplayStatus) => {
+    if (status === 'signed') {
+      return (
       <Badge className="bg-green-100 text-green-800 border-green-200">
-        ✓ Aprobado
+        ✓ Firmado
       </Badge>
-    ) : (
+      );
+    }
+
+    if (status === 'expired') {
+      return (
+        <Badge className="bg-red-100 text-red-800 border-red-200">
+          ⏰ Expirado
+        </Badge>
+      );
+    }
+
+    if (status === 'pending') {
+      return (
+        <Badge className="bg-amber-100 text-amber-800 border-amber-200">
+          ⏳ Pendiente
+        </Badge>
+      );
+    }
+
+    return (
       <Badge className="bg-red-100 text-red-800 border-red-200">
-        ✗ Denegado
+        📤 Enviado
       </Badge>
     );
   };
@@ -342,14 +440,14 @@ export default function AdminPanel() {
 
               <Card>
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Aprobados</CardTitle>
+                  <CardTitle className="text-sm font-medium">Firmados</CardTitle>
                   <TrendingUp className="h-4 w-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-600">{stats.approvedConsents}</div>
+                  <div className="text-2xl font-bold text-green-600">{stats.signedConsents}</div>
                   <p className="text-xs text-muted-foreground">
                     {stats.totalConsents > 0 ? 
-                      `${((stats.approvedConsents / stats.totalConsents) * 100).toFixed(1)}% del total` : 
+                      `${((stats.signedConsents / stats.totalConsents) * 100).toFixed(1)}% del total` : 
                       'No hay datos'
                     }
                   </p>
@@ -431,10 +529,10 @@ export default function AdminPanel() {
                       <div className="w-2 h-2 bg-medical-blue rounded-full"></div>
                       <div className="flex-1">
                         <p className="font-medium text-sm">
-                          Consentimiento {consent.consent_decision === 'aprobar' ? 'aprobado' : 'denegado'}
+                          Consentimiento {getConsentStatusLabel(getConsentDisplayStatus(consent)).toLowerCase()}
                         </p>
                         <p className="text-xs text-gray-600">
-                          {consent.patient_name} {consent.patient_surname} - {consent.document_number}
+                          {getDisplayPatientName(consent)} - {getConsentDocumentNumber(consent)}
                         </p>
                       </div>
                       <div className="text-xs text-gray-500">
@@ -486,8 +584,10 @@ export default function AdminPanel() {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="all">Todos</SelectItem>
-                        <SelectItem value="aprobar">Aprobados</SelectItem>
-                        <SelectItem value="disentir">Denegados</SelectItem>
+                        <SelectItem value="signed">Firmados</SelectItem>
+                        <SelectItem value="sent">Enviados</SelectItem>
+                        <SelectItem value="pending">Pendientes</SelectItem>
+                        <SelectItem value="expired">Expirados</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -497,7 +597,7 @@ export default function AdminPanel() {
                     <div className="relative">
                       <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
                       <Input
-                        placeholder="Nombre, documento, EPS..."
+                        placeholder="Nombre, documento, profesional o sede..."
                         value={filters.searchTerm}
                         onChange={(e) => setFilters(prev => ({...prev, searchTerm: e.target.value}))}
                         className="pl-10"
@@ -560,30 +660,30 @@ export default function AdminPanel() {
                             <TableCell>
                               <div>
                                 <p className="font-medium">
-                                  {consent.patient_name} {consent.patient_surname}
+                                  {getDisplayPatientName(consent)}
                                 </p>
-                                <p className="text-sm text-gray-600">Edad: {consent.age} años</p>
+                                <p className="text-sm text-gray-600">Tipo: {consent.consent_type}</p>
                               </div>
                             </TableCell>
                             <TableCell>
                               <div>
-                                <p className="font-medium">{consent.document_type}</p>
-                                <p className="text-sm text-gray-600">{consent.document_number}</p>
+                                <p className="font-medium">{getConsentDocumentType(consent)}</p>
+                                <p className="text-sm text-gray-600">{getConsentDocumentNumber(consent)}</p>
                               </div>
                             </TableCell>
                             <TableCell className="text-sm max-w-[200px] truncate">
-                              {consent.eps}
+                              {getConsentEps(consent)}
                             </TableCell>
                             <TableCell className="text-sm max-w-[150px] truncate">
-                              {consent.healthcare_center}
+                              {getConsentHealthcareCenter(consent)}
                             </TableCell>
                             <TableCell>
-                              {getStatusBadge(consent.consent_decision)}
+                              {getStatusBadge(getConsentDisplayStatus(consent))}
                             </TableCell>
                             <TableCell className="text-sm">
                               <div>
-                                <p className="font-medium">{consent.professional_name}</p>
-                                <p className="text-xs text-gray-600">{consent.professional_document}</p>
+                                <p className="font-medium">{consent.professional_name || 'No asignado'}</p>
+                                <p className="text-xs text-gray-600">{consent.professional_document || 'Sin documento'}</p>
                               </div>
                             </TableCell>
                           </TableRow>
@@ -611,15 +711,15 @@ export default function AdminPanel() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Tendencia de Aprobaciones</CardTitle>
+                  <CardTitle>Tendencia de Firmas</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-center py-8">
                     <BarChart3 className="h-16 w-16 mx-auto mb-4 text-gray-400" />
                     <p className="text-gray-600">Gráfico de tendencias</p>
                     <p className="text-sm text-gray-500 mt-2">
-                      Tasa de aprobación: {stats.totalConsents > 0 ? 
-                        `${((stats.approvedConsents / stats.totalConsents) * 100).toFixed(1)}%` : 
+                      Tasa de firma: {stats.totalConsents > 0 ? 
+                        `${((stats.signedConsents / stats.totalConsents) * 100).toFixed(1)}%` : 
                         'N/A'
                       }
                     </p>
@@ -635,7 +735,8 @@ export default function AdminPanel() {
                   <div className="space-y-4">
                     {Object.entries(
                       consents.reduce((acc, consent) => {
-                        acc[consent.healthcare_center] = (acc[consent.healthcare_center] || 0) + 1;
+                        const healthcareCenter = getConsentHealthcareCenter(consent);
+                        acc[healthcareCenter] = (acc[healthcareCenter] || 0) + 1;
                         return acc;
                       }, {} as Record<string, number>)
                     ).map(([center, count]) => (
@@ -657,7 +758,8 @@ export default function AdminPanel() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   {Object.entries(
                     consents.reduce((acc, consent) => {
-                      acc[consent.eps] = (acc[consent.eps] || 0) + 1;
+                      const eps = getConsentEps(consent);
+                      acc[eps] = (acc[eps] || 0) + 1;
                       return acc;
                     }, {} as Record<string, number>)
                   )
