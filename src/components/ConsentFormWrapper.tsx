@@ -109,13 +109,13 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
           .from('professional_signatures')
           .select('signature_data, professional_name, professional_document')
           .eq('created_by', user.id)
-          .single();
+          .maybeSingle();
         profSig = dbSig;
       }
 
       if (!profSig?.signature_data) {
         toast.error('Falta la firma del profesional', {
-          description: 'Debe registrar su firma profesional antes de generar cualquier consentimiento. Vaya a "Registro de Firma" en el menú.',
+          description: 'El profesional seleccionado no tiene firma registrada. Selecciónelo en el listado o registre la firma en el panel de administración.',
           duration: 6000,
         });
         setIsPreDiligenciando(false);
