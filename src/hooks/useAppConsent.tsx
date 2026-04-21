@@ -13,12 +13,14 @@ export const useAppConsent = () => {
       if (result.success) {
         toast.success(result.message);
       } else {
-        toast.error(result.message);
+        toast.error(result.message || 'Error al guardar el consentimiento');
       }
       
       return result;
     } catch (error) {
-      const errorMessage = 'Error al guardar el consentimiento';
+      const errorMessage = error instanceof Error && error.message
+        ? error.message
+        : 'Error al guardar el consentimiento';
       toast.error(errorMessage);
       return {
         id: '',

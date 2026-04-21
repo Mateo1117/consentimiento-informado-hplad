@@ -253,10 +253,16 @@ class AppConsentService {
       };
     } catch (error) {
       logger.error('Error in saveAppConsent:', error);
+      const rawMessage =
+        (error as any)?.message ||
+        (error as any)?.error_description ||
+        (error as any)?.hint ||
+        (error as any)?.details ||
+        'Error al guardar el consentimiento';
       return {
         id: '',
         success: false,
-        message: 'Error al guardar el consentimiento'
+        message: `Error al guardar el consentimiento: ${rawMessage}`
       };
     }
   }
