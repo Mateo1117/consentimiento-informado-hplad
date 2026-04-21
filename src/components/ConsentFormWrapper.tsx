@@ -301,9 +301,10 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
           clinicalRiskNotes: clinicalRiskNotes || undefined,
           generatedAt: new Date().toISOString()
         },
-        professionalName: professionalData?.name,
-        professionalDocument: professionalData?.document,
-        professionalSignatureData: professionalData?.signatureData,
+        // Forzar siempre los datos del profesional logueado
+        professionalName: ownProfSig.professional_name,
+        professionalDocument: ownProfSig.professional_document,
+        professionalSignatureData: ownProfSig.signature_data,
         pdfContent: htmlContent,
         patientSignature: currentPatientSignature || undefined,
         patientPhotoUrl: currentPatientPhoto || undefined,
