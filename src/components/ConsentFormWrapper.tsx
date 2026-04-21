@@ -95,27 +95,19 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuario no autenticado');
 
-      // Usar datos del profesional seleccionado si están disponibles, sino buscar en BD
-      let profSig: { signature_data: string; professional_name: string; professional_document: string } | null = null;
-      
-      if (professionalData?.signatureData && professionalData?.name) {
-        profSig = {
-          signature_data: professionalData.signatureData,
-          professional_name: professionalData.name,
-          professional_document: professionalData.document
-        };
-      } else {
-        const { data: dbSig } = await supabase
-          .from('professional_signatures')
-          .select('signature_data, professional_name, professional_document')
-          .eq('created_by', user.id)
-          .maybeSingle();
-        profSig = dbSig;
-      }
+      // SIEMPRE usar la firma profesional del usuario logueado.
+      // Cada profesional solo puede generar consentimientos a su propio nombre.
+      const { data: profSig, error: profSigError } = await supabase
+        .from('professional_signatures')
+        .select('signature_data, professional_name, professional_document')
+        .eq('created_by', user.id)
+        .maybeSingle();
+
+      if (profSigError) throw profSigError;
 
       if (!profSig?.signature_data) {
         toast.error('Falta la firma del profesional', {
-          description: 'El profesional seleccionado no tiene firma registrada. Selecciónelo en el listado o registre la firma en el panel de administración.',
+          description: 'Debe registrar su firma profesional antes de generar consentimientos. Vaya a "Registro de Firma" en el menú.',
           duration: 6000,
         });
         setIsPreDiligenciando(false);
@@ -156,8 +148,8 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
             generatedAt: new Date().toISOString(),
           },
           created_by: user.id,
-          professional_name: profSig?.professional_name || professionalData?.name,
-          professional_document: profSig?.professional_document || professionalData?.document,
+          professional_name: profSig.professional_name,
+          professional_document: profSig.professional_document,
           professional_signature_data: profSigUrl,
           status: 'sent', // paciente aún debe firmar
           source: 'web',
@@ -178,7 +170,8 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       });
     } catch (err: any) {
       console.error('Error al pre-diligenciar:', err);
-      toast.error('Error al pre-diligenciar el consentimiento');
+      const msg = err?.message || err?.hint || err?.details || 'Error al pre-diligenciar el consentimiento';
+      toast.error(`Error al pre-diligenciar: ${msg}`);
     } finally {
       setIsPreDiligenciando(false);
     }
@@ -227,23 +220,22 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       }
 
       // 2. Validar firma del profesional (OBLIGATORIA siempre para consentimiento completo)
-      // Priorizar la firma del profesional SELECCIONADO (cualquier usuario puede generar
-      // consentimientos a nombre de un profesional ya registrado en el sistema).
-      let validProfessionalSignature: string | null = professionalData?.signatureData || null;
+      // SIEMPRE usar la firma del usuario logueado: cada profesional solo puede generar
+      // consentimientos a su propio nombre.
+      const { data: ownProfSig, error: ownProfSigError } = await supabase
+        .from('professional_signatures')
+        .select('signature_data, professional_name, professional_document')
+        .eq('created_by', user.id)
+        .maybeSingle();
 
-      if (!validProfessionalSignature) {
-        // Fallback: buscar la firma del usuario logueado
-        const { data: profSig } = await supabase
-          .from('professional_signatures')
-          .select('signature_data')
-          .eq('created_by', user.id)
-          .maybeSingle();
-        validProfessionalSignature = profSig?.signature_data || null;
+      if (ownProfSigError) {
+        toast.error(`Error al validar firma profesional: ${ownProfSigError.message}`);
+        return;
       }
 
-      if (!validProfessionalSignature) {
+      if (!ownProfSig?.signature_data) {
         toast.error('Falta la firma del profesional', {
-          description: 'El profesional seleccionado no tiene firma registrada. Selecciónelo en el listado o registre la firma en el panel de administración.',
+          description: 'Debe registrar su firma profesional antes de generar consentimientos. Vaya a "Registro de Firma" en el menú.',
           duration: 6000,
         });
         return;
@@ -309,9 +301,10 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
           clinicalRiskNotes: clinicalRiskNotes || undefined,
           generatedAt: new Date().toISOString()
         },
-        professionalName: professionalData?.name,
-        professionalDocument: professionalData?.document,
-        professionalSignatureData: professionalData?.signatureData,
+        // Forzar siempre los datos del profesional logueado
+        professionalName: ownProfSig.professional_name,
+        professionalDocument: ownProfSig.professional_document,
+        professionalSignatureData: ownProfSig.signature_data,
         pdfContent: htmlContent,
         patientSignature: currentPatientSignature || undefined,
         patientPhotoUrl: currentPatientPhoto || undefined,
