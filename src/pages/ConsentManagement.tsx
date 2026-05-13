@@ -26,6 +26,7 @@ export default function ConsentManagement() {
   const [isLoading, setIsLoading] = useState(true)
   const [isPendingLoading, setIsPendingLoading] = useState(false)
   const [isSignedLoading, setIsSignedLoading] = useState(false)
+  const [isDetailLoading, setIsDetailLoading] = useState(false)
   const [selectedConsent, setSelectedConsent] = useState<ConsentForm | null>(null)
   const [activeTab, setActiveTab] = useState("todos")
   
@@ -58,6 +59,14 @@ export default function ConsentManagement() {
     { value: "app", label: "Dispositivo Móvil" }
   ];
 
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) return error.message
+    if (typeof error === 'object' && error !== null && 'message' in error) {
+      return String((error as { message?: unknown }).message || fallback)
+    }
+    return fallback
+  }
+
   useEffect(() => {
     if (!isSupabaseConfigured()) {
       toast.error("Base de datos no configurada. Las credenciales de Supabase son necesarias para el módulo de gestión.")
@@ -87,7 +96,7 @@ export default function ConsentManagement() {
       const active = data.filter(c => !c.share_expires_at || isAfter(new Date(c.share_expires_at), now))
       setPendingConsents(active)
     } catch (error) {
-      toast.error("Error al cargar consentimientos pendientes")
+      toast.error(getErrorMessage(error, "Error al cargar consentimientos pendientes"))
     } finally {
       setIsPendingLoading(false)
     }
@@ -100,7 +109,7 @@ export default function ConsentManagement() {
       const data = await consentService.getConsentsByStatus('signed')
       setSignedConsents(data)
     } catch (error) {
-      toast.error("Error al cargar consentimientos firmados")
+      toast.error(getErrorMessage(error, "Error al cargar consentimientos firmados"))
     } finally {
       setIsSignedLoading(false)
     }
@@ -117,7 +126,7 @@ export default function ConsentManagement() {
       const data = await consentService.getAllConsents()
       setConsents(data)
     } catch (error) {
-      toast.error("Error al cargar los consentimientos")
+      toast.error(getErrorMessage(error, "Error al cargar los consentimientos"))
     } finally {
       setIsLoading(false)
     }
