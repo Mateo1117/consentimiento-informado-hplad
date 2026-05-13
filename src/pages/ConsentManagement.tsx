@@ -566,7 +566,7 @@ export default function ConsentManagement() {
                               <div className="flex items-center gap-2">
                                 <Dialog>
                                   <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" onClick={() => setSelectedConsent(consent)}>
+                                    <Button variant="outline" size="sm" onClick={() => openConsentDetails(consent)}>
                                       <Eye className="h-4 w-4 mr-1" />
                                       Ver
                                     </Button>
@@ -578,7 +578,12 @@ export default function ConsentManagement() {
                                         Detalles del Consentimiento
                                       </DialogTitle>
                                     </DialogHeader>
-                                    {selectedConsent && (
+                                    {isDetailLoading ? (
+                                      <div className="py-10 text-center text-muted-foreground">
+                                        <RefreshCw className="h-6 w-6 mx-auto mb-2 animate-spin opacity-60" />
+                                        Cargando detalle...
+                                      </div>
+                                    ) : selectedConsent && (
                                       <ScrollArea className="max-h-[70vh]">
                                         <ConsentDetails consent={selectedConsent} />
                                       </ScrollArea>
@@ -745,7 +750,7 @@ export default function ConsentManagement() {
                                 <div className="flex items-center gap-1">
                                   <Dialog>
                                     <DialogTrigger asChild>
-                                      <Button variant="outline" size="sm" onClick={() => setSelectedConsent(consent)} className="h-8 text-xs">
+                                      <Button variant="outline" size="sm" onClick={() => openConsentDetails(consent)} className="h-8 text-xs">
                                         <Eye className="h-3.5 w-3.5 mr-1" />
                                         Ver
                                       </Button>
@@ -757,7 +762,12 @@ export default function ConsentManagement() {
                                           Detalles del Consentimiento
                                         </DialogTitle>
                                       </DialogHeader>
-                                      {selectedConsent && (
+                                      {isDetailLoading ? (
+                                        <div className="py-10 text-center text-muted-foreground">
+                                          <RefreshCw className="h-6 w-6 mx-auto mb-2 animate-spin opacity-60" />
+                                          Cargando detalle...
+                                        </div>
+                                      ) : selectedConsent && (
                                         <ScrollArea className="max-h-[70vh]">
                                           <ConsentDetails consent={selectedConsent} />
                                         </ScrollArea>
@@ -899,7 +909,7 @@ export default function ConsentManagement() {
                               <div className="flex items-center gap-1">
                                 <Dialog>
                                   <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" onClick={() => setSelectedConsent(consent)} className="h-8 text-xs">
+                                    <Button variant="outline" size="sm" onClick={() => openConsentDetails(consent)} className="h-8 text-xs">
                                       <Eye className="h-3.5 w-3.5 mr-1" />
                                       Ver
                                     </Button>
@@ -911,7 +921,12 @@ export default function ConsentManagement() {
                                         Detalles del Consentimiento
                                       </DialogTitle>
                                     </DialogHeader>
-                                    {selectedConsent && (
+                                    {isDetailLoading ? (
+                                      <div className="py-10 text-center text-muted-foreground">
+                                        <RefreshCw className="h-6 w-6 mx-auto mb-2 animate-spin opacity-60" />
+                                        Cargando detalle...
+                                      </div>
+                                    ) : selectedConsent && (
                                       <ScrollArea className="max-h-[70vh]">
                                         <ConsentDetails consent={selectedConsent} />
                                       </ScrollArea>
