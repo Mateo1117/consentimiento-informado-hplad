@@ -161,7 +161,7 @@ export default function ConsentManagement() {
       const data = await consentService.searchConsents(searchFilters);
       setFilteredConsents(data);
     } catch (error) {
-      toast.error("Error al aplicar filtros");
+      toast.error(getErrorMessage(error, "Error al aplicar filtros"));
     } finally {
       setIsLoading(false);
     }
@@ -189,11 +189,24 @@ export default function ConsentManagement() {
       const data = await consentService.getAllConsents();
       setFilteredConsents(data);
     } catch (error) {
-      toast.error("Error al limpiar filtros");
+      toast.error(getErrorMessage(error, "Error al limpiar filtros"));
     } finally {
       setIsLoading(false);
     }
   };
+
+  const openConsentDetails = async (consent: ConsentForm) => {
+    setSelectedConsent(consent)
+    setIsDetailLoading(true)
+    try {
+      const fullConsent = await consentService.getConsentById(consent.id)
+      if (fullConsent) setSelectedConsent(fullConsent)
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Error al cargar el detalle del consentimiento"))
+    } finally {
+      setIsDetailLoading(false)
+    }
+  }
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd/MM/yyyy HH:mm", { locale: es })
