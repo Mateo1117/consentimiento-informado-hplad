@@ -557,7 +557,7 @@ export default function ConsentManagement() {
                                 {consent.patient_photo_url && (
                                   <div className="flex items-center gap-1 text-blue-600">
                                     <Camera className="h-4 w-4" />
-                                    <span className="text-xs">Foto</span>
+                                    <span className="text-xs">Huella</span>
                                   </div>
                                 )}
                               </div>
@@ -850,7 +850,7 @@ export default function ConsentManagement() {
                           <TableHead>Tipo</TableHead>
                           <TableHead>Profesional</TableHead>
                           <TableHead>Firmado por</TableHead>
-                          <TableHead>Firma / Foto</TableHead>
+                          <TableHead>Firma / Huella</TableHead>
                           <TableHead>Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -900,7 +900,7 @@ export default function ConsentManagement() {
                                 {consent.patient_photo_url && (
                                   <div className="flex items-center gap-1 text-blue-600">
                                     <Camera className="h-4 w-4" />
-                                    <span className="text-xs">Foto</span>
+                                    <span className="text-xs">Huella</span>
                                   </div>
                                 )}
                               </div>
@@ -1157,20 +1157,20 @@ function ConsentDetails({ consent }: { consent: ConsentForm }) {
                   </div>
                 )}
               </div>
-              {/* Foto */}
+              {/* Huella */}
               <div>
-                <Label className="text-xs text-gray-600">Foto</Label>
+                <Label className="text-xs text-gray-600">Huella</Label>
                 {consent.professional_photo_url ? (
                   <div className="border rounded-lg p-2 bg-gray-50">
                     <img 
                       src={consent.professional_photo_url} 
-                      alt="Foto del profesional" 
+                      alt="Huella del profesional" 
                       className="max-w-full max-h-24 object-cover rounded"
                     />
                   </div>
                 ) : (
                   <div className="border rounded-lg p-2 bg-gray-50 text-xs text-gray-500 text-center">
-                    Sin foto registrada
+                    Sin huella registrada
                   </div>
                 )}
               </div>
