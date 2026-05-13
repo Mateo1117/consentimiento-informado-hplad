@@ -26,6 +26,7 @@ export default function ConsentManagement() {
   const [isLoading, setIsLoading] = useState(true)
   const [isPendingLoading, setIsPendingLoading] = useState(false)
   const [isSignedLoading, setIsSignedLoading] = useState(false)
+  const [isDetailLoading, setIsDetailLoading] = useState(false)
   const [selectedConsent, setSelectedConsent] = useState<ConsentForm | null>(null)
   const [activeTab, setActiveTab] = useState("todos")
   
@@ -58,6 +59,14 @@ export default function ConsentManagement() {
     { value: "app", label: "Dispositivo Móvil" }
   ];
 
+  const getErrorMessage = (error: unknown, fallback: string) => {
+    if (error instanceof Error && error.message) return error.message
+    if (typeof error === 'object' && error !== null && 'message' in error) {
+      return String((error as { message?: unknown }).message || fallback)
+    }
+    return fallback
+  }
+
   useEffect(() => {
     if (!isSupabaseConfigured()) {
       toast.error("Base de datos no configurada. Las credenciales de Supabase son necesarias para el módulo de gestión.")
@@ -87,7 +96,7 @@ export default function ConsentManagement() {
       const active = data.filter(c => !c.share_expires_at || isAfter(new Date(c.share_expires_at), now))
       setPendingConsents(active)
     } catch (error) {
-      toast.error("Error al cargar consentimientos pendientes")
+      toast.error(getErrorMessage(error, "Error al cargar consentimientos pendientes"))
     } finally {
       setIsPendingLoading(false)
     }
@@ -100,7 +109,7 @@ export default function ConsentManagement() {
       const data = await consentService.getConsentsByStatus('signed')
       setSignedConsents(data)
     } catch (error) {
-      toast.error("Error al cargar consentimientos firmados")
+      toast.error(getErrorMessage(error, "Error al cargar consentimientos firmados"))
     } finally {
       setIsSignedLoading(false)
     }
@@ -117,7 +126,7 @@ export default function ConsentManagement() {
       const data = await consentService.getAllConsents()
       setConsents(data)
     } catch (error) {
-      toast.error("Error al cargar los consentimientos")
+      toast.error(getErrorMessage(error, "Error al cargar los consentimientos"))
     } finally {
       setIsLoading(false)
     }
@@ -152,7 +161,7 @@ export default function ConsentManagement() {
       const data = await consentService.searchConsents(searchFilters);
       setFilteredConsents(data);
     } catch (error) {
-      toast.error("Error al aplicar filtros");
+      toast.error(getErrorMessage(error, "Error al aplicar filtros"));
     } finally {
       setIsLoading(false);
     }
@@ -180,11 +189,24 @@ export default function ConsentManagement() {
       const data = await consentService.getAllConsents();
       setFilteredConsents(data);
     } catch (error) {
-      toast.error("Error al limpiar filtros");
+      toast.error(getErrorMessage(error, "Error al limpiar filtros"));
     } finally {
       setIsLoading(false);
     }
   };
+
+  const openConsentDetails = async (consent: ConsentForm) => {
+    setSelectedConsent(consent)
+    setIsDetailLoading(true)
+    try {
+      const fullConsent = await consentService.getConsentById(consent.id)
+      if (fullConsent) setSelectedConsent(fullConsent)
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Error al cargar el detalle del consentimiento"))
+    } finally {
+      setIsDetailLoading(false)
+    }
+  }
 
   const formatDate = (dateString: string) => {
     return format(new Date(dateString), "dd/MM/yyyy HH:mm", { locale: es })
@@ -535,7 +557,7 @@ export default function ConsentManagement() {
                                 {consent.patient_photo_url && (
                                   <div className="flex items-center gap-1 text-blue-600">
                                     <Camera className="h-4 w-4" />
-                                    <span className="text-xs">Foto</span>
+                                    <span className="text-xs">Huella</span>
                                   </div>
                                 )}
                               </div>
@@ -544,7 +566,7 @@ export default function ConsentManagement() {
                               <div className="flex items-center gap-2">
                                 <Dialog>
                                   <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" onClick={() => setSelectedConsent(consent)}>
+                                    <Button variant="outline" size="sm" onClick={() => openConsentDetails(consent)}>
                                       <Eye className="h-4 w-4 mr-1" />
                                       Ver
                                     </Button>
@@ -556,7 +578,12 @@ export default function ConsentManagement() {
                                         Detalles del Consentimiento
                                       </DialogTitle>
                                     </DialogHeader>
-                                    {selectedConsent && (
+                                    {isDetailLoading ? (
+                                      <div className="py-10 text-center text-muted-foreground">
+                                        <RefreshCw className="h-6 w-6 mx-auto mb-2 animate-spin opacity-60" />
+                                        Cargando detalle...
+                                      </div>
+                                    ) : selectedConsent && (
                                       <ScrollArea className="max-h-[70vh]">
                                         <ConsentDetails consent={selectedConsent} />
                                       </ScrollArea>
@@ -723,7 +750,7 @@ export default function ConsentManagement() {
                                 <div className="flex items-center gap-1">
                                   <Dialog>
                                     <DialogTrigger asChild>
-                                      <Button variant="outline" size="sm" onClick={() => setSelectedConsent(consent)} className="h-8 text-xs">
+                                      <Button variant="outline" size="sm" onClick={() => openConsentDetails(consent)} className="h-8 text-xs">
                                         <Eye className="h-3.5 w-3.5 mr-1" />
                                         Ver
                                       </Button>
@@ -735,7 +762,12 @@ export default function ConsentManagement() {
                                           Detalles del Consentimiento
                                         </DialogTitle>
                                       </DialogHeader>
-                                      {selectedConsent && (
+                                      {isDetailLoading ? (
+                                        <div className="py-10 text-center text-muted-foreground">
+                                          <RefreshCw className="h-6 w-6 mx-auto mb-2 animate-spin opacity-60" />
+                                          Cargando detalle...
+                                        </div>
+                                      ) : selectedConsent && (
                                         <ScrollArea className="max-h-[70vh]">
                                           <ConsentDetails consent={selectedConsent} />
                                         </ScrollArea>
@@ -818,7 +850,7 @@ export default function ConsentManagement() {
                           <TableHead>Tipo</TableHead>
                           <TableHead>Profesional</TableHead>
                           <TableHead>Firmado por</TableHead>
-                          <TableHead>Firma / Foto</TableHead>
+                          <TableHead>Firma / Huella</TableHead>
                           <TableHead>Acciones</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -868,7 +900,7 @@ export default function ConsentManagement() {
                                 {consent.patient_photo_url && (
                                   <div className="flex items-center gap-1 text-blue-600">
                                     <Camera className="h-4 w-4" />
-                                    <span className="text-xs">Foto</span>
+                                    <span className="text-xs">Huella</span>
                                   </div>
                                 )}
                               </div>
@@ -877,7 +909,7 @@ export default function ConsentManagement() {
                               <div className="flex items-center gap-1">
                                 <Dialog>
                                   <DialogTrigger asChild>
-                                    <Button variant="outline" size="sm" onClick={() => setSelectedConsent(consent)} className="h-8 text-xs">
+                                    <Button variant="outline" size="sm" onClick={() => openConsentDetails(consent)} className="h-8 text-xs">
                                       <Eye className="h-3.5 w-3.5 mr-1" />
                                       Ver
                                     </Button>
@@ -889,7 +921,12 @@ export default function ConsentManagement() {
                                         Detalles del Consentimiento
                                       </DialogTitle>
                                     </DialogHeader>
-                                    {selectedConsent && (
+                                    {isDetailLoading ? (
+                                      <div className="py-10 text-center text-muted-foreground">
+                                        <RefreshCw className="h-6 w-6 mx-auto mb-2 animate-spin opacity-60" />
+                                        Cargando detalle...
+                                      </div>
+                                    ) : selectedConsent && (
                                       <ScrollArea className="max-h-[70vh]">
                                         <ConsentDetails consent={selectedConsent} />
                                       </ScrollArea>
@@ -1120,20 +1157,20 @@ function ConsentDetails({ consent }: { consent: ConsentForm }) {
                   </div>
                 )}
               </div>
-              {/* Foto */}
+              {/* Huella */}
               <div>
-                <Label className="text-xs text-gray-600">Foto</Label>
+                <Label className="text-xs text-gray-600">Huella</Label>
                 {consent.professional_photo_url ? (
                   <div className="border rounded-lg p-2 bg-gray-50">
                     <img 
                       src={consent.professional_photo_url} 
-                      alt="Foto del profesional" 
+                      alt="Huella del profesional" 
                       className="max-w-full max-h-24 object-cover rounded"
                     />
                   </div>
                 ) : (
                   <div className="border rounded-lg p-2 bg-gray-50 text-xs text-gray-500 text-center">
-                    Sin foto registrada
+                    Sin huella registrada
                   </div>
                 )}
               </div>
