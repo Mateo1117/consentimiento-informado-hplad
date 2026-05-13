@@ -35,6 +35,10 @@ export interface ConsentManagementData extends ConsentRow {
   status_badge?: 'signed' | 'sent' | 'expired';
 }
 
+type ConsentListRow = Partial<ConsentRow> & Pick<ConsentRow,
+  'id' | 'created_at' | 'updated_at' | 'created_by' | 'patient_name' | 'consent_type' | 'status' | 'share_token' | 'pdf_size'
+>;
+
 class ConsentManagementService {
   async getAllConsents(): Promise<ConsentManagementData[]> {
     try {
@@ -52,12 +56,7 @@ class ConsentManagementService {
 
       logger.info('Consents loaded successfully', { count: data?.length || 0 });
       
-      // Process data for display
-      const processedData = data?.map(consent => ({
-        ...consent,
-        patient_full_name: consent.patient_name,
-        status_badge: this.getStatusBadge(consent),
-      })) || [];
+      const processedData = data?.map(consent => this.normalizeConsentListRow(consent)) || [];
 
       return processedData;
     } catch (error) {
@@ -79,11 +78,7 @@ class ConsentManagementService {
         throw new Error(error.message || 'Error al filtrar consentimientos');
       }
 
-      return data?.map(consent => ({
-        ...consent,
-        patient_full_name: consent.patient_name,
-        status_badge: this.getStatusBadge(consent),
-      })) || [];
+      return data?.map(consent => this.normalizeConsentListRow(consent)) || [];
     } catch (error) {
       logger.error('Error in getConsentsByStatus:', error);
       throw error;
@@ -137,18 +132,39 @@ class ConsentManagementService {
         throw new Error(error.message || 'Error al buscar consentimientos');
       }
 
-      return data?.map(consent => ({
-        ...consent,
-        patient_full_name: consent.patient_name,
-        status_badge: this.getStatusBadge(consent),
-      })) || [];
+      return data?.map(consent => this.normalizeConsentListRow(consent)) || [];
     } catch (error) {
       logger.error('Error in searchConsents:', error);
       throw error;
     }
   }
 
-  private getStatusBadge(consent: ConsentRow): 'signed' | 'sent' | 'expired' {
+  private normalizeConsentListRow(consent: ConsentListRow): ConsentManagementData {
+    return {
+      patient_document_number: null,
+      patient_document_type: null,
+      patient_email: null,
+      patient_phone: null,
+      patient_photo_url: null,
+      patient_signature_data: null,
+      payload: {},
+      pdf_url: null,
+      professional_document: null,
+      professional_name: null,
+      professional_photo_url: null,
+      professional_signature_data: null,
+      share_expires_at: null,
+      signed_at: null,
+      signed_by_name: null,
+      signature_data: null,
+      source: null,
+      ...consent,
+      patient_full_name: consent.patient_name,
+      status_badge: this.getStatusBadge(consent),
+    };
+  }
+
+  private getStatusBadge(consent: Pick<ConsentRow, 'status'> & Partial<Pick<ConsentRow, 'share_expires_at'>>): 'signed' | 'sent' | 'expired' {
     if (consent.status === 'signed') return 'signed';
     
     if (consent.share_expires_at) {
