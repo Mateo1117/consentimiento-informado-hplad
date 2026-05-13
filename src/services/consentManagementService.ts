@@ -4,6 +4,30 @@ import { logger } from "@/utils/logger";
 
 type ConsentRow = Database['public']['Tables']['consents']['Row'];
 
+const CONSENT_LIST_COLUMNS = `
+  id,
+  created_at,
+  updated_at,
+  created_by,
+  patient_name,
+  patient_document_type,
+  patient_document_number,
+  patient_email,
+  patient_phone,
+  consent_type,
+  status,
+  share_token,
+  share_expires_at,
+  signed_at,
+  signed_by_name,
+  pdf_url,
+  pdf_size,
+  professional_document,
+  professional_name,
+  source,
+  payload
+`;
+
 export interface ConsentManagementData extends ConsentRow {
   // Additional computed fields for display
   patient_full_name?: string;
@@ -18,12 +42,12 @@ class ConsentManagementService {
       
       const { data, error } = await supabase
         .from('consents')
-        .select('*')
+        .select(CONSENT_LIST_COLUMNS)
         .order('created_at', { ascending: false });
 
       if (error) {
-        logger.error('Error fetching consents:', { error: error.message });
-        throw new Error('Error al obtener los consentimientos');
+        logger.error('Error fetching consents:', { error: error.message, details: error.details, hint: error.hint });
+        throw new Error(error.message || 'Error al obtener los consentimientos');
       }
 
       logger.info('Consents loaded successfully', { count: data?.length || 0 });
@@ -46,13 +70,13 @@ class ConsentManagementService {
     try {
       const { data, error } = await supabase
         .from('consents')
-        .select('*')
+        .select(CONSENT_LIST_COLUMNS)
         .eq('status', status)
         .order('created_at', { ascending: false });
 
       if (error) {
-        logger.error('Error fetching consents by status:', { error: error.message, status });
-        throw new Error('Error al filtrar consentimientos');
+        logger.error('Error fetching consents by status:', { error: error.message, details: error.details, hint: error.hint, status });
+        throw new Error(error.message || 'Error al filtrar consentimientos');
       }
 
       return data?.map(consent => ({
@@ -76,7 +100,7 @@ class ConsentManagementService {
     source?: string;
   }): Promise<ConsentManagementData[]> {
     try {
-      let query = supabase.from('consents').select('*');
+      let query = supabase.from('consents').select(CONSENT_LIST_COLUMNS);
 
       if (filters.documentType) {
         query = query.eq('patient_document_type', filters.documentType);
@@ -109,8 +133,8 @@ class ConsentManagementService {
       const { data, error } = await query.order('created_at', { ascending: false });
 
       if (error) {
-        logger.error('Error searching consents:', { error: error.message });
-        throw new Error('Error al buscar consentimientos');
+        logger.error('Error searching consents:', { error: error.message, details: error.details, hint: error.hint });
+        throw new Error(error.message || 'Error al buscar consentimientos');
       }
 
       return data?.map(consent => ({
