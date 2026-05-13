@@ -24,8 +24,7 @@ const CONSENT_LIST_COLUMNS = `
   pdf_size,
   professional_document,
   professional_name,
-  source,
-  payload
+  source
 `;
 
 export interface ConsentManagementData extends ConsentRow {
