@@ -661,7 +661,7 @@ export function UserManagement() {
                                 PDF de firma cargado
                               </div>
                             ) : (
-                              <img src={newUserSignaturePreview} alt="Firma" className="max-h-20 mx-auto object-contain" />
+                              <img src={newUserSignaturePreview} alt="Firma digital del usuario" className="max-h-20 mx-auto object-contain" />
                             )}
                             <p className="text-xs text-muted-foreground">Clic para cambiar</p>
                           </div>
@@ -1113,7 +1113,7 @@ export function UserManagement() {
                 <div className="border rounded-lg p-3 bg-muted/30 flex items-center justify-center">
                   <img 
                     src={existingSignature} 
-                    alt="Firma actual" 
+                    alt="Firma digital actual del usuario" 
                     className="max-h-32 object-contain"
                   />
                 </div>
@@ -1176,7 +1176,7 @@ export function UserManagement() {
                   ) : (
                     <img 
                       src={signaturePreview} 
-                      alt="Preview firma" 
+                      alt="Vista previa de la nueva firma digital" 
                       className="max-h-32 object-contain"
                     />
                   )}
