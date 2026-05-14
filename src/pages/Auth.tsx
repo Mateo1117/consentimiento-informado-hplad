@@ -163,7 +163,7 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-medical-blue-light to-background flex items-center justify-center p-4">
+    <main className="min-h-screen bg-gradient-to-br from-medical-blue-light to-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
@@ -174,7 +174,7 @@ export default function Auth() {
               className="h-52 w-auto object-contain"
             />
             <div>
-              <h1 className="text-xl font-bold text-medical-blue">E.S.E Hospital La Mesa Pedro León Álvarez Díaz</h1>
+              <h1 className="text-xl font-bold text-medical-blue">Iniciar Sesión - E.S.E Hospital La Mesa Pedro León Álvarez Díaz</h1>
               <p className="text-sm text-medical-gray">Sistema de Consentimientos Informados</p>
             </div>
           </div>
@@ -370,6 +370,6 @@ export default function Auth() {
           <p>Sistema Seguro de Consentimientos Informados</p>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

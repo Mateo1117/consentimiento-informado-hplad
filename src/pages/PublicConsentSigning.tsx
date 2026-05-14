@@ -156,8 +156,9 @@ export const PublicConsentSigning: React.FC = () => {
   const hasProfessionalSignature = !!consent.professional_signature_data || !!consent.professional_name;
 
   return (
-    <div className="min-h-screen bg-background py-6">
+    <main className="min-h-screen bg-background py-6">
       <div className="container mx-auto px-4 max-w-4xl">
+        <h1 className="sr-only">Firma de Consentimiento Informado</h1>
         <Card>
           <CardHeader className="text-center border-b pb-6">
             <div className="flex items-center justify-center mb-3">
@@ -332,7 +333,7 @@ export const PublicConsentSigning: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </main>
   );
 };
 

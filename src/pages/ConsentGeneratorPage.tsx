@@ -84,9 +84,8 @@ const ConsentimientoInformado = () => {
     <div className="max-w-4xl mx-auto p-6 bg-white min-h-screen">
       <div className="bg-blue-50 p-6 rounded-lg shadow-lg">
         <div className="text-center mb-6">
-          <h1 className="text-2xl font-bold text-blue-800 mb-2">FORMATO 119</h1>
+          <h1 className="text-2xl font-bold text-blue-800 mb-2">Generador de Consentimiento - Carga de Glucosa (Formato 119)</h1>
           <h2 className="text-xl font-semibold text-blue-700 mb-1">CONSENTIMIENTO INFORMADO</h2>
-          <h3 className="text-lg font-semibold text-blue-700">PARA CARGA DE GLUCOSA</h3>
           <div className="text-sm text-gray-600 mt-4">
             <p>La Mesa – Cundinamarca, Calle 8 No. 25 – 34</p>
             <p>Call Center: 3172601556 | Email: atencionalusuario@hospilamesa.gov.co</p>

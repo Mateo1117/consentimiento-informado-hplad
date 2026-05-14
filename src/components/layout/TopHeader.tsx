@@ -66,6 +66,7 @@ export function TopHeader({ onMenuClick }: TopHeaderProps) {
           variant="ghost" 
           size="sm" 
           onClick={onMenuClick}
+          aria-label="Abrir menú de navegación"
           className="text-primary-foreground hover:bg-primary-foreground/10 min-h-[44px] min-w-[44px]"
         >
           <Menu className="h-5 w-5" />

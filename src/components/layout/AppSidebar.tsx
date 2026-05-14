@@ -114,9 +114,9 @@ export function AppSidebar({ isOverlay, onClose }: AppSidebarProps) {
       {/* Title Section */}
       {!collapsed && (
         <div className="mb-5 text-center">
-          <h1 className="text-primary font-bold text-sm leading-tight">
+          <p className="text-primary font-bold text-sm leading-tight">
             Sistema de Consentimientos Informados
-          </h1>
+          </p>
           <div className="flex items-start gap-2 text-left mt-2">
             <div className="w-2 h-2 rounded-full bg-primary mt-1.5 shrink-0"></div>
             <span className="text-xs text-muted-foreground leading-tight">
@@ -157,6 +157,7 @@ export function AppSidebar({ isOverlay, onClose }: AppSidebarProps) {
             variant="ghost"
             size="sm"
             onClick={() => setIsCollapsed(!isCollapsed)}
+            aria-label={isCollapsed ? "Expandir menú lateral" : "Colapsar menú lateral"}
             className={cn(
               "w-full justify-center gap-2 text-muted-foreground hover:text-foreground rounded-xl min-h-[44px]",
               isCollapsed && "px-0"
