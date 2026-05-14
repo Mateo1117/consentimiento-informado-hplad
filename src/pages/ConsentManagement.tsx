@@ -195,6 +195,27 @@ export default function ConsentManagement() {
     }
   };
 
+  const reloadAndResetFilters = async () => {
+    setFilters({
+      documentType: "all",
+      documentNumber: "",
+      patientName: "",
+      status: "all",
+      source: "all"
+    });
+    try {
+      setIsLoading(true);
+      await loadConsents();
+      await loadPendingConsents();
+      await loadSignedConsents();
+      toast.success("Lista recargada y filtros reiniciados");
+    } catch (error) {
+      toast.error(getErrorMessage(error, "Error al recargar la lista"));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const openConsentDetails = async (consent: ConsentForm) => {
     setSelectedConsent(consent)
     setIsDetailLoading(true)
@@ -474,6 +495,15 @@ export default function ConsentManagement() {
                   </Button>
                   <Button variant="outline" onClick={clearFilters}>
                     Limpiar Filtros
+                  </Button>
+                  <Button
+                    variant="outline"
+                    onClick={reloadAndResetFilters}
+                    disabled={isLoading}
+                    className="ml-auto"
+                  >
+                    <RefreshCw className={`h-4 w-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+                    Recargar y reiniciar filtros
                   </Button>
                 </div>
 
