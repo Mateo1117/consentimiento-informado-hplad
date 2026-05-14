@@ -333,7 +333,7 @@ export const PublicConsentSigning: React.FC = () => {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </main>
   );
 };
 
