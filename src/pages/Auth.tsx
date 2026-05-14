@@ -370,6 +370,6 @@ export default function Auth() {
           <p>Sistema Seguro de Consentimientos Informados</p>
         </div>
       </div>
-    </div>
+    </main>
   );
 }
