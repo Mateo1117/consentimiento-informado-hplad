@@ -1,0 +1,14 @@
+# Consentimientos Informados HPLAD
+
+> Plataforma digital de la E.S.E. Hospital Pedro León Álvarez Díaz de La Mesa para gestionar, enviar y firmar consentimientos informados clínicos de forma segura.
+
+El sistema permite al personal médico generar consentimientos para procedimientos como venopunción, prueba de VIH, transfusión de hemocomponentes, carga de glucosa y frotis vaginal, enviarlos al paciente por correo, SMS o WhatsApp, y recibir la firma con captura de huella biométrica. La mayoría de las rutas requieren autenticación; solo el enlace personalizado de firma es público.
+
+## Pages
+
+- [Inicio](/): Acceso principal a la plataforma.
+- [Iniciar sesión](/auth): Autenticación del personal del hospital.
+
+## Optional
+
+- [Firma remota de consentimiento](/firmar/): Página pública de firma generada por enlace único enviado al paciente.
