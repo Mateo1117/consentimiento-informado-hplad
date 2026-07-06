@@ -1,5 +1,5 @@
 import { useAuth } from "@/hooks/useAuth";
-import { Navigate, useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, ShieldAlert, ArrowLeft } from "lucide-react";
@@ -14,6 +14,7 @@ interface ProtectedRouteProps {
 export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) {
   const { user, isLoading, isAuthenticated, roles } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -31,7 +32,9 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
   }
 
   if (!isAuthenticated) {
-    return <Navigate to="/auth" replace />;
+    const next = location.pathname + location.search;
+    const to = next && next !== "/" ? `/auth?next=${encodeURIComponent(next)}` : "/auth";
+    return <Navigate to={to} replace />;
   }
 
   // Check role-based access from database roles
