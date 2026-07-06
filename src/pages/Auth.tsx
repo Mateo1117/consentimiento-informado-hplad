@@ -8,11 +8,15 @@ import { Separator } from "@/components/ui/separator";
 import { AlertCircle, Shield, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import logoHospital from "@/assets/logo_hospital.png";
 
 export default function Auth() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const nextParam = searchParams.get("next");
+  const safeNext = nextParam && nextParam.startsWith("/") && !nextParam.startsWith("//") ? nextParam : "/";
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   
@@ -34,11 +38,11 @@ export default function Auth() {
     const checkUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        navigate("/");
+        navigate(safeNext, { replace: true });
       }
     };
     checkUser();
-  }, [navigate]);
+  }, [navigate, safeNext]);
 
   const cleanupAuthState = () => {
     // Clean up any existing auth state
@@ -89,7 +93,7 @@ export default function Auth() {
       if (data.user) {
         toast.success("Sesión iniciada correctamente");
         // Force page reload for clean state
-        window.location.href = '/';
+        window.location.href = safeNext;
       }
     } catch (error: any) {
       console.error('Sign in error:', error);
@@ -126,7 +130,7 @@ export default function Auth() {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/`,
+          emailRedirectTo: `${window.location.origin}${safeNext}`,
           data: {
             full_name: fullName,
             role: role
