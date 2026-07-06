@@ -1,0 +1,125 @@
+{
+  "version": 1,
+  "sdk_version": "0.20.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://dbhamokkweyadibngphq.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "hplad-consent-mcp",
+      "version": "0.1.0",
+      "title": "HPLAD Consentimientos MCP"
+    },
+    "tools": [
+      {
+        "name": "list_consents",
+        "title": "List consents",
+        "description": "List informed-consent records visible to the signed-in user, with optional filters by status, source, consent type, patient name or document number.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "sent",
+                "signed",
+                "expired",
+                "cancelled"
+              ]
+            },
+            "source": {
+              "type": "string",
+              "enum": [
+                "web",
+                "app"
+              ]
+            },
+            "consent_type": {
+              "type": "string",
+              "description": "Consent type key (e.g. carga_glucosa, hiv)."
+            },
+            "patient_name": {
+              "type": "string",
+              "description": "Case-insensitive partial match on patient name."
+            },
+            "patient_document_number": {
+              "type": "string"
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "description": "Max rows to return (default 25)."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_consent",
+        "title": "Get consent",
+        "description": "Fetch full details of a single informed-consent record by id.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "Consent row id (uuid)."
+            }
+          },
+          "required": [
+            "id"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "consent_stats",
+        "title": "Consent statistics",
+        "description": "Return counts of informed-consent records visible to the signed-in user, grouped by status (and optionally within a date range).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "from": {
+              "type": "string",
+              "description": "ISO date lower bound on created_at."
+            },
+            "to": {
+              "type": "string",
+              "description": "ISO date upper bound on created_at."
+            }
+          },
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
