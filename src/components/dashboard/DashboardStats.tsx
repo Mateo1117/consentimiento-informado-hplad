@@ -59,6 +59,10 @@ export function DashboardStats({ stats, isLoading }: DashboardStatsProps) {
     },
   ];
 
+  const completionRate = stats.totalConsents > 0
+    ? Math.round((stats.signedConsents / stats.totalConsents) * 100)
+    : 0;
+
   const getVariantClasses = (variant: string) => {
     switch (variant) {
       case "primary":
@@ -89,7 +93,15 @@ export function DashboardStats({ stats, isLoading }: DashboardStatsProps) {
   };
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+    <div className="space-y-3">
+      <div className="flex items-center justify-between text-sm">
+        <span className="font-medium text-foreground">Cumplimiento de firma</span>
+        <span className="font-bold text-accent">{isLoading ? "…" : `${completionRate}%`}</span>
+      </div>
+      <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Cumplimiento de firma" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completionRate}>
+        <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${completionRate}%` }} />
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       {statCards.map((stat) => {
         const variantClasses = getVariantClasses(stat.variant);
         return (
@@ -119,6 +131,7 @@ export function DashboardStats({ stats, isLoading }: DashboardStatsProps) {
           </Card>
         );
       })}
+      </div>
     </div>
   );
 }

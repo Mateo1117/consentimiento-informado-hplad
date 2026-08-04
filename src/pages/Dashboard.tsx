@@ -7,6 +7,8 @@ import { TabConsentsByType } from "@/components/dashboard/TabConsentsByType";
 import { TabConsentsBySpecialty } from "@/components/dashboard/TabConsentsBySpecialty";
 import { TabConsentsBySource } from "@/components/dashboard/TabConsentsBySource";
 import { TabConsentsByDoctor } from "@/components/dashboard/TabConsentsByDoctor";
+import { TabConsentsMonthly } from "@/components/dashboard/TabConsentsMonthly";
+import { TabConsentsByEPS } from "@/components/dashboard/TabConsentsByEPS";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
@@ -14,6 +16,8 @@ import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfWeek, startOfMonth, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
+import { fetchAnalyticsConsents } from "@/services/dashboardAnalyticsService";
+import { toast } from "sonner";
 
 interface StatsData {
   totalConsents: number;
@@ -141,18 +145,11 @@ const Dashboard = () => {
 
   const generateChartData = async (rangeStart?: string, rangeEnd?: string) => {
     try {
-      // Fetch all consents in range with just created_at
-      let q = supabase.from('consents').select('created_at');
-      if (rangeStart) q = q.gte('created_at', rangeStart);
-      if (rangeEnd) q = q.lte('created_at', rangeEnd);
-      q = q.order('created_at', { ascending: true });
-
-      const { data: consents, error } = await q;
-      if (error) throw error;
+      const consents = await fetchAnalyticsConsents(rangeStart, rangeEnd);
 
       // Group by day
       const dayCounts: Record<string, number> = {};
-      (consents || []).forEach(c => {
+      consents.forEach(c => {
         const day = format(new Date(c.created_at), 'yyyy-MM-dd');
         dayCounts[day] = (dayCounts[day] || 0) + 1;
       });
@@ -189,6 +186,7 @@ const Dashboard = () => {
 
     } catch (error) {
       console.error('Error generating chart data:', error);
+      toast.error(error instanceof Error ? error.message : 'Error al cargar las tendencias');
     }
   };
 
@@ -208,7 +206,7 @@ const Dashboard = () => {
 
   return (
     <MainLayout>
-      <div className="p-6">
+      <div className="p-4 md:p-6">
         <DashboardHeader
           dateFrom={dateFrom}
           dateTo={dateTo}
@@ -278,9 +276,11 @@ const Dashboard = () => {
         )}
 
         {activeTab === "tipo" && <TabConsentsByType {...dateRangeProps} />}
+        {activeTab === "mensual" && <TabConsentsMonthly {...dateRangeProps} />}
         {activeTab === "especialidad" && <TabConsentsBySpecialty {...dateRangeProps} />}
         {activeTab === "sede" && <TabConsentsBySource {...dateRangeProps} />}
         {activeTab === "medico" && <TabConsentsByDoctor {...dateRangeProps} />}
+        {activeTab === "eps" && <TabConsentsByEPS {...dateRangeProps} />}
       </div>
 
       <footer className="border-t border-border bg-card mt-auto">
