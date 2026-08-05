@@ -137,8 +137,9 @@ export async function generateAndUploadSignedPDF(params: {
   signatureData: string;  // base64 firma (data:image/...)
   fingerprintData: string | null; // base64 huella (data:image/...)
   patientPhotoUrl?: string | null; // URL pública de la huella ya subida
+  shareToken?: string | null;      // token del enlace de firma (para subida server-side)
 }): Promise<GeneratePdfAfterSignResult> {
-  const { consent, signatureData, fingerprintData, patientPhotoUrl } = params;
+  const { consent, signatureData, fingerprintData, patientPhotoUrl, shareToken } = params;
 
   // Preferir base64 directo (ya en memoria, evita fetch adicional).
   // Si no hay base64, intentar con la URL pública (toBase64Url la convertirá en el PDF).
@@ -165,45 +166,27 @@ export async function generateAndUploadSignedPDF(params: {
       .replace(/[^a-zA-Z0-9]/g, "_")
       .toUpperCase();
 
-    // Para firmas remotas (sin sesión), guardar en carpeta pública dentro del bucket
-    const folder = "remote_signed";
-    const fileName = `${folder}/${consent.id}_${consentType}_${safeName}_${ts}.pdf`;
+    const fileName = `${consent.id}_${consentType}_${safeName}_${ts}.pdf`
+      .replace(/[^A-Za-z0-9._-]/g, "_");
 
-    const { data: uploadData, error: uploadError } = await supabase.storage
-      .from(BUCKET)
-      .upload(fileName, pdfBlob, { contentType: "application/pdf", upsert: false });
-
-    if (!uploadError && uploadData) {
-      pdfPath = uploadData.path;
-
-      // Generar URL firmada larga (1 año) para retornar al llamador
-      const { data: signedData } = await supabase.storage
-        .from(BUCKET)
-        .createSignedUrl(pdfPath, 60 * 60 * 24 * 365); // 1 año
-
-      pdfPublicUrl = signedData?.signedUrl || null;
-
-      // Guardar la RUTA del archivo (no la URL firmada efímera) en la BD
-      // así siempre se puede regenerar una URL firmada válida
-      if (consent.id) {
-        try {
-          const { error: updateErr } = await supabase
-            .from("consents")
-            .update({ pdf_url: pdfPath })
-            .eq("id", consent.id);
-          if (updateErr) {
-            logger.warn("No se pudo actualizar pdf_url en la BD:", updateErr.message);
-          } else {
-            logger.info("pdf_url actualizado en la BD con ruta:", pdfPath);
-          }
-        } catch (updateEx: any) {
-          logger.warn("Error actualizando pdf_url:", updateEx?.message);
-        }
-      }
-
-      logger.info("PDF generado y subido:", { pdfPath, hasPdfUrl: !!pdfPublicUrl });
+    // La subida se realiza siempre server-side (service role) validando el token
+    // del enlace de firma; el bucket `consent-pdfs` es privado y sin acceso anónimo.
+    const token = shareToken || consent.share_token || null;
+    if (!token) {
+      logger.warn("No se pudo subir el PDF: falta el token del enlace de firma");
     } else {
-      logger.warn("No se pudo subir PDF (sin auth o error):", uploadError?.message);
+      const pdfBase64 = await blobToBase64(pdfBlob);
+      const { data, error } = await supabase.functions.invoke("upload-signed-pdf", {
+        body: { token, fileName, pdfBase64 },
+      });
+
+      if (error || !data?.success) {
+        logger.warn("No se pudo subir el PDF firmado:", data?.error || error?.message);
+      } else {
+        pdfPath = data.pdfPath ?? null;
+        pdfPublicUrl = data.pdfUrl ?? null;
+        logger.info("PDF generado y subido:", { pdfPath, hasPdfUrl: !!pdfPublicUrl });
+      }
     }
   } catch (err: any) {
     logger.error("Error generando/subiendo PDF post-firma:", err?.message);

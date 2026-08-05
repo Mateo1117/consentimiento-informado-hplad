@@ -9,5 +9,8 @@ verify_jwt = false
 [functions.public-sign-consent]
 verify_jwt = false
 
+[functions.upload-signed-pdf]
+verify_jwt = false
+
 [functions.mcp]
 verify_jwt = false
