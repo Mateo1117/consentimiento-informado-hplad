@@ -505,6 +505,20 @@ export type Database = {
           status: string
         }[]
       }
+      get_consent_dashboard_analytics: {
+        Args: { p_date_from?: string; p_date_to?: string }
+        Returns: {
+          consent_type: string
+          eps: string
+          healthcare_center: string
+          month_start: string
+          pending: number
+          professional_name: string
+          signed: number
+          specialty: string
+          total: number
+        }[]
+      }
       get_role_permissions: {
         Args: { p_role: Database["public"]["Enums"]["app_role"] }
         Returns: {
