@@ -1,3 +1,5 @@
+import type { Json } from "@/integrations/supabase/types";
+
 type JsonRecord = Record<string, unknown>;
 
 /**
@@ -5,7 +7,7 @@ type JsonRecord = Record<string, unknown>;
  * Keeping base64 copies inside JSONB caused every consent to consume hundreds
  * of kilobytes twice and eventually exhausted the database quota.
  */
-export function sanitizeConsentPayload(payload: unknown): JsonRecord {
+export function sanitizeConsentPayload(payload: unknown): Json {
   if (!payload || typeof payload !== "object" || Array.isArray(payload)) return {};
 
   const sanitized = { ...(payload as JsonRecord) };
@@ -20,5 +22,5 @@ export function sanitizeConsentPayload(payload: unknown): JsonRecord {
     sanitized.professionalData = sanitizedProfessional;
   }
 
-  return sanitized;
+  return sanitized as Json;
 }
