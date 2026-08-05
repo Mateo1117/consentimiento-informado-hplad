@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from "recharts";
 import { Stethoscope } from "lucide-react";
 import { normalizeConsentType, CONSENT_TYPE_SPECIALTY } from "@/utils/consentTypeNormalizer";
