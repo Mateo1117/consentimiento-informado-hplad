@@ -11,6 +11,16 @@ import { BasePDFGenerator, BasePDFData } from "@/utils/pdfGeneratorBase";
 
 const BUCKET = "consent-pdfs";
 
+async function blobToBase64(blob: Blob): Promise<string> {
+  const buffer = new Uint8Array(await blob.arrayBuffer());
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < buffer.length; i += chunk) {
+    binary += String.fromCharCode(...buffer.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
 // ─── helpers ────────────────────────────────────────────────────────────────
 
 function consentUpperName(consentType: string): string {

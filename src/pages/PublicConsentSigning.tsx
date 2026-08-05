@@ -89,6 +89,7 @@ export const PublicConsentSigning: React.FC = () => {
         signatureData,
         fingerprintData,
         patientPhotoUrl: data?.patientPhotoUrl || null,
+        shareToken: token,
       }).then(({ pdfUrl }) => {
         toast.dismiss('pdf-gen');
         if (pdfUrl) toast.success('PDF generado y guardado correctamente');

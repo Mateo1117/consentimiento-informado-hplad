@@ -109,6 +109,7 @@ export const InlinePendingConsentSigning: React.FC<InlinePendingConsentSigningPr
           signatureData,
           fingerprintData,
           patientPhotoUrl: data?.patientPhotoUrl || null,
+          shareToken: token,
         });
         toast.dismiss('pdf-gen');
         if (pdfUrl) {
