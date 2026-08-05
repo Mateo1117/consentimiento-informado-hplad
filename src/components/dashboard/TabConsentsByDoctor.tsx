@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts";
 import { UserCircle } from "lucide-react";
+import { fetchAnalyticsConsents } from "@/services/dashboardAnalyticsService";
+import { toast } from "sonner";
 
 interface DateRangeProps {
   dateFrom?: string;
@@ -27,10 +29,7 @@ export function TabConsentsByDoctor({ dateFrom, dateTo }: DateRangeProps) {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      let q = supabase.from("consents").select("professional_name, status");
-      if (dateFrom) q = q.gte("created_at", dateFrom);
-      if (dateTo) q = q.lte("created_at", dateTo);
-      const { data: consents, error } = await q;
+      const consents = await fetchAnalyticsConsents(dateFrom, dateTo);
 
       const grouped: Record<string, { total: number; signed: number; pending: number }> = {};
       (consents || []).forEach((c) => {
@@ -48,6 +47,7 @@ export function TabConsentsByDoctor({ dateFrom, dateTo }: DateRangeProps) {
       setData(result);
     } catch (err) {
       console.error("Error fetching by doctor:", err);
+      toast.error(err instanceof Error ? err.message : "Error al cargar datos por médico");
     } finally {
       setIsLoading(false);
     }

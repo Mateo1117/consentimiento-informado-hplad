@@ -4,6 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, PieChart, Pie, Cell } from "recharts";
 import { Stethoscope } from "lucide-react";
 import { normalizeConsentType, CONSENT_TYPE_SPECIALTY } from "@/utils/consentTypeNormalizer";
+import { fetchAnalyticsConsents } from "@/services/dashboardAnalyticsService";
+import { toast } from "sonner";
 
 interface DateRangeProps {
   dateFrom?: string;
@@ -36,10 +38,7 @@ export function TabConsentsBySpecialty({ dateFrom, dateTo }: DateRangeProps) {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      let q = supabase.from("consents").select("consent_type, status");
-      if (dateFrom) q = q.gte("created_at", dateFrom);
-      if (dateTo) q = q.lte("created_at", dateTo);
-      const { data: consents, error } = await q;
+      const consents = await fetchAnalyticsConsents(dateFrom, dateTo);
 
       const grouped: Record<string, { total: number; signed: number; pending: number }> = {};
       (consents || []).forEach((c) => {
@@ -57,6 +56,7 @@ export function TabConsentsBySpecialty({ dateFrom, dateTo }: DateRangeProps) {
       setData(result);
     } catch (err) {
       console.error("Error fetching by specialty:", err);
+      toast.error(err instanceof Error ? err.message : "Error al cargar datos por especialidad");
     } finally {
       setIsLoading(false);
     }
