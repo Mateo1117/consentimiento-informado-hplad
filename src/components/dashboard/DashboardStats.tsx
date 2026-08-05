@@ -1,5 +1,6 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { FileCheck, Clock, TrendingUp, Calendar, CheckCircle, AlertCircle } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 
 interface DashboardStatsProps {
   stats: {
@@ -98,9 +99,7 @@ export function DashboardStats({ stats, isLoading }: DashboardStatsProps) {
         <span className="font-medium text-foreground">Cumplimiento de firma</span>
         <span className="font-bold text-accent">{isLoading ? "…" : `${completionRate}%`}</span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-muted" role="progressbar" aria-label="Cumplimiento de firma" aria-valuemin={0} aria-valuemax={100} aria-valuenow={completionRate}>
-        <div className="h-full rounded-full bg-accent transition-all" style={{ width: `${completionRate}%` }} />
-      </div>
+      <Progress value={completionRate} aria-label="Cumplimiento de firma" className="h-2 [&>div]:bg-accent" />
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
       {statCards.map((stat) => {
         const variantClasses = getVariantClasses(stat.variant);
