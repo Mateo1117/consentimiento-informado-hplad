@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { supabase } from "@/integrations/supabase/client";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 import { FileText } from "lucide-react";
 import { normalizeConsentType, consentTypeLabel } from "@/utils/consentTypeNormalizer";
+import { fetchAnalyticsConsents } from "@/services/dashboardAnalyticsService";
+import { toast } from "sonner";
 
 interface DateRangeProps {
   dateFrom?: string;
@@ -36,11 +37,7 @@ export function TabConsentsByType({ dateFrom, dateTo }: DateRangeProps) {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      let q = supabase.from("consents").select("consent_type, status");
-      if (dateFrom) q = q.gte("created_at", dateFrom);
-      if (dateTo) q = q.lte("created_at", dateTo);
-
-      const { data: consents, error } = await q;
+      const consents = await fetchAnalyticsConsents(dateFrom, dateTo);
 
       const grouped: Record<string, { count: number; signed: number; pending: number }> = {};
       (consents || []).forEach((c) => {
@@ -59,6 +56,7 @@ export function TabConsentsByType({ dateFrom, dateTo }: DateRangeProps) {
       setData(result);
     } catch (err) {
       console.error("Error fetching by type:", err);
+      toast.error(err instanceof Error ? err.message : "Error al cargar datos por tipo");
     } finally {
       setIsLoading(false);
     }
