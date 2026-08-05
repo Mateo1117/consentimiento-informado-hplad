@@ -31,8 +31,14 @@ export class PhotoService {
 
   static async uploadPhoto(base64Image: string, prefix: string): Promise<PhotoUploadResult | null> {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        console.error('Error uploading photo: usuario no autenticado');
+        return null;
+      }
+
       const { blob, mime, extension } = this.base64ToBlob(base64Image);
-      const fileName = this.generateFileName(prefix, extension);
+      const fileName = `${user.id}/${this.generateFileName(prefix, extension)}`;
 
       const { data, error } = await supabase.storage
         .from('photos')
