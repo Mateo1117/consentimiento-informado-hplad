@@ -9,6 +9,7 @@ import { consentService, type ConsentData } from '@/services/consentService';
 import { formatProcedureInfoForPayload } from '@/data/procedureInfo';
 import { supabase } from '@/integrations/supabase/client';
 import { PhotoService } from '@/services/photoService';
+import { sanitizeConsentPayload } from '@/utils/sanitizeConsentPayload';
 interface ConsentFormWrapperProps {
   children: React.ReactNode;
   /** Etiqueta visible / nombre del consentimiento (para UI/archivo). */
@@ -132,7 +133,7 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
           patient_email: patientData.email,
           patient_phone: patientData.telefono,
           consent_type: consentTypeCode || consentType,
-          payload: {
+          payload: sanitizeConsentPayload({
             patientData,
             professionalData,
             decision: consentDecision,
@@ -146,7 +147,7 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
             guardianPhone: guardianPhone || undefined,
             clinicalRiskNotes: clinicalRiskNotes || undefined,
             generatedAt: new Date().toISOString(),
-          },
+          }),
           created_by: user.id,
           professional_name: profSig.professional_name,
           professional_document: profSig.professional_document,
@@ -288,7 +289,7 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         patientEmail: patientData.email,
         patientPhone: patientData.telefono,
         consentType: consentTypeCode || consentType,
-        payload: {
+        payload: sanitizeConsentPayload({
           patientData,
           professionalData,
           decision: currentConsentDecision,
@@ -300,7 +301,7 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
           isMinor,
           clinicalRiskNotes: clinicalRiskNotes || undefined,
           generatedAt: new Date().toISOString()
-        },
+        }),
         // Forzar siempre los datos del profesional logueado
         professionalName: ownProfSig.professional_name,
         professionalDocument: ownProfSig.professional_document,
@@ -352,7 +353,7 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
     patientEmail: patientData.email,
     patientPhone: patientData.telefono,
     consentType: consentTypeCode || consentType,
-    payload: {
+    payload: sanitizeConsentPayload({
       patientData,
       professionalData,
       decision: consentDecision,
@@ -366,7 +367,7 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       guardianDocument: guardianDocument || undefined,
       guardianRelationship: guardianRelationship || undefined,
       guardianPhone: guardianPhone || undefined,
-    }
+    })
   };
 
   return (

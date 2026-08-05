@@ -3,6 +3,7 @@ import { logger } from "@/utils/logger";
 import { pdfStorageService } from "./pdfStorageService";
 import { automationService } from "./automationService";
 import { PhotoService } from "./photoService";
+import { sanitizeConsentPayload } from "@/utils/sanitizeConsentPayload";
 
 export interface AppConsentData {
   patientName: string;
@@ -78,9 +79,16 @@ class AppConsentService {
       const rawPatientPhoto = data.patientPhotoUrl || data.payload?.patientPhotoUrl || null;
       const rawGuardianSignature = data.guardianSignature || data.payload?.guardianSignature || null;
 
-      let patientSignatureForDb: string | null = rawPatientSignature;
+      let patientSignatureForDb: string | null = rawPatientSignature || rawGuardianSignature;
       let patientPhotoForDb: string | null = rawPatientPhoto;
       let guardianSignatureForDb: string | null = rawGuardianSignature;
+      let professionalSignatureForDb: string | null = professionalSignature?.signature_data || null;
+
+      // Store professional signatures as Storage URLs, never repeated base64.
+      if (professionalSignatureForDb?.startsWith('data:image')) {
+        const uploaded = await PhotoService.uploadPhoto(professionalSignatureForDb, 'firma_profesional');
+        if (uploaded?.url) professionalSignatureForDb = uploaded.url;
+      }
 
       // Subir firma del paciente (si es data URL) y usar URL pública
       if (rawPatientSignature && rawPatientSignature.startsWith('data:image')) {
@@ -125,11 +133,11 @@ class AppConsentService {
           patient_email: data.patientEmail,
           patient_phone: data.patientPhone,
           consent_type: data.consentType,
-          payload: data.payload,
+          payload: sanitizeConsentPayload(data.payload),
           created_by: user.id,
           professional_name: professionalSignature?.professional_name || data.professionalName,
           professional_document: professionalSignature?.professional_document || data.professionalDocument,
-          professional_signature_data: professionalSignature?.signature_data,
+          professional_signature_data: professionalSignatureForDb,
           patient_signature_data: patientSignatureForDb,
           patient_photo_url: patientPhotoForDb,
           status: 'signed', // App consents are immediately signed
@@ -200,9 +208,9 @@ class AppConsentService {
           consentType: data.consentType,
           professionalName: professionalSignature?.professional_name || data.professionalName,
           professionalDocument: professionalSignature?.professional_document || data.professionalDocument,
-          professionalSignature: professionalSignature?.signature_data,
+          professionalSignature: professionalSignatureForDb || undefined,
           pdfUrl: pdfUrl,
-          payload: data.payload,
+          payload: sanitizeConsentPayload(data.payload),
           signedAt: consent.signed_at,
           // Datos del acudiente
           hasDisability: data.hasDisability,

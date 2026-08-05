@@ -6,6 +6,8 @@ import {
   generateWhatsAppUrl,
   normalizePhoneForSms,
 } from "@/services/shareLinks";
+import { PhotoService } from "@/services/photoService";
+import { sanitizeConsentPayload } from "@/utils/sanitizeConsentPayload";
 
 export interface ConsentData {
   id?: string;
@@ -57,6 +59,11 @@ class ConsentService {
         }
       }
 
+      if (professionalSignatureData?.startsWith('data:image')) {
+        const uploaded = await PhotoService.uploadPhoto(professionalSignatureData, 'firma_profesional');
+        if (uploaded?.url) professionalSignatureData = uploaded.url;
+      }
+
       const expiresAt = data.shareExpiresAt || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(); // Default: 7 días
 
       const { data: consent, error } = await supabase
@@ -69,7 +76,7 @@ class ConsentService {
           patient_email: data.patientEmail,
           patient_phone: data.patientPhone,
           consent_type: data.consentType,
-          payload: data.payload,
+          payload: sanitizeConsentPayload(data.payload),
           share_expires_at: expiresAt,
           status: 'sent',
           professional_name: professionalName,
