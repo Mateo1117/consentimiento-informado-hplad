@@ -123,6 +123,35 @@ La salida de `Construir Binarios` ahora incluye `firma_paciente_bytes` /
 Esos mismos campos viajan en la respuesta del webhook (200 y 422), así que no hace
 falta abrir nodo por nodo en el editor para saber dónde se perdió la firma.
 
+`Preparar Datos` añade además `diagnostico_entrada`, que dice qué llegó de verdad
+en el webhook sin volcar la imagen entera:
+
+```jsonc
+"diagnostico_entrada": {
+  "claves_body": ["consent_id", "paciente_firma", "..."],
+  "firma_paciente": {
+    "encontrado_en": "paciente_firma",   // null si no vino en ningún campo conocido
+    "tipo": "data_uri",                  // url | data_uri | base64_sin_encabezado | texto_no_reconocido | ausente
+    "longitud": 41231,
+    "muestra": "data:image/png;base64,iVBORw0KGgo…"   // 80 caracteres, no más
+  }
+}
+```
+
+Con `tipo` y `origen_firma_paciente` juntos el diagnóstico es inmediato:
+
+| `tipo` | `origen_firma_paciente` | Qué pasa |
+|---|---|---|
+| `data_uri` | `inline` / `json_base64` | Todo bien |
+| `url` | `descarga` | Todo bien |
+| `url` | `ninguno (la URL … no se pudo descargar: …)` | El bucket de Storage es privado o la URL firmada venció |
+| `ausente` | `ninguno (no venía en el webhook)` | La app no mandó la firma |
+
+`Preparar Datos` también tolera que el body llegue como cadena sin parsear y busca
+la firma en varios nombres (`paciente_firma`, `firma_paciente`, `patientSignature`,
+`payload_adicional.patientSignature`), para que un cambio de nombre en la app no
+cueste la firma.
+
 ### 6. El flujo importado quedaba cortado en `Construir Binarios`
 
 En el JSON del workflow en uso, las conexiones terminaban así:

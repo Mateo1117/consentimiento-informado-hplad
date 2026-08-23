@@ -8,7 +8,30 @@
 // Aquí clasificamos cada imagen: URL http(s) -> se descarga después;
 // data URI -> se decodifica ya mismo a binario.
 
-const body = $input.first().json.body || $input.first().json || {};
+function leerBody() {
+  const entrada = $input.first().json || {};
+  let b = entrada.body !== undefined ? entrada.body : entrada;
+  // Si el webhook no pudo parsear el JSON (Content-Type raro, raw body), llega
+  // como cadena. Mejor intentarlo aquí que perder toda la carga.
+  if (typeof b === 'string') {
+    try { b = JSON.parse(b); } catch (e) { /* no era JSON */ }
+  }
+  return (b && typeof b === 'object') ? b : {};
+}
+
+const body = leerBody();
+
+// Busca el primer campo con contenido entre varios nombres posibles. La app ha
+// cambiado de nombre alguna vez y un nombre distinto no debe costar la firma.
+function primerValor(claves) {
+  for (const clave of claves) {
+    const partes = clave.split('.');
+    let v = body;
+    for (const parte of partes) v = (v && typeof v === 'object') ? v[parte] : undefined;
+    if (typeof v === 'string' && v.trim()) return { valor: v, clave };
+  }
+  return { valor: null, clave: '' };
+}
 
 // ── Aceptación del procedimiento ──────────────────────────────────────────────
 const aceptacion = String(body.aceptacion_procedimiento || '').toLowerCase().trim();
@@ -42,11 +65,42 @@ function clasificarImagen(valor) {
   return vacio;
 }
 
-const firmaPaciente = clasificarImagen(body.paciente_firma);
-const firmaAcudiente = clasificarImagen(body.acudiente_firma);
+const origenFirmaPaciente = primerValor([
+  'paciente_firma', 'firma_paciente', 'patientSignature', 'firma',
+  'payload_adicional.patientSignature',
+]);
+const origenFirmaAcudiente = primerValor([
+  'acudiente_firma', 'firma_acudiente', 'guardianSignature',
+  'payload_adicional.guardianSignature',
+]);
 // La "huella" viaja en paciente_foto. OJO: payload_adicional.patientPhotoUrl NO
 // existe nunca — sanitizeConsentPayload() la borra antes de enviar el webhook.
-const huellaPaciente = clasificarImagen(body.paciente_foto);
+const origenHuella = primerValor([
+  'paciente_foto', 'huella_paciente', 'patientPhotoUrl',
+  'payload_adicional.patientPhotoUrl',
+]);
+
+const firmaPaciente = clasificarImagen(origenFirmaPaciente.valor);
+const firmaAcudiente = clasificarImagen(origenFirmaAcudiente.valor);
+const huellaPaciente = clasificarImagen(origenHuella.valor);
+
+// ── Diagnóstico de lo que realmente llegó ─────────────────────────────────────
+// Sin esto hay que ir abriendo nodos a ciegas cuando la firma no aparece. Nunca
+// vuelca la imagen entera: sólo tipo, tamaño y los primeros caracteres.
+function describir(origen, clasificada) {
+  if (!origen.valor) return { encontrado_en: null, tipo: 'ausente', longitud: 0, muestra: '' };
+  const v = origen.valor.trim();
+  let tipo = 'texto_no_reconocido';
+  if (clasificada.url) tipo = 'url';
+  else if (/^data:/i.test(v)) tipo = 'data_uri';
+  else if (clasificada.dataUri) tipo = 'base64_sin_encabezado';
+  return {
+    encontrado_en: origen.clave,
+    tipo,
+    longitud: v.length,
+    muestra: v.slice(0, 80),
+  };
+}
 
 // ── Quién firma: 1 = acudiente/responsable, 2 = paciente ──────────────────────
 const tipoFirmante = firmaAcudiente.presente ? 1 : 2;
@@ -106,6 +160,14 @@ return [{
     b64_huella_paciente: huellaPaciente.dataUri,
     mime_huella_paciente: huellaPaciente.mimeType,
     ext_huella_paciente: huellaPaciente.extension,
+
+    // Qué llegó exactamente en el webhook, para diagnosticar sin abrir nodos.
+    diagnostico_entrada: {
+      claves_body: Object.keys(body),
+      firma_paciente: describir(origenFirmaPaciente, firmaPaciente),
+      firma_acudiente: describir(origenFirmaAcudiente, firmaAcudiente),
+      huella_paciente: describir(origenHuella, huellaPaciente),
+    },
 
     // Flags de presencia
     tiene_firma_paciente: firmaPaciente.presente,

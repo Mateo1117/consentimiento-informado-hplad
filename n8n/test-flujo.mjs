@@ -163,6 +163,12 @@ const checks = [
   ['9 origen = json_base64 (binarios en disco)', r9.bin.json.origen_firma_paciente==='json_base64'],
   ['7 sin firma explica el motivo', /ninguno \(no venía en el webhook\)/.test(r7.bin.json.origen_firma_paciente)],
   ['1 hcpacfir no lleva la clave de diagnóstico', !('origen' in r1.bin.binary.hcpacfir)],
+  ['1 diagnóstico dice dónde venía la firma', r1.bin.json.diagnostico_entrada.firma_paciente.encontrado_en==='paciente_firma'
+     && r1.bin.json.diagnostico_entrada.firma_paciente.tipo==='data_uri'],
+  ['2 diagnóstico reconoce la URL', r2.bin.json.diagnostico_entrada.firma_paciente.tipo==='url'],
+  ['7 diagnóstico marca la firma ausente', r7.bin.json.diagnostico_entrada.firma_paciente.tipo==='ausente'],
+  ['7 el 422 incluye el diagnóstico de entrada', !!r7.final.json.diagnostico.entrada],
+  ['1 el diagnóstico no vuelca la firma entera', r1.bin.json.diagnostico_entrada.firma_paciente.muestra.length<=80],
 ];
 console.log('\n── Aserciones');
 let fallos=0;

@@ -35,6 +35,7 @@ return [{
       origen_firma_acudiente: datos.origen_firma_acudiente,
       origen_huella_paciente: datos.origen_huella_paciente,
       firma_paciente_bytes: datos.firma_paciente_bytes,
+      entrada: datos.diagnostico_entrada,
     },
   },
 }];
