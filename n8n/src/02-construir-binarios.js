@@ -52,7 +52,7 @@ async function resolverImagen(nodoDescarga, propDescarga, propInline, prefijo) {
   const extPorDefecto = json['ext_' + prefijo] || 'png';
   const nombrePorDefecto = `${prefijo}.${extPorDefecto}`;
 
-  const normalizar = async (bin) => {
+  const normalizar = async (bin, origen) => {
     const data = await aBase64(bin);
     if (!data) return null;
     return {
@@ -60,12 +60,13 @@ async function resolverImagen(nodoDescarga, propDescarga, propInline, prefijo) {
       mimeType: bin.mimeType || mimePorDefecto,
       fileName: bin.fileName || nombrePorDefecto,
       fileExtension: bin.fileExtension || extPorDefecto,
+      origen,
     };
   };
 
   // 1) Lo que bajó el nodo HTTP (imágenes que llegaron como URL http/https).
   try {
-    const r = await normalizar($(nodoDescarga).first().binary?.[propDescarga]);
+    const r = await normalizar($(nodoDescarga).first().binary?.[propDescarga], 'descarga');
     if (r) return r;
   } catch (e) {
     // El nodo no corrió o falló (onError: continueRegularOutput): seguimos.
@@ -73,14 +74,14 @@ async function resolverImagen(nodoDescarga, propDescarga, propInline, prefijo) {
 
   // 2) El binario que "Preparar Datos" ya había decodificado.
   try {
-    const r = await normalizar(datos.binary?.[propInline]);
+    const r = await normalizar(datos.binary?.[propInline], 'inline');
     if (r) return r;
   } catch (e) { /* seguimos */ }
 
   // 3) El binario que venga en la entrada inmediata de este nodo.
   try {
     const entrada = $input.first();
-    const r = await normalizar(entrada.binary?.[propInline] || entrada.binary?.[propDescarga]);
+    const r = await normalizar(entrada.binary?.[propInline] || entrada.binary?.[propDescarga], 'entrada');
     if (r) return r;
   } catch (e) { /* seguimos */ }
 
@@ -92,10 +93,26 @@ async function resolverImagen(nodoDescarga, propDescarga, propInline, prefijo) {
       mimeType: mimePorDefecto,
       fileName: nombrePorDefecto,
       fileExtension: extPorDefecto,
+      origen: 'json_base64',
     };
   }
 
   return null;
+}
+
+// Motivo por el que una imagen no se pudo resolver, para que salga en la
+// respuesta 422 en vez de tener que abrir nodo por nodo en el editor.
+function motivoAusencia(nodoDescarga, prefijo) {
+  if (json['url_' + prefijo]) {
+    let detalle = '';
+    try {
+      const err = $(nodoDescarga).first().json?.error;
+      detalle = typeof err === 'string' ? err : (err?.message || '');
+    } catch (e) { /* el nodo no corrió */ }
+    return `la URL ${json['url_' + prefijo]} no se pudo descargar${detalle ? ': ' + detalle : ''}`;
+  }
+  if (json['tiene_' + prefijo]) return 'llegó en el webhook pero no se pudo decodificar';
+  return 'no venía en el webhook';
 }
 
 const binFirmaPaciente = await resolverImagen(
@@ -419,6 +436,16 @@ if (binFirmaPaciente && binHuella) {
   }
 }
 
+// `origen` es sólo diagnóstico nuestro: no viaja dentro del binario que recibe n8n.
+function soloBinario(bin) {
+  return {
+    data: bin.data,
+    mimeType: bin.mimeType,
+    fileName: bin.fileName,
+    fileExtension: bin.fileExtension,
+  };
+}
+
 // ── Modo de envío: define a qué rama va el Switch ─────────────────────────────
 let modo;
 if (firmaPacienteFinal && binFirmaAcudiente) modo = 'ambas';
@@ -446,11 +473,21 @@ return [{
     // Diagnóstico: tamaño real de lo que se manda. 0 = la firma no llegó.
     firma_paciente_bytes: firmaPacienteFinal ? Buffer.from(firmaPacienteFinal.data, 'base64').length : 0,
     firma_acudiente_bytes: binFirmaAcudiente ? Buffer.from(binFirmaAcudiente.data, 'base64').length : 0,
+    // De dónde salió cada imagen, o por qué no salió.
+    origen_firma_paciente: binFirmaPaciente
+      ? binFirmaPaciente.origen
+      : `ninguno (${motivoAusencia('Descargar Firma Paciente', 'firma_paciente')})`,
+    origen_firma_acudiente: binFirmaAcudiente
+      ? binFirmaAcudiente.origen
+      : `ninguno (${motivoAusencia('Descargar Firma Acudiente', 'firma_acudiente')})`,
+    origen_huella_paciente: binHuella
+      ? binHuella.origen
+      : `ninguno (${motivoAusencia('Descargar Huella Paciente', 'huella_paciente')})`,
     valido: errores.length === 0,
     errores,
   },
   binary: {
-    ...(firmaPacienteFinal && { hcpacfir: firmaPacienteFinal }),
-    ...(binFirmaAcudiente && { hcrepfir: binFirmaAcudiente }),
+    ...(firmaPacienteFinal && { hcpacfir: soloBinario(firmaPacienteFinal) }),
+    ...(binFirmaAcudiente && { hcrepfir: soloBinario(binFirmaAcudiente) }),
   },
 }];

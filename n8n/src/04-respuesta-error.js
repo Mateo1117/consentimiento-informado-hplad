@@ -29,6 +29,12 @@ return [{
       firma_acudiente: datos.firma_acudiente_disponible,
       huella: datos.huella_disponible,
       modo: datos.modo,
+      // De dónde salió cada imagen (o por qué no salió): evita tener que abrir
+      // nodo por nodo en el editor para saber dónde se perdió la firma.
+      origen_firma_paciente: datos.origen_firma_paciente,
+      origen_firma_acudiente: datos.origen_firma_acudiente,
+      origen_huella_paciente: datos.origen_huella_paciente,
+      firma_paciente_bytes: datos.firma_paciente_bytes,
     },
   },
 }];

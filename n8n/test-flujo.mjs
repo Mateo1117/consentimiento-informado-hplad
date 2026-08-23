@@ -86,6 +86,7 @@ async function correr(nombreCaso, body, opciones = {}) {
   console.log(`\n── ${nombreCaso}`);
   console.log(`   modo=${bin.json.modo} valido=${bin.json.valido} composicion=${bin.json.composicion_firma_huella}`);
   console.log(`   binarios: ${camposBin.join(', ') || '(ninguno)'} ${tam}`);
+  console.log(`   origen firma paciente: ${bin.json.origen_firma_paciente}`);
   console.log(`   respuesta: success=${final.json.success}${final.json.errores ? ' errores=' + JSON.stringify(final.json.errores) : ''}`);
   return { bin, final };
 }
@@ -157,6 +158,11 @@ const checks = [
   ['1 hcpacfir no va vacío', r1.bin.json.firma_paciente_bytes > 1000],
   ['9 binarios en disco -> hcpacfir igual', !!r9.bin.binary.hcpacfir && r9.bin.json.valido && r9.bin.json.firma_paciente_bytes > 1000],
   ['10 binarios en disco -> composición ok', r10.bin.json.composicion_firma_huella==='ok'],
+  ['1 origen = inline', r1.bin.json.origen_firma_paciente==='inline'],
+  ['2 origen = descarga', r2.bin.json.origen_firma_paciente==='descarga'],
+  ['9 origen = json_base64 (binarios en disco)', r9.bin.json.origen_firma_paciente==='json_base64'],
+  ['7 sin firma explica el motivo', /ninguno \(no venía en el webhook\)/.test(r7.bin.json.origen_firma_paciente)],
+  ['1 hcpacfir no lleva la clave de diagnóstico', !('origen' in r1.bin.binary.hcpacfir)],
 ];
 console.log('\n── Aserciones');
 let fallos=0;

@@ -108,9 +108,20 @@ La corrección tiene dos partes:
    `Preparar Datos` → **base64 del JSON**. El último eslabón nunca falla si la
    firma venía en el webhook.
 
-La salida de `Construir Binarios` ahora incluye `firma_paciente_bytes` y
-`firma_acudiente_bytes`. Si valen `0`, la firma no llegó; si valen unos miles, se
-está enviando de verdad.
+La salida de `Construir Binarios` ahora incluye `firma_paciente_bytes` /
+`firma_acudiente_bytes` (si valen `0`, la firma no llegó) y
+`origen_firma_paciente`, que dice de dónde salió la imagen:
+
+| Valor | Significado |
+|---|---|
+| `inline` | data URI decodificado en `Preparar Datos` (el caso normal) |
+| `descarga` | bajada por HTTP desde una URL de Supabase Storage |
+| `entrada` | binario que venía en la entrada inmediata del nodo |
+| `json_base64` | base64 del JSON — n8n guarda los binarios fuera de memoria |
+| `ninguno (…)` | no se pudo resolver, con el motivo entre paréntesis |
+
+Esos mismos campos viajan en la respuesta del webhook (200 y 422), así que no hace
+falta abrir nodo por nodo en el editor para saber dónde se perdió la firma.
 
 ### 6. El flujo importado quedaba cortado en `Construir Binarios`
 
