@@ -88,6 +88,25 @@ return [{
     url_firma_acudiente: firmaAcudiente.url,
     url_huella_paciente: huellaPaciente.url,
 
+    // Base64 crudo de las imágenes que ya venían embebidas.
+    // Va también en el JSON, no sólo en `binary`, a propósito: cuando n8n corre
+    // con N8N_DEFAULT_BINARY_DATA_MODE=filesystem (o s3) los binarios se
+    // guardan en disco y `$('Preparar Datos').first().binary.x.data` vuelve
+    // VACÍO (sólo trae `id`). Ese es el motivo por el que "Construir Binarios"
+    // se quedaba sin firma aunque la firma sí venía en el webhook. Con el
+    // base64 aquí, el paso siguiente siempre tiene de dónde reconstruirla.
+    b64_firma_paciente: firmaPaciente.dataUri,
+    mime_firma_paciente: firmaPaciente.mimeType,
+    ext_firma_paciente: firmaPaciente.extension,
+
+    b64_firma_acudiente: firmaAcudiente.dataUri,
+    mime_firma_acudiente: firmaAcudiente.mimeType,
+    ext_firma_acudiente: firmaAcudiente.extension,
+
+    b64_huella_paciente: huellaPaciente.dataUri,
+    mime_huella_paciente: huellaPaciente.mimeType,
+    ext_huella_paciente: huellaPaciente.extension,
+
     // Flags de presencia
     tiene_firma_paciente: firmaPaciente.presente,
     tiene_firma_acudiente: firmaAcudiente.presente,

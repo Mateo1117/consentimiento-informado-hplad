@@ -13,34 +13,99 @@
 const datos = $('Preparar Datos').first();
 const json = datos.json;
 
-// ── Helper: toma el primer binario disponible entre varias fuentes ────────────
-function tomarBinario(fuentes) {
-  for (const [nodo, propiedad] of fuentes) {
-    try {
-      const item = nodo === 'Preparar Datos' ? datos : $(nodo).first();
-      const bin = item?.binary?.[propiedad];
-      if (bin && bin.data && bin.data.length > 0) return bin;
-    } catch (e) {
-      // El nodo no se ejecutó o falló (onError: continueRegularOutput): seguimos.
+// ── Resolución de cada imagen ─────────────────────────────────────────────────
+// Antes esto leía únicamente `$('Nodo').first().binary.x.data`, y ahí estaba el
+// fallo de "no convierte el binario": cuando n8n guarda los binarios fuera de
+// memoria (N8N_DEFAULT_BINARY_DATA_MODE=filesystem o s3, que es lo habitual en
+// self-hosted y en n8n Cloud) esa propiedad `data` llega VACÍA y sólo trae un
+// `id` de referencia. La firma existía, pero aquí se leía como ausente y el
+// item salía sin `hcpacfir`.
+//
+// Ahora se intenta en cascada y el último eslabón —el base64 que "Preparar
+// Datos" deja en el JSON— no depende del modo de almacenamiento de n8n, así
+// que si la firma vino en el webhook, sale sí o sí.
+const ayudantes = (() => {
+  try { return (typeof this !== 'undefined' && this && this.helpers) ? this.helpers : null; }
+  catch (e) { return null; }
+})();
+
+async function aBase64(bin) {
+  if (!bin) return '';
+  if (typeof bin.data === 'string' && bin.data.length > 0) return bin.data;
+  // Binario almacenado en disco/S3: hay que resolver la referencia.
+  if (bin.id && ayudantes) {
+    for (const metodo of ['binaryToBuffer', 'getBinaryStream', 'getBinaryDataBuffer']) {
+      try {
+        if (typeof ayudantes[metodo] !== 'function') continue;
+        const buf = await ayudantes[metodo](bin);
+        if (buf && buf.length) return Buffer.from(buf).toString('base64');
+      } catch (e) {
+        // Método no disponible o firma distinta según la versión de n8n.
+      }
     }
   }
+  return '';
+}
+
+async function resolverImagen(nodoDescarga, propDescarga, propInline, prefijo) {
+  const mimePorDefecto = json['mime_' + prefijo] || 'image/png';
+  const extPorDefecto = json['ext_' + prefijo] || 'png';
+  const nombrePorDefecto = `${prefijo}.${extPorDefecto}`;
+
+  const normalizar = async (bin) => {
+    const data = await aBase64(bin);
+    if (!data) return null;
+    return {
+      data,
+      mimeType: bin.mimeType || mimePorDefecto,
+      fileName: bin.fileName || nombrePorDefecto,
+      fileExtension: bin.fileExtension || extPorDefecto,
+    };
+  };
+
+  // 1) Lo que bajó el nodo HTTP (imágenes que llegaron como URL http/https).
+  try {
+    const r = await normalizar($(nodoDescarga).first().binary?.[propDescarga]);
+    if (r) return r;
+  } catch (e) {
+    // El nodo no corrió o falló (onError: continueRegularOutput): seguimos.
+  }
+
+  // 2) El binario que "Preparar Datos" ya había decodificado.
+  try {
+    const r = await normalizar(datos.binary?.[propInline]);
+    if (r) return r;
+  } catch (e) { /* seguimos */ }
+
+  // 3) El binario que venga en la entrada inmediata de este nodo.
+  try {
+    const entrada = $input.first();
+    const r = await normalizar(entrada.binary?.[propInline] || entrada.binary?.[propDescarga]);
+    if (r) return r;
+  } catch (e) { /* seguimos */ }
+
+  // 4) Base64 crudo en el JSON. Independiente del modo de binarios de n8n.
+  const b64 = json['b64_' + prefijo];
+  if (typeof b64 === 'string' && b64.length > 0) {
+    return {
+      data: b64,
+      mimeType: mimePorDefecto,
+      fileName: nombrePorDefecto,
+      fileExtension: extPorDefecto,
+    };
+  }
+
   return null;
 }
 
-const binFirmaPaciente = tomarBinario([
-  ['Descargar Firma Paciente', 'firma_paciente_dl'],
-  ['Preparar Datos', 'firma_paciente_inline'],
-]);
+const binFirmaPaciente = await resolverImagen(
+  'Descargar Firma Paciente', 'firma_paciente_dl', 'firma_paciente_inline', 'firma_paciente');
 
-const binFirmaAcudiente = tomarBinario([
-  ['Descargar Firma Acudiente', 'firma_acudiente_dl'],
-  ['Preparar Datos', 'firma_acudiente_inline'],
-]);
+const binFirmaAcudiente = await resolverImagen(
+  'Descargar Firma Acudiente', 'firma_acudiente_dl', 'firma_acudiente_inline', 'firma_acudiente');
 
-const binHuella = tomarBinario([
-  ['Descargar Huella Paciente', 'huella_paciente_dl'],
-  ['Preparar Datos', 'huella_paciente_inline'],
-]);
+const binHuella = await resolverImagen(
+  'Descargar Huella Paciente', 'huella_paciente_dl', 'huella_paciente_inline', 'huella_paciente');
 
 // ── Datos maestros de la API ──────────────────────────────────────────────────
 function primerOid(nombreNodo) {
@@ -378,6 +443,9 @@ return [{
     firma_paciente_disponible: !!firmaPacienteFinal,
     firma_acudiente_disponible: !!binFirmaAcudiente,
     huella_disponible: !!binHuella,
+    // Diagnóstico: tamaño real de lo que se manda. 0 = la firma no llegó.
+    firma_paciente_bytes: firmaPacienteFinal ? Buffer.from(firmaPacienteFinal.data, 'base64').length : 0,
+    firma_acudiente_bytes: binFirmaAcudiente ? Buffer.from(binFirmaAcudiente.data, 'base64').length : 0,
     valido: errores.length === 0,
     errores,
   },

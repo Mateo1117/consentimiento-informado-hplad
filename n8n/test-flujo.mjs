@@ -30,6 +30,8 @@ const firmaDataUri = 'data:image/png;base64,' + firmaPng(580,260).toString('base
 const huellaDataUri = 'data:image/png;base64,' + firmaPng(300,300).toString('base64');
 
 // ── Motor de ejecución de nodos Code ─────────────────────────────────────────
+const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+
 function ejecutar(archivo, items, nodos) {
   const $input = { first: () => items[0], all: () => items, item: items[0] };
   const $ = (nombre) => {
@@ -38,18 +40,27 @@ function ejecutar(archivo, items, nodos) {
     if (v === null) throw new Error(`El nodo "${nombre}" falló`);
     return { first: () => v, item: v, all: () => [v] };
   };
-  const fn = new Function('$input', '$', code(archivo));
+  // Los nodos Code de n8n admiten await en el nivel superior: los evaluamos
+  // como funciones async para reproducir ese entorno.
+  const fn = new AsyncFunction('$input', '$', code(archivo));
   return fn($input, $);
 }
 
 const respuestaMedicos = { data: [{ oid: 4321, nombre: 'COLLAZOS QUINTERO KAREN SOFIA' }] };
 const respuestaPlantillas = { data: [{ oid: 88, nombre: 'VENOPUNCION' }] };
 
-function correr(nombreCaso, body, opciones = {}) {
+async function correr(nombreCaso, body, opciones = {}) {
   const nodos = {};
   const webhook = { json: { body }, binary: {} };
 
-  const prep = ejecutar('01-preparar-datos.js', [webhook], nodos)[0];
+  const prep = (await ejecutar('01-preparar-datos.js', [webhook], nodos))[0];
+  if (opciones.modoDisco) {
+    // Reproduce N8N_DEFAULT_BINARY_DATA_MODE=filesystem/s3: n8n guarda el
+    // binario fuera de memoria y `data` vuelve vacío, sólo con la referencia.
+    for (const k of Object.keys(prep.binary || {})) {
+      prep.binary[k] = { ...prep.binary[k], data: '', id: `filesystem:${k}` };
+    }
+  }
   nodos['Preparar Datos'] = prep;
   nodos['Buscar Medico'] = opciones.sinMedico ? { json: { data: [] } } : { json: respuestaMedicos };
   nodos['Buscar Plantilla'] = opciones.sinPlantilla ? { json: { data: [] } } : { json: respuestaPlantillas };
@@ -58,7 +69,7 @@ function correr(nombreCaso, body, opciones = {}) {
   nodos['Descargar Firma Acudiente'] = opciones.dlFirmaAcudiente ?? null;
   nodos['Descargar Huella Paciente'] = opciones.dlHuella ?? null;
 
-  const bin = ejecutar('02-construir-binarios.js', [prep], nodos)[0];
+  const bin = (await ejecutar('02-construir-binarios.js', [prep], nodos))[0];
   nodos['Construir Binarios'] = bin;
 
   const camposBin = Object.keys(bin.binary || {});
@@ -67,9 +78,9 @@ function correr(nombreCaso, body, opciones = {}) {
   let final;
   if (bin.json.valido) {
     const apiResp = [{ json: { data: { oid: 99001 } } }];
-    final = ejecutar('03-respuesta-ok.js', apiResp, nodos)[0];
+    final = (await ejecutar('03-respuesta-ok.js', apiResp, nodos))[0];
   } else {
-    final = ejecutar('04-respuesta-error.js', [bin], nodos)[0];
+    final = (await ejecutar('04-respuesta-error.js', [bin], nodos))[0];
   }
 
   console.log(`\n── ${nombreCaso}`);
@@ -96,31 +107,38 @@ const base = {
 };
 
 // 1) Caso REAL capturado por el usuario: firma como data URI, sin huella
-const r1 = correr('Firma como data URI (caso real del usuario)', { ...base, paciente_firma: firmaDataUri });
+const r1 = await correr('Firma como data URI (caso real del usuario)', { ...base, paciente_firma: firmaDataUri });
 
 // 2) Firma como URL de Storage (camino feliz previsto por la app)
-const r2 = correr('Firma como URL http', { ...base, paciente_firma: 'https://storage.example/f.png' },
+const r2 = await correr('Firma como URL http', { ...base, paciente_firma: 'https://storage.example/f.png' },
   { dlFirmaPaciente: { json: {}, binary: { firma_paciente_dl: { data: firmaPng(580,260).toString('base64'), mimeType: 'image/png', fileName: 'f.png' } } } });
 
 // 3) Firma + huella -> imagen compuesta
-const r3 = correr('Firma + huella (composición)', { ...base, paciente_firma: firmaDataUri, paciente_foto: huellaDataUri });
+const r3 = await correr('Firma + huella (composición)', { ...base, paciente_firma: firmaDataUri, paciente_foto: huellaDataUri });
 
 // 4) Menor de edad: sólo firma del acudiente
-const r4 = correr('Sólo acudiente (menor de edad)', { ...base, paciente_firma: null, paciente_es_menor: true,
+const r4 = await correr('Sólo acudiente (menor de edad)', { ...base, paciente_firma: null, paciente_es_menor: true,
   acudiente_nombre_completo: 'MARIA PEREZ', acudiente_documento: '123', acudiente_parentesco: 'MADRE', acudiente_firma: firmaDataUri });
 
 // 5) Ambas firmas
-const r5 = correr('Paciente y acudiente', { ...base, paciente_firma: firmaDataUri,
+const r5 = await correr('Paciente y acudiente', { ...base, paciente_firma: firmaDataUri,
   acudiente_nombre_completo: 'MARIA PEREZ', acudiente_documento: '123', acudiente_parentesco: 'MADRE', acudiente_firma: firmaDataUri });
 
 // 6) Médico inexistente -> error explícito
-const r6 = correr('Médico no encontrado', { ...base, paciente_firma: firmaDataUri }, { sinMedico: true });
+const r6 = await correr('Médico no encontrado', { ...base, paciente_firma: firmaDataUri }, { sinMedico: true });
 
 // 7) Sin ninguna firma -> error explícito
-const r7 = correr('Sin firma alguna', { ...base, paciente_firma: null });
+const r7 = await correr('Sin firma alguna', { ...base, paciente_firma: null });
 
 // 8) Rechazo del procedimiento
-const r8 = correr('Procedimiento rechazado', { ...base, paciente_firma: firmaDataUri, aceptacion_procedimiento: 'Rechazado' });
+const r8 = await correr('Procedimiento rechazado', { ...base, paciente_firma: firmaDataUri, aceptacion_procedimiento: 'Rechazado' });
+
+// 9) n8n con binarios en disco: `binary.x.data` llega vacío. Este era el fallo
+//    de "no convierte el binario": la firma existe pero el nodo la leía ausente.
+const r9 = await correr('Binarios en disco (filesystem/s3)', { ...base, paciente_firma: firmaDataUri }, { modoDisco: true });
+
+// 10) Binarios en disco con firma + huella: la composición también debe salir
+const r10 = await correr('Binarios en disco + huella', { ...base, paciente_firma: firmaDataUri, paciente_foto: huellaDataUri }, { modoDisco: true });
 
 // ── Aserciones ────────────────────────────────────────────────────────────────
 const checks = [
@@ -136,6 +154,9 @@ const checks = [
   ['8 rechazo -> estado 0', r8.bin.json.estado===0],
   ['1 estado aceptado = 1', r1.bin.json.estado===1],
   ['1 tipo_firmante = 2', r1.bin.json.tipo_firmante===2],
+  ['1 hcpacfir no va vacío', r1.bin.json.firma_paciente_bytes > 1000],
+  ['9 binarios en disco -> hcpacfir igual', !!r9.bin.binary.hcpacfir && r9.bin.json.valido && r9.bin.json.firma_paciente_bytes > 1000],
+  ['10 binarios en disco -> composición ok', r10.bin.json.composicion_firma_huella==='ok'],
 ];
 console.log('\n── Aserciones');
 let fallos=0;

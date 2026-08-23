@@ -13,8 +13,9 @@ historia clínica del hospital (`POST /consentimientos` en `190.145.223.146:99`)
 
 El flujo anterior fallaba en el nodo `Crear Consentimiento2` con *"This operation
 expects the node's input data to contain a binary file"*. Ese error es el síntoma
-final de cuatro defectos encadenados; los dos primeros bastan para que **nunca**
-se cargue un consentimiento.
+final de seis defectos encadenados; los dos primeros bastan para que **nunca**
+se cargue un consentimiento, y el quinto es el que hacía que el consentimiento sí
+se creara pero **sin firma**.
 
 ### 1. Las firmas llegan como base64, no como URL — y un HTTP Request no puede descargarlas
 
@@ -76,6 +77,58 @@ ningún nodo que construyera ese binario.
 los casos la API lo rechaza; en el peor guarda un consentimiento cuya "firma" no
 es una firma. Un consentimiento informado sin firma real no debería llegar nunca
 a la historia clínica: es mejor devolver error.
+
+### 5. n8n guarda los binarios en disco y `binary.x.data` llega vacío
+
+Este es el fallo de *«no convierte el binario»*, y es el que quedaba vivo después
+de la primera corrección.
+
+`Construir Binarios` recogía cada imagen leyendo la propiedad `data` del binario
+de un nodo anterior:
+
+```js
+const bin = $('Preparar Datos').first().binary?.firma_paciente_inline;
+if (bin && bin.data && bin.data.length > 0) return bin;   // ← aquí se perdía
+```
+
+Eso sólo funciona cuando n8n mantiene los binarios en memoria. Con
+`N8N_DEFAULT_BINARY_DATA_MODE=filesystem` (o `s3`) —lo normal en self-hosted y en
+n8n Cloud— n8n escribe el binario fuera del item y devuelve `data: ''` con un
+`id` de referencia. La firma existía, el nodo la leía como ausente, y el item
+salía **sin `hcpacfir`**: el consentimiento se creaba en la historia clínica, pero
+sin firma. Exactamente el síntoma reportado.
+
+La corrección tiene dos partes:
+
+1. `Preparar Datos` deja también el base64 crudo en el **JSON**
+   (`b64_firma_paciente`, `b64_firma_acudiente`, `b64_huella_paciente`), que no
+   depende del modo de almacenamiento de binarios.
+2. `Construir Binarios` resuelve cada imagen en cascada: binario del nodo de
+   descarga → referencia en disco vía `helpers` → binario inline de
+   `Preparar Datos` → **base64 del JSON**. El último eslabón nunca falla si la
+   firma venía en el webhook.
+
+La salida de `Construir Binarios` ahora incluye `firma_paciente_bytes` y
+`firma_acudiente_bytes`. Si valen `0`, la firma no llegó; si valen unos miles, se
+está enviando de verdad.
+
+### 6. El flujo importado quedaba cortado en `Construir Binarios`
+
+En el JSON del workflow en uso, las conexiones terminaban así:
+
+```json
+"Construir Binarios": { "main": [[]] }
+```
+
+Sin `Datos Completos`, sin `Firmantes`, sin ningún `Crear Consentimiento (…)` y
+sin los nodos de respuesta. El binario se construía y se quedaba ahí: nada hacía
+`POST /consentimientos` con la firma. Si aun así aparecían consentimientos en la
+historia clínica, los estaba creando el flujo viejo (`Crear Consentimiento2` /
+`Crear Consentimiento3`), que es justamente el que no manda la firma.
+
+Al importar, comprueba que el lienzo tenga **17 nodos** y que la cadena llegue
+hasta `Responder OK` / `Responder Error`. Si copias y pegas nodos sueltos en vez
+de importar el archivo completo, las conexiones se pierden.
 
 ### Defectos menores corregidos de paso
 
@@ -174,9 +227,15 @@ node n8n/build-workflow.mjs    # regenera el JSON tras editar src/*.js
    `supabase/functions/enviar-consentimiento/index.ts`.
 4. **Desactiva el workflow viejo antes de activar este**: dos flujos activos con
    el mismo path se pisan.
-5. Prueba con *Execute Workflow* usando un consentimiento real y revisa la salida
-   de `Construir Binarios`: `modo`, `valido`, `errores` y `composicion_firma_huella`
-   dicen exactamente qué pasó.
+5. **Cuenta los nodos: deben ser 17** y la última conexión debe llegar a
+   `Responder OK` / `Responder Error`. Si el lienzo termina en `Construir Binarios`,
+   la importación quedó a medias y la firma nunca se envía.
+6. Prueba con *Execute Workflow* usando un consentimiento real y revisa la salida
+   de `Construir Binarios`: `modo`, `valido`, `errores`, `composicion_firma_huella`
+   y sobre todo `firma_paciente_bytes` dicen exactamente qué pasó.
+7. Abre el nodo `Crear Consentimiento (…)` que se haya ejecutado y mira su pestaña
+   **INPUT → Binary**: si ahí no está `hcpacfir`, la firma se perdió antes del POST;
+   si está, salió hacia la API y lo que falle está del lado del hospital.
 
 > `Buscar Medico` y `Buscar Plantilla` filtran por nombre exacto
 > (`profesional_nombre_completo` en mayúsculas y `nombre_consentimiento`). Si la
