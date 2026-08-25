@@ -189,7 +189,7 @@ console.log('\n4) Sin ninguna firma');
   afirmar(r.bin.json.ok === false, 'no se llama a la API');
   afirmar(r.bin.json.ruta === 'error', 'el Switch la manda a "Con error"');
   afirmar(r.bin.json.errores.some((e) => e.includes('firma del paciente')), 'el error lo explica');
-  afirmar(Object.keys(r.bin.binary).length === 0, 'no se inventa ningún binario de relleno');
+  afirmar(Object.keys(r.bin.binary).length === 0, 'el item de error va sin binarios (el JSON con `errores` queda a la vista)');
 }
 
 console.log('\n5) El profesional no existe en /medicos');
@@ -198,6 +198,17 @@ console.log('\n5) El profesional no existe en /medicos');
   const r = await correr(body, { medicos: { data: [] } });
   afirmar(r.bin.json.ok === false, 'no se manda el POST con genmedico vacío');
   afirmar(r.bin.json.errores.some((e) => e.includes('MATEO LOPEZ')), 'el error nombra al profesional');
+  afirmar(Object.keys(r.bin.binary).length === 0, 'el item de error va sin binarios');
+}
+
+console.log('\n5b) La consulta a /medicos falla (timeout o API caída)');
+{
+  const body = { ...bodyBase, paciente_firma: DATA_URI_FIRMA };
+  const r = await correr(body, { medicos: { error: { message: 'connect ETIMEDOUT 190.145.223.146:99' } } });
+  afirmar(r.bin.json.ok === false, 'no se manda el POST');
+  afirmar(r.bin.json.errores.some((e) => e.includes('No se pudo consultar /medicos')), 'distingue "falló la consulta" de "no existe"');
+  afirmar(!r.bin.json.errores.some((e) => e.includes('no existe en /medicos')), 'no acusa en falso al profesional');
+  afirmar(Object.keys(r.bin.binary).length === 0, 'el item de error va sin binarios');
 }
 
 console.log('\n6) La plantilla de consentimiento no existe');

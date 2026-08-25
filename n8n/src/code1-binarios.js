@@ -105,10 +105,19 @@ const binHuella = await resolver(
 function oidDe(leerRespuesta) {
   try {
     const res = leerRespuesta();
+    // Con onError=continueRegularOutput un fallo HTTP no detiene el flujo: el
+    // item llega con { error }. Eso NO es "no existe", es "no se pudo consultar",
+    // y confundirlos manda a corregir lo que no está roto.
+    if (res && res.error) {
+      const e = res.error;
+      const detalle = typeof e === 'string' ? e : (e.message || JSON.stringify(e));
+      return { leido: true, fallo: detalle, oid: null, total: 0 };
+    }
     const lista = res && (res.data || res.results) ? (res.data || res.results) : (Array.isArray(res) ? res : []);
-    return { leido: true, oid: lista && lista.length > 0 ? (lista[0].oid ?? null) : null };
+    const total = lista ? lista.length : 0;
+    return { leido: true, fallo: null, oid: total > 0 ? (lista[0].oid ?? null) : null, total };
   } catch (e) {
-    return { leido: false, oid: null };
+    return { leido: false, fallo: null, oid: null, total: 0 };
   }
 }
 
@@ -443,7 +452,9 @@ if (clasificacion.tiene_firma_acudiente && !binFirmaAcudiente) {
   );
 }
 
-if (medico.leido && !medico.oid) {
+if (medico.fallo) {
+  errores.push('No se pudo consultar /medicos del hospital: ' + medico.fallo);
+} else if (medico.leido && !medico.oid) {
   errores.push(
     'El profesional "' + (body.profesional_nombre_completo || '(vacío)')
     + '" no existe en /medicos del hospital. Verifique que el consentimiento se '
@@ -454,7 +465,9 @@ if (medico.leido && !medico.oid) {
   errores.push('No se pudo leer la respuesta de la búsqueda de médicos.');
 }
 
-if (plantilla.leido && !plantilla.oid) {
+if (plantilla.fallo) {
+  errores.push('No se pudo consultar /plantillas-consentimiento del hospital: ' + plantilla.fallo);
+} else if (plantilla.leido && !plantilla.oid) {
   errores.push(
     'No existe la plantilla de consentimiento "' + (body.nombre_consentimiento || '(vacío)')
     + '" en /plantillas-consentimiento.'
@@ -464,9 +477,13 @@ if (plantilla.leido && !plantilla.oid) {
 }
 
 // ── Salida ───────────────────────────────────────────────────────────────────
+// El item de error va sin binarios a propósito: con binario, el editor de n8n
+// abre la pestaña Binary y los motivos de `errores` quedan escondidos en JSON.
 const binarios = {};
-if (firmaPacienteFinal) binarios.data = soloBinario(firmaPacienteFinal);
-if (binFirmaAcudiente) binarios['data rep'] = soloBinario(binFirmaAcudiente);
+if (errores.length === 0) {
+  if (firmaPacienteFinal) binarios.data = soloBinario(firmaPacienteFinal);
+  if (binFirmaAcudiente) binarios['data rep'] = soloBinario(binFirmaAcudiente);
+}
 
 return [{
   json: {
@@ -484,6 +501,10 @@ return [{
       firma_paciente: firmaPacienteFinal ? firmaPacienteFinal.origen || 'compuesta' : 'ausente',
       firma_acudiente: binFirmaAcudiente ? binFirmaAcudiente.origen : 'ausente',
       huella: binHuella ? binHuella.origen : 'ausente',
+      busquedas: {
+        medicos: { encontrados: medico.total, fallo: medico.fallo },
+        plantillas: { encontrados: plantilla.total, fallo: plantilla.fallo },
+      },
       composicion,
       entrada: clasificacion.diagnostico_entrada,
     },

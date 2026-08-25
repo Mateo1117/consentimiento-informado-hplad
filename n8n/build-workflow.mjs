@@ -70,7 +70,8 @@ const busqueda = (name, ruta, campoFiltro, extraQuery, position) =>
       sendQuery: true,
       queryParameters: {
         parameters: [
-          { name: 'filtro', value: `={{ ${WH}.${campoFiltro} }}` },
+          // trim: un espacio al final (pasa al digitar nombres) vacía la búsqueda
+          { name: 'filtro', value: `={{ (${WH}.${campoFiltro} || '').trim() }}` },
           ...extraQuery,
         ],
       },
