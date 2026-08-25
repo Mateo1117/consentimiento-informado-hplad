@@ -1,218 +1,120 @@
-# Flujo n8n · Crear Consentimiento (HPLAD)
+# Flujo n8n · Crear Consentimiento HPLAD
 
-Automatización que recibe el consentimiento firmado desde la app y lo carga en la
-historia clínica del hospital (`POST /consentimientos` en `190.145.223.146:99`).
+Registra en la historia clínica del hospital el consentimiento que firma el
+paciente en la app, **con su firma como imagen**.
 
-- **Webhook:** `https://webhook.mcmasociados.tech/webhook/crear_consentimiento`
-- **Lo dispara:** `supabase/functions/enviar-consentimiento/index.ts`, llamado por
-  `appConsentService.sendConsentToWebhook()`.
+- `crear-consentimiento.workflow.json` — el flujo listo para importar.
+- `build-workflow.mjs` — lo genera a partir de `src/`.
+- `test-flujo.mjs` — pruebas sin necesidad de n8n.
+- `src/*.js` — el código de cada nodo Code, uno por fichero.
 
----
-
-## Cómo quedó el flujo
-
-```
-Webhook ─► Preparar Datos ─► Buscar Medico ─► Buscar Plantilla ─► Datos Completos
-                                                                        │
-                                            ┌───────────── no ──────────┘
-                                            ▼
-                                   Respuesta Con Error ─► Responder Error (422)
-                                            ▲
-        ┌──────────────── sí ───────────────┼──────────────────────────┐
-        ▼                                   │ (errores de descarga y   │
-    Firmantes ─┬─ Solo paciente  ─► Descargar Firma Paciente  ─► POST hcpacfir
-               ├─ Solo acudiente ─► Descargar Firma Acudiente ─► POST hcrepfir
-               └─ Ambas ─┬─ Descargar Firma Paciente (Ambas) ─┐
-                         └─ Descargar Firma Acudiente (Ambas)─┴─► Unir Firmas ─► POST hcpacfir + hcrepfir
-                                                                                        │
-                                                                    ┌── ok ─────────────┘
-                                                                    ▼
-                                              Respuesta Exitosa ─► Responder OK (200)
+```bash
+node n8n/build-workflow.mjs && node n8n/test-flujo.mjs
 ```
 
-18 nodos. La cadena termina siempre en `Responder OK` o `Responder Error`.
+## Nombres de nodo
 
-### Por qué las descargas van *después* del Switch
+Se conservan **exactamente** los del flujo que ya está en producción (`wh`,
+`Code in JavaScript3`, `Medicos`, `Plantilla Consentimiento2`, `If`,
+`firma paciente`, `firma acudiente`, `huella paciente`, `Code in JavaScript1`,
+`Switch`, `Crear Consentimiento2`, `Crear Consentimiento3`,
+`Code in JavaScript2`, `Responder OK`), para poder reemplazarlo sin renombrar
+nada.
 
-Un nodo HTTP Request con `responseFormat: "file"` **reemplaza** el binario del
-item, no lo suma. Tres descargas encadenadas dejan sólo la última, así que cada
-rama baja únicamente la firma que su POST necesita. La rama de ambas firmas usa
-un nodo **Merge** (*combine by position*) para juntar los dos binarios en un
-único item antes del POST.
-
-### Por qué ya no hay nodo "Construir Binarios"
-
-Porque no hace falta: el nodo de descarga ya entrega la firma como archivo, y su
-propiedad de salida se llama **directamente `hcpacfir` / `hcrepfir`**, que es el
-nombre que espera el multipart de la API. Los OIDs de médico y plantilla los leen
-los POST de sus nodos de origen:
+## Recorrido
 
 ```
-hcnplconsinf → {{ $('Buscar Plantilla').first().json.data[0].oid }}
-genmedico    → {{ $('Buscar Medico').first().json.data[0].oid }}
-pacnumdoc    → {{ $('Preparar Datos').first().json.paciente_numero_documento }}
+wh
+ └ Code in JavaScript3      ¿qué llegó en cada imagen? (URL / data URI / nada)
+    └ Code in JavaScript    aceptado → 1, rechazado → 0
+       └ Medicos                     busca al profesional
+          └ Plantilla Consentimiento2
+             └ If  ¿hay firma de acudiente?
+                ├ sí → firma acudiente ┐
+                └ no ─────────────────┴→ firma paciente
+                                          └ huella paciente
+                                             └ Code in JavaScript1   arma los binarios
+                                                └ Switch
+                                                   ├ Con error      → Code in JavaScript2
+                                                   ├ Con acudiente  → Crear Consentimiento3
+                                                   └ Sin acudiente  → Crear Consentimiento2
+                                                                       └ Code in JavaScript2
+                                                                          └ Responder OK
 ```
 
-Ojo con esto al editar: el item que llega al POST viene de una descarga, así que
-su `$json` **no** es el de `Preparar Datos`. Cualquier campo que se lea con
-`$json.loQueSea` saldrá vacío; hay que nombrar el nodo de origen.
+## Qué se arregló y por qué
 
----
+**La firma llegaba de dos formas y el flujo sólo soportaba una.** La app sube la
+firma a Supabase Storage y manda la URL, pero cuando esa subida falla manda el
+data URI (`data:image/png;base64,...`) dentro del JSON. Un nodo HTTP Request no
+puede resolver el esquema `data:`, así que en ese caso el consentimiento salía
+sin firma. Ahora `Code in JavaScript3` distingue los dos casos y
+`Code in JavaScript1` decodifica el data URI cuando la descarga no aplica.
 
-## Qué hace "Preparar Datos"
+**`firma paciente` no pedía el archivo.** Tenía sólo `fullResponse: true`, sin
+`responseFormat: "file"`, así que nunca creaba la propiedad binaria `data` que
+sube `hcpacfir`. Ese era el "no convierte el binario".
 
-Normaliza el body del webhook y decide la rama. Tres detalles que importan:
+**Los binarios guardados en disco se leían como vacíos.** Con
+`N8N_DEFAULT_BINARY_DATA_MODE=filesystem` (o `s3`) la propiedad `binary.x.data`
+llega vacía y sólo trae un `id`. Se resuelve la referencia con los helpers.
 
-- **Sólo una URL http(s) es descargable.** Si la firma llega como data URI
-  (`data:image/png;base64,…`) significa que `PhotoService.uploadPhoto()` falló en
-  la app y mandó la imagen incrustada. Un HTTP Request no puede resolver el
-  esquema `data:`, así que eso se reporta como error en vez de dejar que el
-  consentimiento se guarde sin firma.
-- **Tolera el body sin parsear.** Si llega como cadena (Content-Type inesperado),
-  intenta `JSON.parse` antes de rendirse.
-- **Busca cada firma en varios nombres**: `paciente_firma`, `firma_paciente`,
-  `patientSignature`, `payload_adicional.patientSignature`, con los equivalentes
-  del acudiente. Un cambio de nombre en la app no cuesta la firma.
+**El Switch descartaba el item en silencio.** Evaluaba
+`payload_adicional.patientPhotoUrl`, un campo que `sanitizeConsentPayload`
+borra siempre, con `typeValidation: strict` y `fallbackOutput: none`. Ahora
+reparte por `ok` / `con_acudiente` y lo que no encaje se va a la rama de error.
 
-Emite `modo` (`paciente` | `acudiente` | `ambas` | `sin_firma`), que es lo único
-que mira el Switch, y `diagnostico_entrada`, que dice en qué campo se encontró
-cada firma y de qué tipo es — sin volcar la imagen.
+**`Crear Consentimiento3` no llevaba a ninguna parte.** Su conexión era
+`{"main": [[]]}`: la rama del acudiente terminaba sin responder al webhook.
+También tenía `hcaparent` duplicado.
 
----
+**Se enviaba un PDF vacío como firma.** Cuando faltaba una imagen, el flujo
+subía un PDF con el texto "Sin informacion" en `hcpacfir` / `hcrepfir`. Eso
+guardaba consentimientos con una "firma" que no era una firma. Ahora, si falta
+la firma del paciente no se llama a la API y se responde 422 explicando por qué.
 
-## Diagnóstico cuando algo falla
+**Los errores no llegaban a la app.** Sólo existía `Responder OK` con 200 fijo,
+así que la Edge Function veía éxito pasara lo que pasara. Ahora
+`Code in JavaScript2` arma un cuerpo con `ok`, `errores`, `respuesta_api` y
+`diagnostico`, y `Responder OK` devuelve 200 o 422 según `ok`.
 
-La respuesta 422 trae todo lo necesario para saber dónde se rompió:
+**Nombres de nodo como texto suelto.** Al importar, n8n añade un sufijo
+numérico a los nodos repetidos y reescribe los `$('Nombre')` —también dentro del
+`jsCode`—, pero **no** un nombre pasado como argumento de texto
+(`primerOid('Medicos')`). Todas las referencias se escriben como `$('Nombre')`
+literal, y `test-flujo.mjs` simula el renombrado para comprobarlo.
 
-```jsonc
-{
-  "success": false,
-  "errores": ["La firma del paciente llegó como data_uri … Storage (PhotoService.uploadPhoto falló)."],
-  "diagnostico": {
-    "modo": "sin_firma",
-    "medico_oid": 4321,
-    "plantilla_oid": 88,
-    "url_firma_paciente": "",
-    "entrada": {
-      "claves_body": ["consent_id", "paciente_firma", "…"],
-      "firma_paciente": { "campo": "paciente_firma", "tipo": "data_uri", "descargable": false }
-    }
-  }
-}
-```
+## Cómo importarlo
 
-| `tipo` | Qué pasa |
-|---|---|
-| `url` | Todo bien, la descarga la baja |
-| `data_uri` / `base64_sin_encabezado` | La app no subió la firma a Storage |
-| `ausente` | La app no mandó la firma |
+1. En n8n, **desactivar** el flujo actual (dos flujos activos no pueden
+   compartir la ruta `crear_consentimiento`).
+2. Crear un workflow **nuevo y vacío** → *Import from File* →
+   `crear-consentimiento.workflow.json`.
+3. Revisar que ningún nodo haya quedado con un "2" de más en el nombre. Si pasó,
+   es que el flujo viejo seguía abierto: borrar y repetir sobre uno vacío.
+4. Activar el nuevo y probar con *Execute Workflow* + un envío real.
 
-Si la descarga falla (bucket privado, URL firmada vencida, 403), el item se va
-por la salida de error del nodo hacia el 422 con el mensaje de la petición. Nunca
-se sube un consentimiento sin la firma que dice tener.
+## Requisitos del lado del hospital
 
----
+El POST a `/consentimientos` falla con 404 aunque el flujo esté bien si:
 
-## Errores del flujo original
-
-El flujo anterior fallaba en `Crear Consentimiento2` con *"This operation expects
-the node's input data to contain a binary file"*. La cadena de defectos era:
-
-1. **Las firmas podían llegar como data URI base64.** Los nodos hacían un GET
-   contra `{{ $('Webhook1').item.json.body.paciente_firma }}`, que a veces valía
-   `data:image/png;base64,…`. El nodo fallaba, `onError: continueRegularOutput`
-   silenciaba el fallo y el item seguía sin binario. Encima `maxTries: 5`
-   reintentaba cinco veces algo que no podía funcionar.
-2. **El Switch decidía sobre un campo que el backend borra siempre.** Evaluaba
-   `payload_adicional.patientPhotoUrl`, y `src/utils/sanitizeConsentPayload.ts`
-   elimina esa clave antes de enviar el webhook. Con `typeValidation: "strict"` y
-   `fallbackOutput: "none"` el item se descartaba y la rama del paciente moría.
-3. **`firma paciente` no pedía `responseFormat: "file"`** (`firma acudiente` sí),
-   así que la propiedad binaria que exige el POST no se creaba nunca.
-4. **Al faltar la firma se subía un PDF vacío** en `hcpacfir`, guardando
-   consentimientos cuya firma no era una firma.
-
-Menores corregidos de paso: `hcaparent` duplicado en `Crear Consentimiento3`, ese
-nodo sin salida conectada, ausencia de `Respond to Webhook` (el webhook
-contestaba "Workflow was started" antes de intentar nada, así que la app nunca se
-enteraba de los fallos) y `data[0].oid` sin validar en médico/plantilla.
-
----
-
-## Archivos
-
-| Archivo | Qué es |
-|---|---|
-| `crear-consentimiento.workflow.json` | El workflow listo para importar |
-| `src/01-preparar-datos.js` | Código del nodo "Preparar Datos" |
-| `src/03-respuesta-ok.js` | Código del nodo "Respuesta Exitosa" |
-| `src/04-respuesta-error.js` | Código del nodo "Respuesta Con Error" |
-| `build-workflow.mjs` | Genera el JSON a partir de los `.js` |
-| `test-flujo.mjs` | Simula el flujo y valida el grafo |
-
-Los nodos Code se editan como archivos `.js` y el JSON se regenera con
-`node n8n/build-workflow.mjs`. Nunca se edita el `jsCode` dentro del JSON.
-
-`node n8n/test-flujo.mjs` cubre nueve escenarios (firma por URL, sólo acudiente,
-ambas firmas, base64 incrustado, sin firma, médico inexistente, procedimiento
-rechazado, body sin parsear, descarga fallida) y valida el grafo: sin nodos
-huérfanos ni conexiones colgando, sin referencias `$('Nodo')` a nodos que no
-existen, y cada binario que pide un POST lo produce alguna descarga de su rama.
-Además simula el renombrado que hace n8n al importar (`Nombre` → `Nombre2`) y
-comprueba que los nodos Code siguen resolviendo los OIDs, y que ningún nodo Code
-cita un nombre de nodo como cadena suelta. 18 aserciones, todas pasan.
-
----
-
-## Importar en n8n
-
-**Importa en un workflow NUEVO y vacío, y borra o desactiva el viejo antes.** Los
-dos puntos siguientes son la causa de que una importación "correcta" siga sin
-funcionar:
-
-- **Un solo workflow activo puede escuchar el path `crear_consentimiento`.** Si el
-  viejo sigue activo, es él quien atiende las peticiones y el nuevo no se entera
-  de nada, por muy bien importado que esté.
-- **Si un nombre de nodo ya existe, n8n renombra el nuevo** (`Buscar Medico` →
-  `Buscar Medico2`). Reescribe las llamadas `$('Buscar Medico')` que encuentra,
-  pero **no** un nombre que viaje como cadena suelta. Por eso en los nodos Code
-  los lookups se escriben siempre `$('Nombre')` literal — nunca en una variable
-  ni como argumento de una función. Si ves nodos acabados en `2` o `3`, estás
-  importando encima de una copia vieja.
-
-Pasos:
-
-1. **Duplica el workflow actual antes de tocar nada** (⋯ → Duplicate), por si hay
-   que volver.
-2. **Desactiva y renombra o borra el workflow viejo.** Que no quede ningún nodo
-   con estos nombres ni ningún webhook activo en `crear_consentimiento`.
-3. Crea un workflow nuevo y vacío → *Import from File* →
-   `crear-consentimiento.workflow.json`. Importa el archivo completo; copiar
-   nodos sueltos pierde las conexiones y el código.
-4. Comprueba que **ningún nodo tenga sufijo numérico** y que el lienzo tenga
-   **18 nodos**, con la cadena llegando hasta `Responder OK` / `Responder Error`.
-5. Verifica que el `webhookId` no haya cambiado; si n8n genera uno nuevo, la URL
-   pública cambia y hay que actualizar `WEBHOOK_URL` en
-   `supabase/functions/enviar-consentimiento/index.ts`.
-6. Activa el nuevo.
-
-> `Buscar Medico` y `Buscar Plantilla` filtran por nombre exacto
-> (`profesional_nombre_completo` en mayúsculas y `nombre_consentimiento`). Si la
-> API no encuentra coincidencia, la respuesta 422 lo dice con el nombre buscado.
-
----
+- **El profesional no está en `/medicos`.** El nombre se busca tal cual llega en
+  `profesional_nombre_completo`. Tiene que ser el profesional que atendió y
+  estar registrado en el hospital con ese mismo nombre.
+- **El paciente no tiene folio (`HCNFOLIO`).** `No se encontró un folio
+  (HCNFOLIO) para el paciente con OID …` significa que el paciente existe pero
+  no tiene historia clínica abierta: hay que admitirlo en el sistema del
+  hospital antes de registrar el consentimiento. El flujo no puede crear el
+  folio, sólo lo reporta.
+- **La plantilla no está en `/plantillas-consentimiento`** con el nombre que
+  manda `nombre_consentimiento` (`VENOPUNCION`, `GLUCOSA`, …).
 
 ## Pendientes conocidos
 
-- **La huella (`paciente_foto`) ya no se compone junto a la firma.** El montaje
-  de las dos imágenes en un PNG vivía en el nodo que se eliminó. La API recibe
-  ahora la firma sola. Si hace falta recuperarlo, el sitio natural es un nodo
-  entre la descarga y el POST, o hacerlo en la app antes de subir a Storage.
-- **La rama de "ambas firmas" usa un nodo Merge** para juntar los dos binarios.
-  Es el único camino que no se pudo probar contra un n8n real: si el POST de
-  paciente+acudiente se queja de que falta `hcpacfir` o `hcrepfir`, el Merge no
-  está arrastrando el binario y habría que revisarlo.
-- **Que la firma llegue alguna vez como data URI** significa que
-  `PhotoService.uploadPhoto()` falla en silencio: en
-  `src/services/appConsentService.ts` el resultado se ignora con
-  `if (uploaded?.url)`. Conviene registrar ese fallo del lado de la app.
+- La composición firma + huella se arma en JavaScript puro. Si el sandbox de
+  n8n no deja usar `zlib`, el PNG sale sin comprimir (~260 kB); con `zlib`,
+  unas decenas de kB. Se hace sólo cuando hay huella *y* ambas son PNG; ante
+  cualquier fallo se manda la firma sola.
+- No está verificado si la API acepta `image/png` en `hcpacfir` o espera PDF.
+  El flujo anterior mandaba `application/pdf` en ese campo, pero era el PDF
+  vacío de relleno, así que no prueba nada.

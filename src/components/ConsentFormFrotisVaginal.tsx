@@ -66,10 +66,13 @@ export const ConsentFormFrotisVaginal = ({ patientData, onBack }: ConsentFormPro
           .eq('created_by', user.id)
           .single();
         if (profSig) {
-          setProfessionalData({ name: profSig.professional_name, document: profSig.professional_document });
-          if (profSig.signature_data && !professionalSignature) {
-            setProfessionalSignature(profSig.signature_data);
-          }
+          // Sólo rellenar lo que siga vacío: no pisar al profesional ya elegido.
+          setProfessionalData((actual) =>
+            actual.name && actual.document
+              ? actual
+              : { name: profSig.professional_name, document: profSig.professional_document }
+          );
+          setProfessionalSignature((actual) => actual || profSig.signature_data || '');
         }
       } catch { /* silently ignore */ }
     };
