@@ -158,22 +158,43 @@ ambas firmas, base64 incrustado, sin firma, médico inexistente, procedimiento
 rechazado, body sin parsear, descarga fallida) y valida el grafo: sin nodos
 huérfanos ni conexiones colgando, sin referencias `$('Nodo')` a nodos que no
 existen, y cada binario que pide un POST lo produce alguna descarga de su rama.
-25 aserciones, todas pasan.
+Además simula el renombrado que hace n8n al importar (`Nombre` → `Nombre2`) y
+comprueba que los nodos Code siguen resolviendo los OIDs, y que ningún nodo Code
+cita un nombre de nodo como cadena suelta. 18 aserciones, todas pasan.
 
 ---
 
 ## Importar en n8n
 
-1. **Duplica el workflow actual antes de tocar nada** (⋯ → Duplicate).
-2. n8n → *Import from File* → `crear-consentimiento.workflow.json`. Importa el
-   archivo completo; copiar nodos sueltos pierde las conexiones y el código.
-3. Comprueba que el lienzo tenga **18 nodos** y que la cadena llegue hasta
-   `Responder OK` / `Responder Error`.
-4. **Desactiva el workflow viejo antes de activar este**: dos flujos activos con
-   el mismo path se pisan.
+**Importa en un workflow NUEVO y vacío, y borra o desactiva el viejo antes.** Los
+dos puntos siguientes son la causa de que una importación "correcta" siga sin
+funcionar:
+
+- **Un solo workflow activo puede escuchar el path `crear_consentimiento`.** Si el
+  viejo sigue activo, es él quien atiende las peticiones y el nuevo no se entera
+  de nada, por muy bien importado que esté.
+- **Si un nombre de nodo ya existe, n8n renombra el nuevo** (`Buscar Medico` →
+  `Buscar Medico2`). Reescribe las llamadas `$('Buscar Medico')` que encuentra,
+  pero **no** un nombre que viaje como cadena suelta. Por eso en los nodos Code
+  los lookups se escriben siempre `$('Nombre')` literal — nunca en una variable
+  ni como argumento de una función. Si ves nodos acabados en `2` o `3`, estás
+  importando encima de una copia vieja.
+
+Pasos:
+
+1. **Duplica el workflow actual antes de tocar nada** (⋯ → Duplicate), por si hay
+   que volver.
+2. **Desactiva y renombra o borra el workflow viejo.** Que no quede ningún nodo
+   con estos nombres ni ningún webhook activo en `crear_consentimiento`.
+3. Crea un workflow nuevo y vacío → *Import from File* →
+   `crear-consentimiento.workflow.json`. Importa el archivo completo; copiar
+   nodos sueltos pierde las conexiones y el código.
+4. Comprueba que **ningún nodo tenga sufijo numérico** y que el lienzo tenga
+   **18 nodos**, con la cadena llegando hasta `Responder OK` / `Responder Error`.
 5. Verifica que el `webhookId` no haya cambiado; si n8n genera uno nuevo, la URL
    pública cambia y hay que actualizar `WEBHOOK_URL` en
    `supabase/functions/enviar-consentimiento/index.ts`.
+6. Activa el nuevo.
 
 > `Buscar Medico` y `Buscar Plantilla` filtran por nombre exacto
 > (`profesional_nombre_completo` en mayúsculas y `nombre_consentimiento`). Si la

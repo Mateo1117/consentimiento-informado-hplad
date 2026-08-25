@@ -83,6 +83,55 @@ const r8 = correr('Body sin parsear (llega como cadena)', JSON.stringify({ ...ba
 const r9 = correr('Descarga fallida -> 422 con el motivo', { ...base, paciente_firma: URL_FIRMA },
   { sinMedico: true, errorNodo: { json: { error: { message: 'Request failed with status code 403' } } } });
 
+// ── Resistencia al renombrado que hace n8n al importar ───────────────────────
+// Si ya existe un nodo con ese nombre, n8n importa el nuevo como "Nombre2" y
+// reescribe las llamadas $('Nombre') que encuentra — pero NO los nombres que
+// viajan como cadena suelta. Aquí se simula ese renombrado y se comprueba que
+// los nodos Code siguen funcionando.
+function simularImportacionN8n(original) {
+  const mapa = Object.fromEntries(original.nodes.map((n) => [n.name, `${n.name}2`]));
+  let texto = JSON.stringify(original);
+  for (const [viejo, nuevo] of Object.entries(mapa)) {
+    texto = texto.split(`$('${viejo}')`).join(`$('${nuevo}')`);
+  }
+  const copia = JSON.parse(texto);
+  copia.nodes.forEach((n) => { n.name = mapa[n.name] ?? n.name; });
+  copia.connections = Object.fromEntries(Object.entries(copia.connections).map(([k, v]) => [
+    mapa[k] ?? k,
+    { main: v.main.map((s) => s.map((c) => ({ ...c, node: mapa[c.node] ?? c.node }))) },
+  ]));
+  return copia;
+}
+
+const renombrado = simularImportacionN8n(wf);
+const jsDe = (w, nombre) => w.nodes.find((n) => n.name === nombre).parameters.jsCode;
+
+function correrRenombrado(archivoNodo, entradaItem, nodosRenombrados) {
+  const $input = { first: () => entradaItem, all: () => [entradaItem], item: entradaItem };
+  const $ = (nombre) => {
+    if (!(nombre in nodosRenombrados)) throw new Error(`El nodo "${nombre}" no se ejecutó`);
+    const v = nodosRenombrados[nombre];
+    return { first: () => v, item: v, all: () => [v] };
+  };
+  return new Function('$input', '$', jsDe(renombrado, archivoNodo))($input, $);
+}
+
+const nodosR = {
+  'Preparar Datos2': { json: r1.prep.json },
+  'Buscar Medico2': { json: respuestaMedicos },
+  'Buscar Plantilla2': { json: respuestaPlantillas },
+};
+const okRenombrado = correrRenombrado('Respuesta Exitosa2', { json: { data: { oid: 99001 } } }, nodosR)[0];
+const errRenombrado = correrRenombrado('Respuesta Con Error2', { json: {} }, nodosR)[0];
+
+console.log('\n── Tras el renombrado de n8n (Nombre -> Nombre2)');
+console.log(`   Respuesta Exitosa: medico_oid=${okRenombrado.json.medico_oid} plantilla_oid=${okRenombrado.json.plantilla_oid}`);
+console.log(`   Respuesta Con Error: errores=${JSON.stringify(errRenombrado.json.errores)}`);
+
+// Las líneas de comentario se descartan antes de analizar el código: ahí los
+// $('Nombre') son sólo ejemplos.
+const sinComentarios = (js) => js.split('\n').filter((l) => !/^\s*\/\//.test(l)).join('\n');
+
 // ── Validación del grafo ──────────────────────────────────────────────────────
 const nombres = wf.nodes.map((n) => n.name);
 const porNombre = Object.fromEntries(wf.nodes.map((n) => [n.name, n]));
@@ -103,9 +152,28 @@ for (const n of nombres) {
 }
 if (nombres.length !== new Set(nombres).size) problemas.push('hay nombres de nodo duplicados');
 
-// Toda referencia $('Nodo') —en expresiones y en código— debe existir.
+// Ningún nodo Code puede citar un nombre de nodo como cadena suelta: n8n no lo
+// reescribe al renombrar y el lookup queda roto en silencio.
+for (const n of wf.nodes) {
+  const js = n.parameters?.jsCode && sinComentarios(n.parameters.jsCode);
+  if (!js) continue;
+  for (const otro of nombres) {
+    if (js.includes(`'${otro}'`) && !js.includes(`$('${otro}')`)) {
+      problemas.push(`"${n.name}" cita '${otro}' como cadena suelta en vez de $('${otro}')`);
+    }
+  }
+}
+
+// Toda referencia $('Nodo') —en expresiones y en código— debe existir. Las
+// líneas de comentario se descartan: ahí los $('Nombre') son sólo ejemplos.
 const textoCompleto = JSON.stringify(wf);
-for (const m of textoCompleto.matchAll(/\$\('([^']+)'\)/g)) {
+const textoEjecutable = JSON.stringify({
+  ...wf,
+  nodes: wf.nodes.map((n) => (n.parameters?.jsCode
+    ? { ...n, parameters: { ...n.parameters, jsCode: sinComentarios(n.parameters.jsCode) } }
+    : n)),
+});
+for (const m of textoEjecutable.matchAll(/\$\('([^']+)'\)/g)) {
   if (!nombres.includes(m[1])) problemas.push(`referencia a nodo inexistente: $('${m[1]}')`);
 }
 
@@ -155,6 +223,9 @@ const checks = [
   ['grafo sin problemas', problemas.length === 0],
   ['ya no existe "Construir Binarios"', !textoCompleto.includes('Construir Binarios')],
   ['las descargas producen hcpacfir y hcrepfir', !!producidoPor.hcpacfir && !!producidoPor.hcrepfir],
+  ['renombrado: los OIDs se siguen leyendo', okRenombrado.json.medico_oid === 4321 && okRenombrado.json.plantilla_oid === 88],
+  ['renombrado: no inventa "médico no encontrado"', !errRenombrado.json.errores.some((e) => /No se encontró el médico/.test(e))],
+  ['renombrado: no inventa "plantilla no encontrada"', !errRenombrado.json.errores.some((e) => /No se encontró la plantilla/.test(e))],
 ];
 
 console.log('\n── Grafo');
