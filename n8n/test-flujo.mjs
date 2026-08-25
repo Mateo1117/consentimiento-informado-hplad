@@ -158,6 +158,7 @@ console.log('\n1) Firma del paciente como URL de Storage (la descarga el nodo HT
   afirmar(r.bin.json.ok === true, 'el item queda válido');
   afirmar(!!r.bin.binary.data, 'hcpacfir lleva binario');
   afirmar(r.bin.json.diagnostico.firma_paciente === 'descarga', 'la firma vino de la descarga');
+  afirmar(r.bin.json.ruta === 'sin_acudiente', 'el Switch la manda a "Sin acudiente"');
   afirmar(!r.bin.binary['data rep'], 'sin acudiente no se manda hcrepfir');
 }
 
@@ -177,7 +178,7 @@ console.log('\n3) Firma de acudiente');
   const body = { ...bodyBase, paciente_firma: DATA_URI_FIRMA, acudiente_firma: DATA_URI_FIRMA, acudiente_nombre_completo: 'ANA PEREZ' };
   const r = await correr(body);
   afirmar(r.clasif.json.tipo_firmante === 1, 'hcatipaut = 1 (acudiente)');
-  afirmar(r.bin.json.con_acudiente === true, 'el Switch irá a "Con acudiente"');
+  afirmar(r.bin.json.ruta === 'con_acudiente', 'el Switch la manda a "Con acudiente"');
   afirmar(!!r.bin.binary['data rep'], 'hcrepfir lleva la firma del acudiente');
   afirmar(!!r.bin.binary.data, 'hcpacfir sigue llevando la del paciente');
 }
@@ -186,6 +187,7 @@ console.log('\n4) Sin ninguna firma');
 {
   const r = await correr({ ...bodyBase });
   afirmar(r.bin.json.ok === false, 'no se llama a la API');
+  afirmar(r.bin.json.ruta === 'error', 'el Switch la manda a "Con error"');
   afirmar(r.bin.json.errores.some((e) => e.includes('firma del paciente')), 'el error lo explica');
   afirmar(Object.keys(r.bin.binary).length === 0, 'no se inventa ningún binario de relleno');
 }
@@ -290,6 +292,36 @@ console.log('\n11) Grafo del workflow');
       if (otro === n.name) continue;
       if (js.includes(`'${otro}'`) && !js.includes(`$('${otro}')`)) {
         problemas.push(`${n.name} cita "${otro}" como texto suelto (n8n no lo reescribe al renombrar)`);
+      }
+    }
+  }
+
+  // El Switch reparte por texto y sus destinos tienen que existir de verdad.
+  const conmutador = porNombre.Switch;
+  const salidasSwitch = workflow.connections.Switch.main;
+  const rutas = ['error', 'con_acudiente', 'sin_acudiente'];
+  conmutador.parameters.rules.values.forEach((r, i) => {
+    const c = r.conditions.conditions[0];
+    if (c.operator.type !== 'string' || !rutas.includes(c.rightValue)) {
+      problemas.push(`la regla ${i} del Switch no compara una ruta conocida`);
+    }
+    if (!salidasSwitch[i] || salidasSwitch[i].length === 0) {
+      problemas.push(`la salida ${i} del Switch ("${r.outputKey}") no lleva a ningún nodo`);
+    }
+  });
+
+  // Un operador de un solo valor con rightValue vacío no valida en modo
+  // estricto: la regla nunca encaja y el item se va al fallback.
+  for (const n of workflow.nodes) {
+    const grupos = [
+      ...(n.parameters?.conditions ? [n.parameters.conditions] : []),
+      ...((n.parameters?.rules?.values || []).map((r) => r.conditions)),
+    ];
+    for (const g of grupos) {
+      for (const c of g.conditions) {
+        if (c.operator.singleValue && 'rightValue' in c) {
+          problemas.push(`${n.name}: condición de un solo valor con rightValue`);
+        }
       }
     }
   }

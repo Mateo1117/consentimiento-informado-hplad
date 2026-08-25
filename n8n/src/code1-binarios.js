@@ -451,7 +451,7 @@ if (medico.leido && !medico.oid) {
     + 'registrado en el hospital tal cual.'
   );
 } else if (!medico.leido) {
-  errores.push('No se pudo leer la respuesta del nodo "Medicos" (¿n8n lo renombró al importar?).');
+  errores.push('No se pudo leer la respuesta de la búsqueda de médicos.');
 }
 
 if (plantilla.leido && !plantilla.oid) {
@@ -460,7 +460,7 @@ if (plantilla.leido && !plantilla.oid) {
     + '" en /plantillas-consentimiento.'
   );
 } else if (!plantilla.leido) {
-  errores.push('No se pudo leer la respuesta del nodo "Plantilla Consentimiento2" (¿n8n lo renombró al importar?).');
+  errores.push('No se pudo leer la respuesta de la búsqueda de plantillas.');
 }
 
 // ── Salida ───────────────────────────────────────────────────────────────────
@@ -476,6 +476,10 @@ return [{
     plantilla_oid: plantilla.oid,
     tipo_firmante: clasificacion.tipo_firmante,
     con_acudiente: !!binFirmaAcudiente,
+
+    // Por aquí reparte el Switch. Es texto a propósito: una condición booleana
+    // con validación estricta no encaja y el item se iba a la rama de error.
+    ruta: errores.length > 0 ? 'error' : (binFirmaAcudiente ? 'con_acudiente' : 'sin_acudiente'),
     diagnostico: {
       firma_paciente: firmaPacienteFinal ? firmaPacienteFinal.origen || 'compuesta' : 'ausente',
       firma_acudiente: binFirmaAcudiente ? binFirmaAcudiente.origen : 'ausente',

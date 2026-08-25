@@ -62,7 +62,15 @@ llega vacía y sólo trae un `id`. Se resuelve la referencia con los helpers.
 **El Switch descartaba el item en silencio.** Evaluaba
 `payload_adicional.patientPhotoUrl`, un campo que `sanitizeConsentPayload`
 borra siempre, con `typeValidation: strict` y `fallbackOutput: none`. Ahora
-reparte por `ok` / `con_acudiente` y lo que no encaje se va a la rama de error.
+reparte por el texto `ruta` (`error` / `con_acudiente` / `sin_acudiente`) y lo
+que no encaje se va a la rama de error.
+
+**El Switch mandaba todo a "Con error".** Repartía con condiciones booleanas
+(`{{ $json.ok }}` *is true*). Al importar, n8n deja el Switch con
+`typeValidation: "strict"` y "Convert types where required" apagado, y ahí una
+condición booleana con `rightValue` vacío no valida: ninguna regla encaja y todo
+cae al *fallback*, que es la salida 0. Ahora se compara un texto —mucho más
+tolerante— y los nodos llevan `looseTypeValidation: true`.
 
 **`Crear Consentimiento3` no llevaba a ninguna parte.** Su conexión era
 `{"main": [[]]}`: la rama del acudiente terminaba sin responder al webhook.

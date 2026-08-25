@@ -126,11 +126,19 @@ const crearConsentimiento = (name, conAcudiente, position) =>
     { position, alwaysOutputData: true, onError: 'continueRegularOutput' },
   );
 
+// Los operadores booleanos de un solo valor no llevan rightValue: con
+// validación estricta, un rightValue vacío no valida y la regla nunca encaja.
 const condicionBooleana = (id, expresion, valor) => ({
   id,
   leftValue: `={{ ${expresion} }}`,
-  rightValue: '',
   operator: { type: 'boolean', operation: valor ? 'true' : 'false', singleValue: true },
+});
+
+const condicionTexto = (id, expresion, valor) => ({
+  id,
+  leftValue: `={{ ${expresion} }}`,
+  rightValue: valor,
+  operator: { type: 'string', operation: 'equals' },
 });
 
 const opcionesCondicion = {
@@ -139,6 +147,12 @@ const opcionesCondicion = {
   typeValidation: 'loose',
   version: 2,
 };
+
+const regla = (outputKey, condiciones) => ({
+  conditions: { options: opcionesCondicion, conditions: condiciones, combinator: 'and' },
+  renameOutput: true,
+  outputKey,
+});
 
 const nodes = [
   nodo(
@@ -168,6 +182,7 @@ const nodes = [
         ],
         combinator: 'and',
       },
+      looseTypeValidation: true,
       options: {},
     },
     { position: [380, 0] },
@@ -180,6 +195,9 @@ const nodes = [
   code('Code in JavaScript1', 'code1-binarios.js', [1180, 0]),
 
   // Reparto final: error / con acudiente / sin acudiente.
+  // Se compara el texto `ruta` en vez de dos booleanos: n8n importa el Switch
+  // con typeValidation "strict" y ahí una condición booleana sin rightValue
+  // válido no encaja, así que TODO se iba al fallback (la rama de error).
   nodo(
     'Switch',
     'n8n-nodes-base.switch',
@@ -187,41 +205,18 @@ const nodes = [
     {
       rules: {
         values: [
-          {
-            conditions: {
-              options: opcionesCondicion,
-              conditions: [condicionBooleana('b176c321-1a52-42e1-9206-20d05a6197a0', `$json.ok`, false)],
-              combinator: 'and',
-            },
-            renameOutput: true,
-            outputKey: 'Con error',
-          },
-          {
-            conditions: {
-              options: opcionesCondicion,
-              conditions: [
-                condicionBooleana('11d0b6e6-4621-4964-8d00-7299d1322d5f', `$json.ok`, true),
-                condicionBooleana('2f6d0f0d-3a1c-4d0a-9d3b-1c0d5f7a9b21', `$json.con_acudiente`, true),
-              ],
-              combinator: 'and',
-            },
-            renameOutput: true,
-            outputKey: 'Con acudiente',
-          },
-          {
-            conditions: {
-              options: opcionesCondicion,
-              conditions: [
-                condicionBooleana('7c1e3a55-4f2b-4a77-9a10-52d8e3f0c4a9', `$json.ok`, true),
-                condicionBooleana('9b2d6c14-8e33-4f61-b2a7-6d4e1f8c0a35', `$json.con_acudiente`, false),
-              ],
-              combinator: 'and',
-            },
-            renameOutput: true,
-            outputKey: 'Sin acudiente',
-          },
+          regla('Con error', [
+            condicionTexto('b176c321-1a52-42e1-9206-20d05a6197a0', '$json.ruta', 'error'),
+          ]),
+          regla('Con acudiente', [
+            condicionTexto('11d0b6e6-4621-4964-8d00-7299d1322d5f', '$json.ruta', 'con_acudiente'),
+          ]),
+          regla('Sin acudiente', [
+            condicionTexto('7c1e3a55-4f2b-4a77-9a10-52d8e3f0c4a9', '$json.ruta', 'sin_acudiente'),
+          ]),
         ],
       },
+      looseTypeValidation: true,
       // Lo que no encaje se va a la salida 0 (error): nunca se descarta en silencio.
       options: { fallbackOutput: 0 },
     },
