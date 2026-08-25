@@ -1,16 +1,34 @@
 // ── Nodo "Respuesta Con Error" (Code · Run Once for All Items) ────────────────
-// Se ejecuta cuando la validación previa falla o cuando la API del hospital
-// rechaza la carga. Responde 422 con el motivo, en vez de fallar en silencio.
+// Se ejecuta cuando la validación previa falla, cuando no se pudo descargar una
+// firma, o cuando la API del hospital rechaza la carga. Responde 422 con el
+// motivo, en vez de fallar en silencio o guardar un consentimiento sin firma.
 
-const datos = $('Construir Binarios').first().json;
+const datos = $('Preparar Datos').first().json;
 const entrada = $input.first().json ?? {};
 
-const erroresValidacion = Array.isArray(datos.errores) ? datos.errores : [];
-const errorApi = entrada?.error?.message || entrada?.message || entrada?.error || null;
+function primerOid(nombreNodo) {
+  try {
+    const res = $(nombreNodo).first().json;
+    const lista = res?.data || res?.results || (Array.isArray(res) ? res : []);
+    return lista && lista.length > 0 ? (lista[0].oid ?? null) : null;
+  } catch (e) {
+    return null;
+  }
+}
 
-const errores = erroresValidacion.length > 0
-  ? erroresValidacion
-  : [errorApi || 'La API de historia clínica rechazó el consentimiento'];
+const medicoOid = primerOid('Buscar Medico');
+const plantillaOid = primerOid('Buscar Plantilla');
+
+const errores = Array.isArray(datos.errores) ? [...datos.errores] : [];
+if (!medicoOid) errores.push(`No se encontró el médico "${datos.profesional_nombre_completo}" en /medicos`);
+if (!plantillaOid) errores.push(`No se encontró la plantilla "${datos.nombre_consentimiento}" en /plantillas-consentimiento`);
+
+// Error que venga del nodo anterior (descarga fallida o rechazo de la API).
+const errorNodo = entrada?.error?.message || entrada?.message
+  || (typeof entrada?.error === 'string' ? entrada.error : null);
+if (errorNodo) errores.push(errorNodo);
+
+if (errores.length === 0) errores.push('La API de historia clínica rechazó el consentimiento');
 
 return [{
   json: {
@@ -23,18 +41,11 @@ return [{
     nombre_consentimiento: datos.nombre_consentimiento,
     profesional_nombre_completo: datos.profesional_nombre_completo,
     diagnostico: {
-      medico_oid: datos.medico_oid,
-      plantilla_oid: datos.plantilla_oid,
-      firma_paciente: datos.firma_paciente_disponible,
-      firma_acudiente: datos.firma_acudiente_disponible,
-      huella: datos.huella_disponible,
       modo: datos.modo,
-      // De dónde salió cada imagen (o por qué no salió): evita tener que abrir
-      // nodo por nodo en el editor para saber dónde se perdió la firma.
-      origen_firma_paciente: datos.origen_firma_paciente,
-      origen_firma_acudiente: datos.origen_firma_acudiente,
-      origen_huella_paciente: datos.origen_huella_paciente,
-      firma_paciente_bytes: datos.firma_paciente_bytes,
+      medico_oid: medicoOid,
+      plantilla_oid: plantillaOid,
+      url_firma_paciente: datos.url_firma_paciente,
+      url_firma_acudiente: datos.url_firma_acudiente,
       entrada: datos.diagnostico_entrada,
     },
   },

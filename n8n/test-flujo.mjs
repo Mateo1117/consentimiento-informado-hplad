@@ -1,37 +1,18 @@
 #!/usr/bin/env node
-// Simulador mínimo de n8n: ejecuta los nodos Code de n8n/src con payloads reales
-// y comprueba que el flujo produce los binarios y las decisiones esperadas, sin
-// necesidad de desplegar en n8n ni de tocar la API del hospital.
+// Verifica el flujo sin desplegar en n8n ni tocar la API del hospital:
+//   1. Ejecuta los nodos Code con payloads reales.
+//   2. Valida el grafo del workflow generado (conexiones, binarios, referencias).
 //
 //   node n8n/test-flujo.mjs
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import zlib from 'node:zlib';
 
 const aqui = dirname(fileURLToPath(import.meta.url));
 const code = (f) => readFileSync(join(aqui, 'src', f), 'utf8');
+const wf = JSON.parse(readFileSync(join(aqui, 'crear-consentimiento.workflow.json'), 'utf8'));
 
-// ── PNG de firma real (RGBA con transparencia, como los que produce el canvas)
-function crc32(buf){const t=[];for(let i=0;i<256;i++){let c=i;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t.push(c);}let c=0xFFFFFFFF;for(let i=0;i<buf.length;i++)c=t[(c^buf[i])&0xFF]^(c>>>8);return (c^0xFFFFFFFF)>>>0;}
-const u32=n=>Buffer.from([(n>>>24)&255,(n>>>16)&255,(n>>>8)&255,n&255]);
-const chunk=(t,d)=>{const T=Buffer.from(t,'ascii');return Buffer.concat([u32(d.length),T,d,u32(crc32(Buffer.concat([T,d])))]);};
-function firmaPng(w,h){
-  const raw=Buffer.alloc(h*(w*4+1));
-  for(let y=0;y<h;y++){raw[y*(w*4+1)]=y%5;
-    for(let x=0;x<w;x++){const i=y*(w*4+1)+1+x*4;
-      const trazo = Math.abs(Math.sin(x/18)*h/3 + h/2 - y) < 3;
-      raw[i]=raw[i+1]=raw[i+2]=trazo?20:255; raw[i+3]=trazo?255:0;}}
-  return Buffer.concat([Buffer.from([0x89,0x50,0x4E,0x47,0x0D,0x0A,0x1A,0x0A]),
-    chunk('IHDR',Buffer.concat([u32(w),u32(h),Buffer.from([8,6,0,0,0])])),
-    chunk('IDAT',zlib.deflateSync(raw,{level:9})),chunk('IEND',Buffer.alloc(0))]);
-}
-const firmaDataUri = 'data:image/png;base64,' + firmaPng(580,260).toString('base64');
-const huellaDataUri = 'data:image/png;base64,' + firmaPng(300,300).toString('base64');
-
-// ── Motor de ejecución de nodos Code ─────────────────────────────────────────
-const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
-
+// ── Motor mínimo de nodos Code ───────────────────────────────────────────────
 function ejecutar(archivo, items, nodos) {
   const $input = { first: () => items[0], all: () => items, item: items[0] };
   const $ = (nombre) => {
@@ -40,55 +21,35 @@ function ejecutar(archivo, items, nodos) {
     if (v === null) throw new Error(`El nodo "${nombre}" falló`);
     return { first: () => v, item: v, all: () => [v] };
   };
-  // Los nodos Code de n8n admiten await en el nivel superior: los evaluamos
-  // como funciones async para reproducir ese entorno.
-  const fn = new AsyncFunction('$input', '$', code(archivo));
-  return fn($input, $);
+  return new Function('$input', '$', code(archivo))($input, $);
 }
+
+const URL_FIRMA = 'https://dbhamokkweyadibngphq.supabase.co/storage/v1/object/public/photos/29031127-4ee1/firma_paciente.png';
+const URL_ACUD = 'https://dbhamokkweyadibngphq.supabase.co/storage/v1/object/public/photos/29031127-4ee1/firma_acudiente.png';
+const DATA_URI = `data:image/png;base64,${'A'.repeat(500)}`;
 
 const respuestaMedicos = { data: [{ oid: 4321, nombre: 'COLLAZOS QUINTERO KAREN SOFIA' }] };
 const respuestaPlantillas = { data: [{ oid: 88, nombre: 'VENOPUNCION' }] };
 
-async function correr(nombreCaso, body, opciones = {}) {
+function correr(nombreCaso, body, opciones = {}) {
   const nodos = {};
-  const webhook = { json: { body }, binary: {} };
-
-  const prep = (await ejecutar('01-preparar-datos.js', [webhook], nodos))[0];
-  if (opciones.modoDisco) {
-    // Reproduce N8N_DEFAULT_BINARY_DATA_MODE=filesystem/s3: n8n guarda el
-    // binario fuera de memoria y `data` vuelve vacío, sólo con la referencia.
-    for (const k of Object.keys(prep.binary || {})) {
-      prep.binary[k] = { ...prep.binary[k], data: '', id: `filesystem:${k}` };
-    }
-  }
+  const prep = ejecutar('01-preparar-datos.js', [{ json: { body } }], nodos)[0];
   nodos['Preparar Datos'] = prep;
   nodos['Buscar Medico'] = opciones.sinMedico ? { json: { data: [] } } : { json: respuestaMedicos };
   nodos['Buscar Plantilla'] = opciones.sinPlantilla ? { json: { data: [] } } : { json: respuestaPlantillas };
-  // Las descargas fallan (URL vacía) salvo que el caso diga lo contrario
-  nodos['Descargar Firma Paciente'] = opciones.dlFirmaPaciente ?? null;
-  nodos['Descargar Firma Acudiente'] = opciones.dlFirmaAcudiente ?? null;
-  nodos['Descargar Huella Paciente'] = opciones.dlHuella ?? null;
 
-  const bin = (await ejecutar('02-construir-binarios.js', [prep], nodos))[0];
-  nodos['Construir Binarios'] = bin;
-
-  const camposBin = Object.keys(bin.binary || {});
-  const tam = camposBin.map(k => `${k}=${Math.round(Buffer.from(bin.binary[k].data,'base64').length/1024)}KB`).join(' ');
-
+  const oidsOk = !opciones.sinMedico && !opciones.sinPlantilla;
   let final;
-  if (bin.json.valido) {
-    const apiResp = [{ json: { data: { oid: 99001 } } }];
-    final = (await ejecutar('03-respuesta-ok.js', apiResp, nodos))[0];
+  if (prep.json.valido && oidsOk) {
+    final = ejecutar('03-respuesta-ok.js', [{ json: { data: { oid: 99001 } } }], nodos)[0];
   } else {
-    final = (await ejecutar('04-respuesta-error.js', [bin], nodos))[0];
+    final = ejecutar('04-respuesta-error.js', [opciones.errorNodo ?? { json: {} }], nodos)[0];
   }
 
   console.log(`\n── ${nombreCaso}`);
-  console.log(`   modo=${bin.json.modo} valido=${bin.json.valido} composicion=${bin.json.composicion_firma_huella}`);
-  console.log(`   binarios: ${camposBin.join(', ') || '(ninguno)'} ${tam}`);
-  console.log(`   origen firma paciente: ${bin.json.origen_firma_paciente}`);
-  console.log(`   respuesta: success=${final.json.success}${final.json.errores ? ' errores=' + JSON.stringify(final.json.errores) : ''}`);
-  return { bin, final };
+  console.log(`   modo=${prep.json.modo} valido=${prep.json.valido} tipo_firmante=${prep.json.tipo_firmante}`);
+  console.log(`   respuesta: success=${final.json.success}${final.json.errores ? ` errores=${JSON.stringify(final.json.errores)}` : ''}`);
+  return { prep, final };
 }
 
 const base = {
@@ -96,82 +57,111 @@ const base = {
   paciente_nombre_completo: 'FLOR MARINA AMORTEGUI OLARTE',
   paciente_tipo_documento: 'CC',
   paciente_numero_documento: '20878722',
-  paciente_foto: null,
-  acudiente_nombre_completo: null, acudiente_documento: null, acudiente_parentesco: null, acudiente_firma: null,
   procedimiento_medico: 'Toma de Muestra por Venopunción',
   nombre_consentimiento: 'VENOPUNCION',
   aceptacion_procedimiento: 'Aceptado',
-  fecha_documento: '2026-08-21',
+  fecha_documento: '2026-08-25',
   profesional_nombre_completo: 'COLLAZOS QUINTERO KAREN SOFIA',
   riesgos_situacion_clinica: 'Hipertensión',
-  payload_adicional: { patientData: {}, decision: 'aprobar' },  // sin patientPhotoUrl (lo borra el sanitizador)
+  payload_adicional: { patientData: {}, decision: 'aprobar' },
 };
 
-// 1) Caso REAL capturado por el usuario: firma como data URI, sin huella
-const r1 = await correr('Firma como data URI (caso real del usuario)', { ...base, paciente_firma: firmaDataUri });
+const acud = {
+  acudiente_nombre_completo: 'MARIA PEREZ',
+  acudiente_documento: '123',
+  acudiente_parentesco: 'MADRE',
+};
 
-// 2) Firma como URL de Storage (camino feliz previsto por la app)
-const r2 = await correr('Firma como URL http', { ...base, paciente_firma: 'https://storage.example/f.png' },
-  { dlFirmaPaciente: { json: {}, binary: { firma_paciente_dl: { data: firmaPng(580,260).toString('base64'), mimeType: 'image/png', fileName: 'f.png' } } } });
+const r1 = correr('Firma del paciente como URL (caso real)', { ...base, paciente_firma: URL_FIRMA });
+const r2 = correr('Sólo acudiente (menor de edad)', { ...base, ...acud, acudiente_firma: URL_ACUD });
+const r3 = correr('Paciente y acudiente', { ...base, ...acud, paciente_firma: URL_FIRMA, acudiente_firma: URL_ACUD });
+const r4 = correr('Firma incrustada en base64 (Storage falló)', { ...base, paciente_firma: DATA_URI });
+const r5 = correr('Sin firma alguna', { ...base });
+const r6 = correr('Médico no encontrado', { ...base, paciente_firma: URL_FIRMA }, { sinMedico: true });
+const r7 = correr('Procedimiento rechazado', { ...base, paciente_firma: URL_FIRMA, aceptacion_procedimiento: 'Rechazado' });
+const r8 = correr('Body sin parsear (llega como cadena)', JSON.stringify({ ...base, paciente_firma: URL_FIRMA }));
+const r9 = correr('Descarga fallida -> 422 con el motivo', { ...base, paciente_firma: URL_FIRMA },
+  { sinMedico: true, errorNodo: { json: { error: { message: 'Request failed with status code 403' } } } });
 
-// 3) Firma + huella -> imagen compuesta
-const r3 = await correr('Firma + huella (composición)', { ...base, paciente_firma: firmaDataUri, paciente_foto: huellaDataUri });
+// ── Validación del grafo ──────────────────────────────────────────────────────
+const nombres = wf.nodes.map((n) => n.name);
+const porNombre = Object.fromEntries(wf.nodes.map((n) => [n.name, n]));
+const destinos = new Set();
+const problemas = [];
 
-// 4) Menor de edad: sólo firma del acudiente
-const r4 = await correr('Sólo acudiente (menor de edad)', { ...base, paciente_firma: null, paciente_es_menor: true,
-  acudiente_nombre_completo: 'MARIA PEREZ', acudiente_documento: '123', acudiente_parentesco: 'MADRE', acudiente_firma: firmaDataUri });
+for (const [origen, conexion] of Object.entries(wf.connections)) {
+  if (!nombres.includes(origen)) problemas.push(`origen inexistente: ${origen}`);
+  for (const salida of conexion.main) {
+    for (const c of salida) {
+      destinos.add(c.node);
+      if (!nombres.includes(c.node)) problemas.push(`destino inexistente: ${c.node}`);
+    }
+  }
+}
+for (const n of nombres) {
+  if (!destinos.has(n) && n !== 'Webhook Crear Consentimiento') problemas.push(`nodo huérfano: ${n}`);
+}
+if (nombres.length !== new Set(nombres).size) problemas.push('hay nombres de nodo duplicados');
 
-// 5) Ambas firmas
-const r5 = await correr('Paciente y acudiente', { ...base, paciente_firma: firmaDataUri,
-  acudiente_nombre_completo: 'MARIA PEREZ', acudiente_documento: '123', acudiente_parentesco: 'MADRE', acudiente_firma: firmaDataUri });
+// Toda referencia $('Nodo') —en expresiones y en código— debe existir.
+const textoCompleto = JSON.stringify(wf);
+for (const m of textoCompleto.matchAll(/\$\('([^']+)'\)/g)) {
+  if (!nombres.includes(m[1])) problemas.push(`referencia a nodo inexistente: $('${m[1]}')`);
+}
 
-// 6) Médico inexistente -> error explícito
-const r6 = await correr('Médico no encontrado', { ...base, paciente_firma: firmaDataUri }, { sinMedico: true });
-
-// 7) Sin ninguna firma -> error explícito
-const r7 = await correr('Sin firma alguna', { ...base, paciente_firma: null });
-
-// 8) Rechazo del procedimiento
-const r8 = await correr('Procedimiento rechazado', { ...base, paciente_firma: firmaDataUri, aceptacion_procedimiento: 'Rechazado' });
-
-// 9) n8n con binarios en disco: `binary.x.data` llega vacío. Este era el fallo
-//    de "no convierte el binario": la firma existe pero el nodo la leía ausente.
-const r9 = await correr('Binarios en disco (filesystem/s3)', { ...base, paciente_firma: firmaDataUri }, { modoDisco: true });
-
-// 10) Binarios en disco con firma + huella: la composición también debe salir
-const r10 = await correr('Binarios en disco + huella', { ...base, paciente_firma: firmaDataUri, paciente_foto: huellaDataUri }, { modoDisco: true });
+// Cada binario que pide un POST tiene que producirlo alguna descarga de su rama.
+const producidoPor = {};
+for (const n of wf.nodes) {
+  const prop = n.parameters?.options?.response?.response?.outputPropertyName;
+  if (prop) (producidoPor[prop] ||= []).push(n.name);
+}
+function ramaLlegaCon(nodoPost, campo) {
+  const visitados = new Set();
+  const pendientes = [nodoPost];
+  while (pendientes.length) {
+    const actual = pendientes.pop();
+    if (visitados.has(actual)) continue;
+    visitados.add(actual);
+    if ((producidoPor[campo] || []).includes(actual)) return true;
+    for (const [origen, conexion] of Object.entries(wf.connections)) {
+      if (conexion.main.some((s) => s.some((c) => c.node === actual))) pendientes.push(origen);
+    }
+  }
+  return false;
+}
+for (const n of wf.nodes) {
+  for (const p of n.parameters?.bodyParameters?.parameters || []) {
+    if (p.parameterType !== 'formBinaryData') continue;
+    if (!ramaLlegaCon(n.name, p.inputDataFieldName)) {
+      problemas.push(`"${n.name}" pide el binario ${p.inputDataFieldName} pero ninguna descarga de su rama lo produce`);
+    }
+  }
+}
 
 // ── Aserciones ────────────────────────────────────────────────────────────────
 const checks = [
-  ['1 data URI produce hcpacfir', !!r1.bin.binary.hcpacfir && r1.bin.json.valido && r1.bin.json.modo==='paciente'],
-  ['2 URL http produce hcpacfir', !!r2.bin.binary.hcpacfir && r2.bin.json.valido],
-  ['3 composición ok', r3.bin.json.composicion_firma_huella==='ok' && !!r3.bin.binary.hcpacfir],
-  ['3 compuesto pesa < 800KB', Buffer.from(r3.bin.binary.hcpacfir.data,'base64').length < 800*1024],
-  ['4 sólo acudiente -> hcrepfir sin hcpacfir', !!r4.bin.binary.hcrepfir && !r4.bin.binary.hcpacfir && r4.bin.json.modo==='acudiente'],
-  ['4 tipo_firmante = 1', r4.bin.json.tipo_firmante===1],
-  ['5 ambas -> dos binarios', !!r5.bin.binary.hcpacfir && !!r5.bin.binary.hcrepfir && r5.bin.json.modo==='ambas'],
-  ['6 médico faltante invalida', r6.bin.json.valido===false && r6.final.json.success===false],
-  ['7 sin firma invalida', r7.bin.json.valido===false && r7.bin.json.modo==='sin_firma'],
-  ['8 rechazo -> estado 0', r8.bin.json.estado===0],
-  ['1 estado aceptado = 1', r1.bin.json.estado===1],
-  ['1 tipo_firmante = 2', r1.bin.json.tipo_firmante===2],
-  ['1 hcpacfir no va vacío', r1.bin.json.firma_paciente_bytes > 1000],
-  ['9 binarios en disco -> hcpacfir igual', !!r9.bin.binary.hcpacfir && r9.bin.json.valido && r9.bin.json.firma_paciente_bytes > 1000],
-  ['10 binarios en disco -> composición ok', r10.bin.json.composicion_firma_huella==='ok'],
-  ['1 origen = inline', r1.bin.json.origen_firma_paciente==='inline'],
-  ['2 origen = descarga', r2.bin.json.origen_firma_paciente==='descarga'],
-  ['9 origen = json_base64 (binarios en disco)', r9.bin.json.origen_firma_paciente==='json_base64'],
-  ['7 sin firma explica el motivo', /ninguno \(no venía en el webhook\)/.test(r7.bin.json.origen_firma_paciente)],
-  ['1 hcpacfir no lleva la clave de diagnóstico', !('origen' in r1.bin.binary.hcpacfir)],
-  ['1 diagnóstico dice dónde venía la firma', r1.bin.json.diagnostico_entrada.firma_paciente.encontrado_en==='paciente_firma'
-     && r1.bin.json.diagnostico_entrada.firma_paciente.tipo==='data_uri'],
-  ['2 diagnóstico reconoce la URL', r2.bin.json.diagnostico_entrada.firma_paciente.tipo==='url'],
-  ['7 diagnóstico marca la firma ausente', r7.bin.json.diagnostico_entrada.firma_paciente.tipo==='ausente'],
-  ['7 el 422 incluye el diagnóstico de entrada', !!r7.final.json.diagnostico.entrada],
-  ['1 el diagnóstico no vuelca la firma entera', r1.bin.json.diagnostico_entrada.firma_paciente.muestra.length<=80],
+  ['1 URL de firma -> modo paciente y válido', r1.prep.json.modo === 'paciente' && r1.prep.json.valido && r1.final.json.success === true],
+  ['1 tipo_firmante = 2', r1.prep.json.tipo_firmante === 2],
+  ['1 estado aceptado = 1', r1.prep.json.estado === 1],
+  ['2 sólo acudiente -> modo acudiente, tipo_firmante 1', r2.prep.json.modo === 'acudiente' && r2.prep.json.tipo_firmante === 1],
+  ['3 ambas firmas -> modo ambas', r3.prep.json.modo === 'ambas' && r3.prep.json.valido],
+  ['4 base64 incrustado no se da por bueno', r4.prep.json.modo === 'sin_firma' && r4.prep.json.valido === false],
+  ['4 el 422 explica que Storage falló', /no la subió a Supabase Storage/.test(r4.final.json.errores.join(' '))],
+  ['5 sin firma invalida', r5.prep.json.modo === 'sin_firma' && r5.final.json.success === false],
+  ['6 médico faltante invalida', r6.final.json.success === false && /No se encontró el médico/.test(r6.final.json.errores.join(' '))],
+  ['7 rechazo -> estado 0', r7.prep.json.estado === 0],
+  ['8 body como cadena se parsea igual', r8.prep.json.modo === 'paciente' && r8.prep.json.paciente_numero_documento === '20878722'],
+  ['9 el error del nodo llega al 422', /403/.test(r9.final.json.errores.join(' '))],
+  ['grafo sin problemas', problemas.length === 0],
+  ['ya no existe "Construir Binarios"', !textoCompleto.includes('Construir Binarios')],
+  ['las descargas producen hcpacfir y hcrepfir', !!producidoPor.hcpacfir && !!producidoPor.hcrepfir],
 ];
+
+console.log('\n── Grafo');
+console.log(`   ${wf.nodes.length} nodos, ${problemas.length} problemas${problemas.length ? `: ${problemas.join(' | ')}` : ''}`);
+
 console.log('\n── Aserciones');
-let fallos=0;
-for (const [n,ok] of checks){ console.log(`   ${ok?'✓':'✗'} ${n}`); if(!ok) fallos++; }
-console.log(fallos===0 ? '\nTODAS LAS ASERCIONES PASAN' : `\n${fallos} ASERCIONES FALLAN`);
-process.exit(fallos===0?0:1);
+let fallos = 0;
+for (const [n, ok] of checks) { console.log(`   ${ok ? '✓' : '✗'} ${n}`); if (!ok) fallos++; }
+console.log(fallos === 0 ? '\nTODAS LAS ASERCIONES PASAN' : `\n${fallos} ASERCIONES FALLAN`);
+process.exit(fallos === 0 ? 0 : 1);

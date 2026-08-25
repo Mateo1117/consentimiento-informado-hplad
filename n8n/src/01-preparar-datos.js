@@ -1,18 +1,15 @@
 // ── Nodo "Preparar Datos" (Code · Run Once for All Items) ──────────────────────
-// Normaliza el body del webhook antes de tocar la API del hospital.
+// Normaliza el body del webhook y decide por qué rama va el consentimiento.
 //
-// Corrige el problema raíz del flujo anterior: las firmas NO siempre son URLs.
-// `appConsentService` intenta subirlas a Supabase Storage y enviar una URL, pero
-// si esa subida falla envía el data URI base64 crudo. Un nodo HTTP Request no
-// puede descargar `data:image/png;base64,...`, así que la firma se perdía.
-// Aquí clasificamos cada imagen: URL http(s) -> se descarga después;
-// data URI -> se decodifica ya mismo a binario.
+// No construye binarios: de eso se encargan los propios nodos de descarga, que
+// ya sacan la firma como archivo (`hcpacfir` / `hcrepfir`) directamente desde la
+// URL de Supabase Storage. Aquí sólo se prepara el terreno.
 
 function leerBody() {
   const entrada = $input.first().json || {};
   let b = entrada.body !== undefined ? entrada.body : entrada;
-  // Si el webhook no pudo parsear el JSON (Content-Type raro, raw body), llega
-  // como cadena. Mejor intentarlo aquí que perder toda la carga.
+  // Si el webhook no pudo parsear el JSON (Content-Type inesperado, raw body),
+  // llega como cadena. Mejor intentarlo aquí que perder toda la carga.
   if (typeof b === 'string') {
     try { b = JSON.parse(b); } catch (e) { /* no era JSON */ }
   }
@@ -28,41 +25,33 @@ function primerValor(claves) {
     const partes = clave.split('.');
     let v = body;
     for (const parte of partes) v = (v && typeof v === 'object') ? v[parte] : undefined;
-    if (typeof v === 'string' && v.trim()) return { valor: v, clave };
+    if (typeof v === 'string' && v.trim()) return { valor: v.trim(), clave };
   }
-  return { valor: null, clave: '' };
+  return { valor: '', clave: '' };
 }
 
 // ── Aceptación del procedimiento ──────────────────────────────────────────────
 const aceptacion = String(body.aceptacion_procedimiento || '').toLowerCase().trim();
 const aceptado = aceptacion === 'aceptado' || aceptacion === 'aprobar' || aceptacion === 'aprobado';
 
-// ── Clasificación de imágenes ─────────────────────────────────────────────────
-// Devuelve { url, dataUri, mimeType, extension, presente }
-function clasificarImagen(valor) {
-  const vacio = { url: '', dataUri: '', mimeType: '', extension: '', presente: false };
-  if (!valor || typeof valor !== 'string') return vacio;
-
-  const v = valor.trim();
-  if (!v) return vacio;
-
+// ── Clasificación de cada imagen ──────────────────────────────────────────────
+// Sólo una URL http(s) es descargable. Un data URI base64 significa que
+// PhotoService.uploadPhoto() falló en la app y mandó la imagen incrustada: el
+// nodo HTTP Request no puede resolver el esquema `data:`, así que eso se
+// reporta como error en vez de dejar que el consentimiento se guarde sin firma.
+function clasificar(origen) {
+  const v = origen.valor;
+  if (!v) return { url: '', tipo: 'ausente', descargable: false, presente: false, campo: '' };
   if (/^https?:\/\//i.test(v)) {
-    return { url: v, dataUri: '', mimeType: '', extension: '', presente: true };
+    return { url: v, tipo: 'url', descargable: true, presente: true, campo: origen.clave };
   }
-
-  const match = /^data:([^;,]+);base64,(.+)$/i.exec(v);
-  if (match) {
-    const mimeType = match[1];
-    const extension = (mimeType.split('/')[1] || 'png').replace('jpeg', 'jpg');
-    return { url: '', dataUri: match[2], mimeType, extension, presente: true };
+  if (/^data:/i.test(v)) {
+    return { url: '', tipo: 'data_uri', descargable: false, presente: true, campo: origen.clave };
   }
-
-  // Base64 pelado, sin encabezado data:
   if (/^[A-Za-z0-9+/=\s]+$/.test(v) && v.length > 100) {
-    return { url: '', dataUri: v.replace(/\s+/g, ''), mimeType: 'image/png', extension: 'png', presente: true };
+    return { url: '', tipo: 'base64_sin_encabezado', descargable: false, presente: true, campo: origen.clave };
   }
-
-  return vacio;
+  return { url: '', tipo: 'texto_no_reconocido', descargable: false, presente: true, campo: origen.clave };
 }
 
 const origenFirmaPaciente = primerValor([
@@ -73,37 +62,36 @@ const origenFirmaAcudiente = primerValor([
   'acudiente_firma', 'firma_acudiente', 'guardianSignature',
   'payload_adicional.guardianSignature',
 ]);
-// La "huella" viaja en paciente_foto. OJO: payload_adicional.patientPhotoUrl NO
-// existe nunca — sanitizeConsentPayload() la borra antes de enviar el webhook.
-const origenHuella = primerValor([
-  'paciente_foto', 'huella_paciente', 'patientPhotoUrl',
-  'payload_adicional.patientPhotoUrl',
-]);
 
-const firmaPaciente = clasificarImagen(origenFirmaPaciente.valor);
-const firmaAcudiente = clasificarImagen(origenFirmaAcudiente.valor);
-const huellaPaciente = clasificarImagen(origenHuella.valor);
+const firmaPaciente = clasificar(origenFirmaPaciente);
+const firmaAcudiente = clasificar(origenFirmaAcudiente);
 
-// ── Diagnóstico de lo que realmente llegó ─────────────────────────────────────
-// Sin esto hay que ir abriendo nodos a ciegas cuando la firma no aparece. Nunca
-// vuelca la imagen entera: sólo tipo, tamaño y los primeros caracteres.
-function describir(origen, clasificada) {
-  if (!origen.valor) return { encontrado_en: null, tipo: 'ausente', longitud: 0, muestra: '' };
-  const v = origen.valor.trim();
-  let tipo = 'texto_no_reconocido';
-  if (clasificada.url) tipo = 'url';
-  else if (/^data:/i.test(v)) tipo = 'data_uri';
-  else if (clasificada.dataUri) tipo = 'base64_sin_encabezado';
-  return {
-    encontrado_en: origen.clave,
-    tipo,
-    longitud: v.length,
-    muestra: v.slice(0, 80),
-  };
-}
+// ── Modo: define a qué rama del Switch va el item ─────────────────────────────
+// Se decide por firmas DESCARGABLES: una firma que no se puede bajar es como no
+// tenerla, y así el error sale antes de tocar la historia clínica.
+let modo;
+if (firmaPaciente.descargable && firmaAcudiente.descargable) modo = 'ambas';
+else if (firmaAcudiente.descargable) modo = 'acudiente';
+else if (firmaPaciente.descargable) modo = 'paciente';
+else modo = 'sin_firma';
 
 // ── Quién firma: 1 = acudiente/responsable, 2 = paciente ──────────────────────
-const tipoFirmante = firmaAcudiente.presente ? 1 : 2;
+const tipoFirmante = firmaAcudiente.descargable ? 1 : 2;
+
+// ── Errores detectables antes de llamar a la API ──────────────────────────────
+const errores = [];
+const paciente_numero_documento = body.paciente_numero_documento || '';
+if (!paciente_numero_documento) errores.push('Falta el número de documento del paciente');
+
+for (const [quien, f] of [['paciente', firmaPaciente], ['acudiente', firmaAcudiente]]) {
+  if (f.presente && !f.descargable) {
+    errores.push(
+      `La firma del ${quien} llegó como ${f.tipo} en el campo "${f.campo}" en vez de como URL: ` +
+      'la app no la subió a Supabase Storage (PhotoService.uploadPhoto falló).'
+    );
+  }
+}
+if (modo === 'sin_firma') errores.push('No hay ninguna firma descargable (ni del paciente ni del acudiente)');
 
 return [{
   json: {
@@ -112,7 +100,7 @@ return [{
     // Paciente
     paciente_nombre_completo: body.paciente_nombre_completo || '',
     paciente_tipo_documento: body.paciente_tipo_documento || 'CC',
-    paciente_numero_documento: body.paciente_numero_documento || '',
+    paciente_numero_documento,
 
     // Acudiente
     acudiente_nombre_completo: body.acudiente_nombre_completo || '',
@@ -137,68 +125,21 @@ return [{
     tipo_firmante: tipoFirmante,
     descripcion_firmante: tipoFirmante === 1 ? 'acudiente' : 'paciente',
 
-    // URLs a descargar (vacías si la imagen vino como data URI o no vino)
+    // URLs que descargarán los nodos HTTP de cada rama
     url_firma_paciente: firmaPaciente.url,
     url_firma_acudiente: firmaAcudiente.url,
-    url_huella_paciente: huellaPaciente.url,
 
-    // Base64 crudo de las imágenes que ya venían embebidas.
-    // Va también en el JSON, no sólo en `binary`, a propósito: cuando n8n corre
-    // con N8N_DEFAULT_BINARY_DATA_MODE=filesystem (o s3) los binarios se
-    // guardan en disco y `$('Preparar Datos').first().binary.x.data` vuelve
-    // VACÍO (sólo trae `id`). Ese es el motivo por el que "Construir Binarios"
-    // se quedaba sin firma aunque la firma sí venía en el webhook. Con el
-    // base64 aquí, el paso siguiente siempre tiene de dónde reconstruirla.
-    b64_firma_paciente: firmaPaciente.dataUri,
-    mime_firma_paciente: firmaPaciente.mimeType,
-    ext_firma_paciente: firmaPaciente.extension,
+    // Ruta que tomará el Switch
+    modo,
 
-    b64_firma_acudiente: firmaAcudiente.dataUri,
-    mime_firma_acudiente: firmaAcudiente.mimeType,
-    ext_firma_acudiente: firmaAcudiente.extension,
-
-    b64_huella_paciente: huellaPaciente.dataUri,
-    mime_huella_paciente: huellaPaciente.mimeType,
-    ext_huella_paciente: huellaPaciente.extension,
-
-    // Qué llegó exactamente en el webhook, para diagnosticar sin abrir nodos.
+    // Diagnóstico: qué llegó de verdad, sin volcar la imagen
     diagnostico_entrada: {
       claves_body: Object.keys(body),
-      firma_paciente: describir(origenFirmaPaciente, firmaPaciente),
-      firma_acudiente: describir(origenFirmaAcudiente, firmaAcudiente),
-      huella_paciente: describir(origenHuella, huellaPaciente),
+      firma_paciente: { campo: firmaPaciente.campo || null, tipo: firmaPaciente.tipo, descargable: firmaPaciente.descargable },
+      firma_acudiente: { campo: firmaAcudiente.campo || null, tipo: firmaAcudiente.tipo, descargable: firmaAcudiente.descargable },
     },
 
-    // Flags de presencia
-    tiene_firma_paciente: firmaPaciente.presente,
-    tiene_firma_acudiente: firmaAcudiente.presente,
-    tiene_huella_paciente: huellaPaciente.presente,
-  },
-  // Las imágenes que llegaron como data URI ya quedan como binarios aquí.
-  binary: {
-    ...(firmaPaciente.dataUri && {
-      firma_paciente_inline: {
-        data: firmaPaciente.dataUri,
-        mimeType: firmaPaciente.mimeType,
-        fileName: `firma_paciente.${firmaPaciente.extension}`,
-        fileExtension: firmaPaciente.extension,
-      },
-    }),
-    ...(firmaAcudiente.dataUri && {
-      firma_acudiente_inline: {
-        data: firmaAcudiente.dataUri,
-        mimeType: firmaAcudiente.mimeType,
-        fileName: `firma_acudiente.${firmaAcudiente.extension}`,
-        fileExtension: firmaAcudiente.extension,
-      },
-    }),
-    ...(huellaPaciente.dataUri && {
-      huella_paciente_inline: {
-        data: huellaPaciente.dataUri,
-        mimeType: huellaPaciente.mimeType,
-        fileName: `huella_paciente.${huellaPaciente.extension}`,
-        fileExtension: huellaPaciente.extension,
-      },
-    }),
+    valido: errores.length === 0,
+    errores,
   },
 }];
