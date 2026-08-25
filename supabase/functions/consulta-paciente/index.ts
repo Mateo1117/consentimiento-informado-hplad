@@ -129,14 +129,15 @@ serve(async (req: Request) => {
             headers: attempt.headers,
             body: attempt.body,
           },
-          15000,
+          30000,
         );
       } catch (fetchError: any) {
         console.error(`Error de fetch en intento ${attempt.name}:`, fetchError);
 
         if (fetchError?.name === "AbortError") {
           return jsonResponse({
-            error: "La consulta tardó demasiado tiempo. Verifique su conexión.",
+            error:
+              "El servicio de consulta de pacientes (webhook n8n) no respondió a tiempo. El flujo está activo pero no devuelve respuesta; verifique el nodo 'Respond to Webhook' o la conexión a la base de datos del hospital.",
             errorType: "timeout",
           });
         }
