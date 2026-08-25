@@ -1,11 +1,11 @@
-// ── Nodo "Code in JavaScript3" (Code · Run Once for All Items) ────────────────
+// ── Nodo "Clasificar Imagenes" (Code · Run Once for All Items) ────────────────
 // Primer nodo después del webhook. Mira qué llegó realmente en cada imagen y
 // deja decidido:
 //
 //   · tipo_firmante        -> 1 acudiente, 2 paciente (campo hcatipaut)
 //   · url_*                -> SÓLO si la imagen vino como http(s). Los nodos de
 //                             descarga usan estas URLs; si están vacías el nodo
-//                             falla a propósito y "Code in JavaScript1" recupera
+//                             falla a propósito y "Armar Binarios" recupera
 //                             la imagen del propio webhook.
 //   · tiene_*              -> hay imagen, venga como URL o como data URI
 //

@@ -1,6 +1,21 @@
 {
-  "name": "Crear Consentimiento HPLAD",
+  "name": "Crear Consentimiento HPLAD v2",
   "nodes": [
+    {
+      "parameters": {
+        "content": "## ⚠️ Antes de activar\n\nSólo puede existir **un** webhook con la ruta `crear_consentimiento` en todo n8n.\n\n1. Borre o desactive el flujo viejo (el nodo `wh` y toda su cadena, y cualquier copia anterior).\n2. Si algún nodo de este flujo quedó con un número pegado al final (p. ej. `Recibir Consentimiento1`), se importó sobre un lienzo que no estaba vacío: borre e importe de nuevo en un workflow NUEVO.\n3. Active este flujo y pruebe desde la app.\n\nSi la ejecución cae en **Con error**, el motivo exacto está en el campo `errores` (pestaña JSON de \"Decidir Envio\") y también le llega a la app en la respuesta 422.",
+        "height": 340,
+        "width": 460,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        -360
+      ],
+      "name": "Leame"
+    },
     {
       "parameters": {
         "httpMethod": "POST",
@@ -12,37 +27,36 @@
       "typeVersion": 2.1,
       "position": [
         -620,
-        0
+        40
       ],
       "id": "1385530b-5254-4501-d928-63fe5240eece",
-      "name": "wh",
-      "webhookId": "c79c363a-8d30-4f48-8135-7bf21d2feb08"
+      "name": "Recibir Consentimiento"
     },
     {
       "parameters": {
-        "jsCode": "// ── Nodo \"Code in JavaScript3\" (Code · Run Once for All Items) ────────────────\n// Primer nodo después del webhook. Mira qué llegó realmente en cada imagen y\n// deja decidido:\n//\n//   · tipo_firmante        -> 1 acudiente, 2 paciente (campo hcatipaut)\n//   · url_*                -> SÓLO si la imagen vino como http(s). Los nodos de\n//                             descarga usan estas URLs; si están vacías el nodo\n//                             falla a propósito y \"Code in JavaScript1\" recupera\n//                             la imagen del propio webhook.\n//   · tiene_*              -> hay imagen, venga como URL o como data URI\n//\n// El motivo de separar \"url\" de \"tiene\": la app a veces sube la firma a Storage\n// y manda una URL, y a veces (cuando la subida falla) manda el data URI dentro\n// del JSON. Un nodo HTTP Request no puede resolver \"data:image/png;base64,...\",\n// así que ese caso hay que decodificarlo a mano más adelante.\n\nconst entrada = $input.first().json || {};\n\nlet body = entrada.body !== undefined ? entrada.body : entrada;\nif (typeof body === 'string') {\n  try { body = JSON.parse(body); } catch (e) { /* se queda como texto */ }\n}\nif (!body || typeof body !== 'object') body = {};\n\nfunction clasificar(valor) {\n  const texto = typeof valor === 'string' ? valor.trim() : '';\n  if (!texto || texto === 'null' || texto === 'undefined') {\n    return { presente: false, tipo: 'ausente', url: '' };\n  }\n  if (/^https?:\\/\\//i.test(texto)) {\n    return { presente: true, tipo: 'url', url: texto };\n  }\n  if (/^data:/i.test(texto)) {\n    return { presente: true, tipo: 'data_uri', url: '' };\n  }\n  if (texto.length > 100 && /^[A-Za-z0-9+/\\s]+={0,2}$/.test(texto)) {\n    return { presente: true, tipo: 'base64_sin_encabezado', url: '' };\n  }\n  return { presente: false, tipo: 'texto_no_reconocido', url: '' };\n}\n\nconst firmaPaciente = clasificar(body.paciente_firma);\nconst firmaAcudiente = clasificar(body.acudiente_firma);\nconst huella = clasificar(body.paciente_foto);\n\n// Quién firma: si hay acudiente manda el acudiente.\nconst tipoFirmante = firmaAcudiente.presente ? 1 : 2;\n\nreturn [{\n  json: {\n    tipo_firmante: tipoFirmante,\n    descripcion_firmante: tipoFirmante === 1 ? 'acudiente' : 'paciente',\n\n    url_firma_paciente: firmaPaciente.url,\n    url_firma_acudiente: firmaAcudiente.url,\n    url_huella: huella.url,\n\n    tiene_firma_paciente: firmaPaciente.presente,\n    tiene_firma_acudiente: firmaAcudiente.presente,\n    tiene_huella: huella.presente,\n\n    // Para ver de un vistazo en la respuesta qué mandó la app.\n    diagnostico_entrada: {\n      claves_body: Object.keys(body),\n      firma_paciente: firmaPaciente.tipo,\n      firma_acudiente: firmaAcudiente.tipo,\n      huella: huella.tipo,\n      profesional_nombre_completo: body.profesional_nombre_completo || null,\n      profesional_documento: body.profesional_documento || null,\n      nombre_consentimiento: body.nombre_consentimiento || null,\n    },\n  },\n}];"
+        "jsCode": "// ── Nodo \"Clasificar Imagenes\" (Code · Run Once for All Items) ────────────────\n// Primer nodo después del webhook. Mira qué llegó realmente en cada imagen y\n// deja decidido:\n//\n//   · tipo_firmante        -> 1 acudiente, 2 paciente (campo hcatipaut)\n//   · url_*                -> SÓLO si la imagen vino como http(s). Los nodos de\n//                             descarga usan estas URLs; si están vacías el nodo\n//                             falla a propósito y \"Armar Binarios\" recupera\n//                             la imagen del propio webhook.\n//   · tiene_*              -> hay imagen, venga como URL o como data URI\n//\n// El motivo de separar \"url\" de \"tiene\": la app a veces sube la firma a Storage\n// y manda una URL, y a veces (cuando la subida falla) manda el data URI dentro\n// del JSON. Un nodo HTTP Request no puede resolver \"data:image/png;base64,...\",\n// así que ese caso hay que decodificarlo a mano más adelante.\n\nconst entrada = $input.first().json || {};\n\nlet body = entrada.body !== undefined ? entrada.body : entrada;\nif (typeof body === 'string') {\n  try { body = JSON.parse(body); } catch (e) { /* se queda como texto */ }\n}\nif (!body || typeof body !== 'object') body = {};\n\nfunction clasificar(valor) {\n  const texto = typeof valor === 'string' ? valor.trim() : '';\n  if (!texto || texto === 'null' || texto === 'undefined') {\n    return { presente: false, tipo: 'ausente', url: '' };\n  }\n  if (/^https?:\\/\\//i.test(texto)) {\n    return { presente: true, tipo: 'url', url: texto };\n  }\n  if (/^data:/i.test(texto)) {\n    return { presente: true, tipo: 'data_uri', url: '' };\n  }\n  if (texto.length > 100 && /^[A-Za-z0-9+/\\s]+={0,2}$/.test(texto)) {\n    return { presente: true, tipo: 'base64_sin_encabezado', url: '' };\n  }\n  return { presente: false, tipo: 'texto_no_reconocido', url: '' };\n}\n\nconst firmaPaciente = clasificar(body.paciente_firma);\nconst firmaAcudiente = clasificar(body.acudiente_firma);\nconst huella = clasificar(body.paciente_foto);\n\n// Quién firma: si hay acudiente manda el acudiente.\nconst tipoFirmante = firmaAcudiente.presente ? 1 : 2;\n\nreturn [{\n  json: {\n    tipo_firmante: tipoFirmante,\n    descripcion_firmante: tipoFirmante === 1 ? 'acudiente' : 'paciente',\n\n    url_firma_paciente: firmaPaciente.url,\n    url_firma_acudiente: firmaAcudiente.url,\n    url_huella: huella.url,\n\n    tiene_firma_paciente: firmaPaciente.presente,\n    tiene_firma_acudiente: firmaAcudiente.presente,\n    tiene_huella: huella.presente,\n\n    // Para ver de un vistazo en la respuesta qué mandó la app.\n    diagnostico_entrada: {\n      claves_body: Object.keys(body),\n      firma_paciente: firmaPaciente.tipo,\n      firma_acudiente: firmaAcudiente.tipo,\n      huella: huella.tipo,\n      profesional_nombre_completo: body.profesional_nombre_completo || null,\n      profesional_documento: body.profesional_documento || null,\n      nombre_consentimiento: body.nombre_consentimiento || null,\n    },\n  },\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         -420,
-        0
+        40
       ],
       "id": "9c5fba17-8360-71d2-4c2c-23c30b8ccbc4",
-      "name": "Code in JavaScript3"
+      "name": "Clasificar Imagenes"
     },
     {
       "parameters": {
-        "jsCode": "// ── Nodo \"Code in JavaScript\" (Code · Run Once for All Items) ─────────────────\n// Traduce la decisión del paciente al 1/0 que espera la API del hospital en\n// hcaautinf, hcaautoproc y hcaautent.\n\nconst body = $('wh').first().json.body || {};\nconst aceptacion = String(body.aceptacion_procedimiento || '').toLowerCase().trim();\n\nconst aceptado = aceptacion === 'aceptado' || aceptacion === 'aprobar' || aceptacion === 'aprobado';\n\nreturn [{\n  json: {\n    estado: aceptado ? 1 : 0,\n    descripcion: aceptado ? 'aceptado' : 'rechazado',\n  },\n}];"
+        "jsCode": "// ── Nodo \"Estado Autorizacion\" (Code · Run Once for All Items) ────────────────\n// Traduce la decisión del paciente al 1/0 que espera la API del hospital en\n// hcaautinf, hcaautoproc y hcaautent.\n\nconst body = $('Recibir Consentimiento').first().json.body || {};\nconst aceptacion = String(body.aceptacion_procedimiento || '').toLowerCase().trim();\n\nconst aceptado = aceptacion === 'aceptado' || aceptacion === 'aprobar' || aceptacion === 'aprobado';\n\nreturn [{\n  json: {\n    estado: aceptado ? 1 : 0,\n    descripcion: aceptado ? 'aceptado' : 'rechazado',\n  },\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         -220,
-        0
+        40
       ],
       "id": "9f946ecf-0306-76ba-b61f-94549a5d8874",
-      "name": "Code in JavaScript"
+      "name": "Estado Autorizacion"
     },
     {
       "parameters": {
@@ -52,7 +66,7 @@
           "parameters": [
             {
               "name": "filtro",
-              "value": "={{ ($('wh').first().json.body.profesional_nombre_completo || '').trim() }}"
+              "value": "={{ ($('Recibir Consentimiento').first().json.body.profesional_nombre_completo || '').trim() }}"
             },
             {
               "name": "limit",
@@ -77,10 +91,10 @@
       "typeVersion": 4.2,
       "position": [
         -20,
-        0
+        40
       ],
       "id": "06cb7899-744e-68d6-24ac-a7e80a427803",
-      "name": "Medicos",
+      "name": "Consultar Medicos",
       "alwaysOutputData": true,
       "onError": "continueRegularOutput"
     },
@@ -92,7 +106,7 @@
           "parameters": [
             {
               "name": "filtro",
-              "value": "={{ ($('wh').first().json.body.nombre_consentimiento || '').trim() }}"
+              "value": "={{ ($('Recibir Consentimiento').first().json.body.nombre_consentimiento || '').trim() }}"
             }
           ]
         },
@@ -113,10 +127,10 @@
       "typeVersion": 4.2,
       "position": [
         180,
-        0
+        40
       ],
       "id": "8a1bf929-d1c4-fccd-552a-05e8a25e070d",
-      "name": "Plantilla Consentimiento2",
+      "name": "Consultar Plantillas",
       "alwaysOutputData": true,
       "onError": "continueRegularOutput"
     },
@@ -132,7 +146,7 @@
           "conditions": [
             {
               "id": "99260089-f874-4605-a5fb-735154a3ef60",
-              "leftValue": "={{ $('Code in JavaScript3').first().json.tiene_firma_acudiente }}",
+              "leftValue": "={{ $('Clasificar Imagenes').first().json.tiene_firma_acudiente }}",
               "operator": {
                 "type": "boolean",
                 "operation": "true",
@@ -152,11 +166,11 @@
         0
       ],
       "id": "68b4faf3-225a-22cc-bbec-7cadcfc744ca",
-      "name": "If"
+      "name": "Hay Acudiente"
     },
     {
       "parameters": {
-        "url": "={{ $('Code in JavaScript3').first().json.url_firma_acudiente }}",
+        "url": "={{ $('Clasificar Imagenes').first().json.url_firma_acudiente }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -184,16 +198,16 @@
       "typeVersion": 4.2,
       "position": [
         580,
-        -120
+        -80
       ],
       "id": "a07268ee-a626-7caa-7cf1-b1c11c3aba27",
-      "name": "firma acudiente",
+      "name": "Bajar Firma Acudiente",
       "alwaysOutputData": true,
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "url": "={{ $('Code in JavaScript3').first().json.url_firma_paciente }}",
+        "url": "={{ $('Clasificar Imagenes').first().json.url_firma_paciente }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -221,16 +235,16 @@
       "typeVersion": 4.2,
       "position": [
         780,
-        0
+        40
       ],
       "id": "122126bd-d8b0-e8c4-5c36-4edc6d86429b",
-      "name": "firma paciente",
+      "name": "Bajar Firma Paciente",
       "alwaysOutputData": true,
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "url": "={{ $('Code in JavaScript3').first().json.url_huella }}",
+        "url": "={{ $('Clasificar Imagenes').first().json.url_huella }}",
         "sendHeaders": true,
         "headerParameters": {
           "parameters": [
@@ -258,25 +272,25 @@
       "typeVersion": 4.2,
       "position": [
         980,
-        0
+        40
       ],
       "id": "22451f36-6fe6-c211-e561-d679c0005404",
-      "name": "huella paciente",
+      "name": "Bajar Huella",
       "alwaysOutputData": true,
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "// ── Nodo \"Code in JavaScript1\" (Code · Run Once for All Items) ────────────────\n// Deja listos los binarios que suben los POST al hospital:\n//\n//   data     -> hcpacfir : firma del paciente (con la huella al lado si la hay)\n//   data rep -> hcrepfir : firma del acudiente (sólo si existe)\n//\n// Cada imagen se resuelve en cascada, porque puede llegar de dos formas muy\n// distintas y antes sólo se contemplaba una:\n//\n//   1) La descargó el nodo HTTP correspondiente (la app subió la imagen a\n//      Storage y mandó la URL). Ojo: cuando n8n guarda los binarios fuera de\n//      memoria (N8N_DEFAULT_BINARY_DATA_MODE=filesystem o s3, lo normal en\n//      self-hosted) `binary.x.data` llega VACÍO y sólo trae un `id`; por eso\n//      hay que resolver la referencia con los helpers.\n//   2) Vino dentro del webhook como data URI, porque la subida a Storage falló.\n//      Un HTTP Request no puede resolver \"data:image/png;base64,...\" así que\n//      ese caso se decodifica aquí.\n//\n// Nunca se generan binarios de relleno: si una firma no existe, el campo no se\n// envía. El flujo anterior mandaba un PDF vacío en hcpacfir, y eso guardaba\n// consentimientos con una \"firma\" que no era una firma.\n\nconst clasificacion = $('Code in JavaScript3').first().json;\nconst body = $('wh').first().json.body || {};\n\nconst ayudantes = (() => {\n  try { return (typeof this !== 'undefined' && this && this.helpers) ? this.helpers : null; }\n  catch (e) { return null; }\n})();\n\nasync function aBase64(bin) {\n  if (!bin) return '';\n  if (typeof bin.data === 'string' && bin.data.length > 0) return bin.data;\n  if (bin.id && ayudantes) {\n    for (const metodo of ['binaryToBuffer', 'getBinaryStream', 'getBinaryDataBuffer']) {\n      try {\n        if (typeof ayudantes[metodo] !== 'function') continue;\n        const buf = await ayudantes[metodo](bin);\n        if (buf && buf.length) return Buffer.from(buf).toString('base64');\n      } catch (e) {\n        // Método no disponible o con otra firma según la versión de n8n.\n      }\n    }\n  }\n  return '';\n}\n\nfunction desdeTexto(valor, nombreArchivo) {\n  const texto = typeof valor === 'string' ? valor.trim() : '';\n  if (!texto) return null;\n\n  const m = /^data:([^;,]*)(;base64)?,([\\s\\S]*)$/i.exec(texto);\n  if (m) {\n    const mime = m[1] || 'image/png';\n    const cuerpo = (m[3] || '').replace(/\\s+/g, '');\n    if (!cuerpo) return null;\n    const data = m[2]\n      ? cuerpo\n      : Buffer.from(decodeURIComponent(cuerpo), 'binary').toString('base64');\n    const ext = (mime.split('/')[1] || 'png').split('+')[0];\n    return { data, mimeType: mime, fileName: nombreArchivo, fileExtension: ext, origen: 'webhook_data_uri' };\n  }\n\n  const limpio = texto.replace(/\\s+/g, '');\n  if (limpio.length > 100 && /^[A-Za-z0-9+/]+={0,2}$/.test(limpio)) {\n    return { data: limpio, mimeType: 'image/png', fileName: nombreArchivo, fileExtension: 'png', origen: 'webhook_base64' };\n  }\n\n  return null;\n}\n\n// `leerDescarga` es una función para que n8n pueda reescribir el `$('Nodo')`\n// literal si al importar renombra los nodos. Pasar el nombre como texto —\n// primerOid('Medicos')— NO se reescribe y rompe el flujo en silencio.\nasync function resolver(leerDescarga, propiedad, crudo, nombreArchivo) {\n  try {\n    const item = leerDescarga();\n    const bin = item && item.binary ? item.binary[propiedad] : null;\n    const data = await aBase64(bin);\n    if (data) {\n      return {\n        data,\n        mimeType: bin.mimeType || 'image/png',\n        fileName: bin.fileName || nombreArchivo,\n        fileExtension: bin.fileExtension || 'png',\n        origen: 'descarga',\n      };\n    }\n  } catch (e) {\n    // El nodo de descarga no corrió (otra rama) o falló: seguimos con el webhook.\n  }\n  return desdeTexto(crudo, nombreArchivo);\n}\n\nconst binFirmaPaciente = await resolver(\n  () => $('firma paciente').first(), 'data', body.paciente_firma, 'firma_paciente.png');\n\nconst binFirmaAcudiente = await resolver(\n  () => $('firma acudiente').first(), 'data rep', body.acudiente_firma, 'firma_acudiente.png');\n\nconst binHuella = await resolver(\n  () => $('huella paciente').first(), 'data', body.paciente_foto, 'huella_paciente.png');\n\n// ── Datos maestros de la API ─────────────────────────────────────────────────\nfunction oidDe(leerRespuesta) {\n  try {\n    const res = leerRespuesta();\n    // Con onError=continueRegularOutput un fallo HTTP no detiene el flujo: el\n    // item llega con { error }. Eso NO es \"no existe\", es \"no se pudo consultar\",\n    // y confundirlos manda a corregir lo que no está roto.\n    if (res && res.error) {\n      const e = res.error;\n      const detalle = typeof e === 'string' ? e : (e.message || JSON.stringify(e));\n      return { leido: true, fallo: detalle, oid: null, total: 0 };\n    }\n    const lista = res && (res.data || res.results) ? (res.data || res.results) : (Array.isArray(res) ? res : []);\n    const total = lista ? lista.length : 0;\n    return { leido: true, fallo: null, oid: total > 0 ? (lista[0].oid ?? null) : null, total };\n  } catch (e) {\n    return { leido: false, fallo: null, oid: null, total: 0 };\n  }\n}\n\nconst medico = oidDe(() => $('Medicos').first().json);\nconst plantilla = oidDe(() => $('Plantilla Consentimiento2').first().json);\n\n// ══ Composición firma + huella en una sola imagen ════════════════════════════\n// La API sólo tiene un campo para la firma del paciente (hcpacfir), así que\n// cuando además hay huella se pegan las dos en una imagen. Ante cualquier\n// problema se devuelve la firma intacta: mejor perder la composición que la\n// firma.\nfunction inflate(comprimido) {\n  let pos = 2, buf = 0, len = 0;\n  const bits = (n) => {\n    while (len < n) { buf |= comprimido[pos++] << len; len += 8; }\n    const v = buf & ((1 << n) - 1);\n    buf >>= n; len -= n;\n    return v;\n  };\n  const tabla = (longitudes, maxSym) => {\n    const maxLen = Math.max(...longitudes);\n    if (maxLen === 0) return { porLongitud: [], maxLen: 0 };\n    const cuenta = new Array(maxLen + 1).fill(0);\n    for (let i = 0; i <= maxSym; i++) if (longitudes[i]) cuenta[longitudes[i]]++;\n    const inicio = new Array(maxLen + 1).fill(0);\n    let c = 0;\n    for (let l = 1; l <= maxLen; l++) { c = (c + cuenta[l - 1]) << 1; inicio[l] = c; }\n    const porLongitud = [];\n    for (let l = 0; l <= maxLen; l++) porLongitud.push({});\n    for (let i = 0; i <= maxSym; i++) {\n      const l = longitudes[i];\n      if (l > 0) { porLongitud[l][inicio[l]] = i; inicio[l]++; }\n    }\n    return { porLongitud, maxLen };\n  };\n  const leerSimbolo = (arbol) => {\n    let code = 0;\n    for (let l = 1; l <= arbol.maxLen; l++) {\n      code = (code << 1) | bits(1);\n      const sym = arbol.porLongitud[l][code];\n      if (sym !== undefined) return sym;\n    }\n    throw new Error('simbolo huffman invalido');\n  };\n\n  const fijoLL = [];\n  for (let i = 0; i < 144; i++) fijoLL.push(8);\n  for (let i = 144; i < 256; i++) fijoLL.push(9);\n  for (let i = 256; i < 280; i++) fijoLL.push(7);\n  for (let i = 280; i < 288; i++) fijoLL.push(8);\n  const fijoD = new Array(32).fill(5);\n\n  const lExtra = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];\n  const lBase = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];\n  const dExtra = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];\n  const dBase = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];\n\n  const salida = [];\n  const bloque = (lt, dt) => {\n    for (;;) {\n      const s = leerSimbolo(lt);\n      if (s < 256) { salida.push(s); continue; }\n      if (s === 256) break;\n      const ei = s - 257;\n      const longitud = lBase[ei] + bits(lExtra[ei]);\n      const ds = leerSimbolo(dt);\n      const dist = dBase[ds] + bits(dExtra[ds]);\n      const desde = salida.length - dist;\n      for (let i = 0; i < longitud; i++) salida.push(salida[desde + i]);\n    }\n  };\n\n  let final = 0;\n  while (!final) {\n    final = bits(1);\n    const tipo = bits(2);\n    if (tipo === 0) {\n      buf = 0; len = 0;\n      const n = comprimido[pos] | (comprimido[pos + 1] << 8);\n      pos += 4;\n      for (let i = 0; i < n; i++) salida.push(comprimido[pos++]);\n    } else if (tipo === 1) {\n      bloque(tabla(fijoLL, 287), tabla(fijoD, 31));\n    } else if (tipo === 2) {\n      const hl = bits(5) + 257, hd = bits(5) + 1, hc = bits(4) + 4;\n      const orden = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];\n      const cl = new Array(19).fill(0);\n      for (let i = 0; i < hc; i++) cl[orden[i]] = bits(3);\n      const ct = tabla(cl, 18);\n      const longitudes = [];\n      while (longitudes.length < hl + hd) {\n        const s = leerSimbolo(ct);\n        if (s < 16) longitudes.push(s);\n        else if (s === 16) { const r = bits(2) + 3, p = longitudes[longitudes.length - 1]; for (let i = 0; i < r; i++) longitudes.push(p); }\n        else if (s === 17) { const r = bits(3) + 3; for (let i = 0; i < r; i++) longitudes.push(0); }\n        else { const r = bits(7) + 11; for (let i = 0; i < r; i++) longitudes.push(0); }\n      }\n      bloque(tabla(longitudes.slice(0, hl), hl - 1), tabla(longitudes.slice(hl), hd - 1));\n    } else {\n      throw new Error('bloque deflate reservado');\n    }\n  }\n  return Buffer.from(salida);\n}\n\nfunction pngARgb(png) {\n  let ancho, alto, tipoColor;\n  const idat = [];\n  let off = 8;\n  while (off < png.length - 8) {\n    const largo = png.readUInt32BE(off);\n    const tipo = png.slice(off + 4, off + 8).toString('ascii');\n    const datos = png.slice(off + 8, off + 8 + largo);\n    if (tipo === 'IHDR') { ancho = datos.readUInt32BE(0); alto = datos.readUInt32BE(4); tipoColor = datos[9]; }\n    else if (tipo === 'IDAT') idat.push(datos);\n    else if (tipo === 'IEND') break;\n    off += 12 + largo;\n  }\n  if (!ancho || !alto) throw new Error('PNG sin IHDR');\n  if (![0, 2, 4, 6].includes(tipoColor)) throw new Error('PNG con paleta no soportado');\n\n  const crudo = inflate(Buffer.concat(idat));\n  const bpp = tipoColor === 6 ? 4 : tipoColor === 4 ? 2 : tipoColor === 0 ? 1 : 3;\n  const gris = tipoColor === 0 || tipoColor === 4;\n  const conAlfa = tipoColor === 4 || tipoColor === 6;\n  const stride = ancho * bpp;\n\n  const filas = [];\n  for (let y = 0; y < alto; y++) {\n    const filtro = crudo[y * (stride + 1)];\n    const fila = crudo.slice(y * (stride + 1) + 1, y * (stride + 1) + 1 + stride);\n    const out = Buffer.alloc(stride);\n    const prev = filas[y - 1] || Buffer.alloc(stride, 0);\n    for (let x = 0; x < stride; x++) {\n      const a = x >= bpp ? out[x - bpp] : 0;\n      const b = prev[x];\n      const c = x >= bpp ? prev[x - bpp] : 0;\n      if (filtro === 0) out[x] = fila[x];\n      else if (filtro === 1) out[x] = (fila[x] + a) & 0xFF;\n      else if (filtro === 2) out[x] = (fila[x] + b) & 0xFF;\n      else if (filtro === 3) out[x] = (fila[x] + Math.floor((a + b) / 2)) & 0xFF;\n      else if (filtro === 4) {\n        const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);\n        out[x] = (fila[x] + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c)) & 0xFF;\n      } else out[x] = fila[x];\n    }\n    filas.push(out);\n  }\n\n  // Aplana sobre blanco: las firmas suelen venir con fondo transparente y sin\n  // esto quedarían negras sobre negro al quitar el canal alfa.\n  const rgb = Buffer.alloc(ancho * alto * 3);\n  let p = 0;\n  for (let y = 0; y < alto; y++) {\n    const fila = filas[y];\n    for (let x = 0; x < ancho; x++) {\n      const i = x * bpp;\n      let r, g, b;\n      if (gris) { r = g = b = fila[i]; } else { r = fila[i]; g = fila[i + 1]; b = fila[i + 2]; }\n      if (conAlfa) {\n        const alfa = fila[i + bpp - 1] / 255;\n        r = Math.round(r * alfa + 255 * (1 - alfa));\n        g = Math.round(g * alfa + 255 * (1 - alfa));\n        b = Math.round(b * alfa + 255 * (1 - alfa));\n      }\n      rgb[p++] = r; rgb[p++] = g; rgb[p++] = b;\n    }\n  }\n  return { ancho, alto, rgb };\n}\n\nfunction crc32(buf) {\n  const tabla = [];\n  for (let i = 0; i < 256; i++) {\n    let c = i;\n    for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;\n    tabla.push(c);\n  }\n  let c = 0xFFFFFFFF;\n  for (let i = 0; i < buf.length; i++) c = tabla[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);\n  return (c ^ 0xFFFFFFFF) >>> 0;\n}\n\n// Comprime con zlib si el sandbox de n8n lo permite; si no, emite bloques\n// DEFLATE \"stored\" (válidos y legibles por cualquier visor, sólo más pesados).\nfunction comprimir(datos) {\n  try {\n    // eslint-disable-next-line\n    const zlib = require('zlib');\n    if (zlib && zlib.deflateSync) return zlib.deflateSync(datos, { level: 9 });\n  } catch (e) {\n    // require no disponible en el sandbox: seguimos con \"stored\".\n  }\n  const BLOQUE = 65535;\n  const partes = [Buffer.from([0x78, 0x01])];\n  let off = 0;\n  for (;;) {\n    const fin = Math.min(off + BLOQUE, datos.length);\n    const trozo = datos.slice(off, fin);\n    const ultimo = fin >= datos.length ? 1 : 0;\n    const n = trozo.length, nn = (~n) & 0xFFFF;\n    partes.push(Buffer.from([ultimo, n & 0xFF, (n >> 8) & 0xFF, nn & 0xFF, (nn >> 8) & 0xFF]));\n    partes.push(trozo);\n    off = fin;\n    if (ultimo) break;\n  }\n  let s1 = 1, s2 = 0;\n  for (let i = 0; i < datos.length; i++) { s1 = (s1 + datos[i]) % 65521; s2 = (s2 + s1) % 65521; }\n  const adler = ((s2 << 16) | s1) >>> 0;\n  partes.push(Buffer.from([(adler >>> 24) & 0xFF, (adler >>> 16) & 0xFF, (adler >>> 8) & 0xFF, adler & 0xFF]));\n  return Buffer.concat(partes);\n}\n\n// PNG en escala de grises (8 bits, 1 canal): una firma y una huella no necesitan\n// color, y así la imagen compuesta pesa un tercio.\nfunction construirPngGris(ancho, alto, gris) {\n  const u32 = (n) => Buffer.from([(n >>> 24) & 0xFF, (n >>> 16) & 0xFF, (n >>> 8) & 0xFF, n & 0xFF]);\n  const chunk = (tipo, datos) => {\n    const t = Buffer.from(tipo, 'ascii');\n    const d = Buffer.isBuffer(datos) ? datos : Buffer.from(datos);\n    return Buffer.concat([u32(d.length), t, d, u32(crc32(Buffer.concat([t, d])))]);\n  };\n  const ihdr = Buffer.concat([u32(ancho), u32(alto), Buffer.from([8, 0, 0, 0, 0])]);\n  const filas = Buffer.alloc(alto * (ancho + 1));\n  for (let y = 0; y < alto; y++) {\n    filas[y * (ancho + 1)] = 0; // filtro None\n    gris.copy(filas, y * (ancho + 1) + 1, y * ancho, (y + 1) * ancho);\n  }\n  return Buffer.concat([\n    Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),\n    chunk('IHDR', ihdr),\n    chunk('IDAT', comprimir(filas)),\n    chunk('IEND', Buffer.alloc(0)),\n  ]);\n}\n\nfunction componerFirmaYHuella(imgIzq, imgDer) {\n  // Tamaño contenido a propósito: si el sandbox de n8n no deja usar zlib, el PNG\n  // sale sin comprimir y pesa ancho*alto bytes. A 760x340 son ~260 kB en el peor\n  // caso (con zlib baja a unas pocas decenas de kB).\n  const W = 760, H = 340, PAD = 18, DIV = 3;\n  const mitad = Math.floor(W / 2);\n  const lienzo = Buffer.alloc(W * H, 255);\n\n  const pintar = (x, y, v) => {\n    if (x < 0 || x >= W || y < 0 || y >= H) return;\n    lienzo[y * W + x] = v;\n  };\n\n  // Separador vertical\n  for (let y = 0; y < H; y++) {\n    for (let d = 0; d < DIV; d++) pintar(mitad - Math.floor(DIV / 2) + d, y, 180);\n  }\n\n  const dibujar = (img, destX, destY, destW, destH) => {\n    const ratio = Math.min(destW / img.ancho, destH / img.alto);\n    const w = Math.max(1, Math.round(img.ancho * ratio));\n    const h = Math.max(1, Math.round(img.alto * ratio));\n    const offX = destX + Math.round((destW - w) / 2);\n    const offY = destY + Math.round((destH - h) / 2);\n    for (let py = 0; py < h; py++) {\n      for (let px = 0; px < w; px++) {\n        const i = (Math.floor(py / ratio) * img.ancho + Math.floor(px / ratio)) * 3;\n        // Luminancia BT.601\n        const v = Math.round(0.299 * img.rgb[i] + 0.587 * img.rgb[i + 1] + 0.114 * img.rgb[i + 2]);\n        pintar(offX + px, offY + py, v);\n      }\n    }\n  };\n\n  const areaW = mitad - PAD * 2;\n  const areaH = H - PAD * 2;\n  dibujar(imgIzq, PAD, PAD, areaW, areaH);\n  dibujar(imgDer, mitad + PAD, PAD, areaW, areaH);\n\n  return construirPngGris(W, H, lienzo);\n}\n\n// ── Firma del paciente final (compuesta o intacta) ────────────────────────────\nlet firmaPacienteFinal = binFirmaPaciente;\nlet composicion = 'no_aplica';\n\nif (binFirmaPaciente && binHuella) {\n  const ambosPng = String(binFirmaPaciente.mimeType || '').includes('png')\n    && String(binHuella.mimeType || '').includes('png');\n  if (!ambosPng) {\n    composicion = 'omitida_formato_no_png';\n  } else {\n    try {\n      const compuesto = componerFirmaYHuella(\n        pngARgb(Buffer.from(binFirmaPaciente.data, 'base64')),\n        pngARgb(Buffer.from(binHuella.data, 'base64')),\n      );\n      firmaPacienteFinal = {\n        data: compuesto.toString('base64'),\n        mimeType: 'image/png',\n        fileName: 'firma_huella_paciente.png',\n        fileExtension: 'png',\n      };\n      composicion = 'ok';\n    } catch (e) {\n      composicion = 'fallo: ' + e.message;\n    }\n  }\n}\n\n// `origen` es diagnóstico nuestro: no debe viajar dentro del binario de n8n.\nfunction soloBinario(bin) {\n  if (!bin) return null;\n  return {\n    data: bin.data,\n    mimeType: bin.mimeType,\n    fileName: bin.fileName,\n    fileExtension: bin.fileExtension,\n  };\n}\n\n// ── Validaciones antes de tocar la API ───────────────────────────────────────\nconst errores = [];\n\nif (!firmaPacienteFinal) {\n  errores.push(\n    'No se pudo obtener la firma del paciente (llegó como \"'\n    + clasificacion.diagnostico_entrada.firma_paciente + '\").'\n  );\n}\n\nif (clasificacion.tiene_firma_acudiente && !binFirmaAcudiente) {\n  errores.push(\n    'Llegó firma de acudiente pero no se pudo obtener (llegó como \"'\n    + clasificacion.diagnostico_entrada.firma_acudiente + '\").'\n  );\n}\n\nif (medico.fallo) {\n  errores.push('No se pudo consultar /medicos del hospital: ' + medico.fallo);\n} else if (medico.leido && !medico.oid) {\n  errores.push(\n    'El profesional \"' + (body.profesional_nombre_completo || '(vacío)')\n    + '\" no existe en /medicos del hospital. Verifique que el consentimiento se '\n    + 'esté generando a nombre del profesional que atendió y que ese nombre esté '\n    + 'registrado en el hospital tal cual.'\n  );\n} else if (!medico.leido) {\n  errores.push('No se pudo leer la respuesta de la búsqueda de médicos.');\n}\n\nif (plantilla.fallo) {\n  errores.push('No se pudo consultar /plantillas-consentimiento del hospital: ' + plantilla.fallo);\n} else if (plantilla.leido && !plantilla.oid) {\n  errores.push(\n    'No existe la plantilla de consentimiento \"' + (body.nombre_consentimiento || '(vacío)')\n    + '\" en /plantillas-consentimiento.'\n  );\n} else if (!plantilla.leido) {\n  errores.push('No se pudo leer la respuesta de la búsqueda de plantillas.');\n}\n\n// ── Salida ───────────────────────────────────────────────────────────────────\n// El item de error va sin binarios a propósito: con binario, el editor de n8n\n// abre la pestaña Binary y los motivos de `errores` quedan escondidos en JSON.\nconst binarios = {};\nif (errores.length === 0) {\n  if (firmaPacienteFinal) binarios.data = soloBinario(firmaPacienteFinal);\n  if (binFirmaAcudiente) binarios['data rep'] = soloBinario(binFirmaAcudiente);\n}\n\nreturn [{\n  json: {\n    ok: errores.length === 0,\n    errores,\n    medico_oid: medico.oid,\n    plantilla_oid: plantilla.oid,\n    tipo_firmante: clasificacion.tipo_firmante,\n    con_acudiente: !!binFirmaAcudiente,\n\n    // Por aquí reparte el Switch. Es texto a propósito: una condición booleana\n    // con validación estricta no encaja y el item se iba a la rama de error.\n    ruta: errores.length > 0 ? 'error' : (binFirmaAcudiente ? 'con_acudiente' : 'sin_acudiente'),\n    diagnostico: {\n      firma_paciente: firmaPacienteFinal ? firmaPacienteFinal.origen || 'compuesta' : 'ausente',\n      firma_acudiente: binFirmaAcudiente ? binFirmaAcudiente.origen : 'ausente',\n      huella: binHuella ? binHuella.origen : 'ausente',\n      busquedas: {\n        medicos: { encontrados: medico.total, fallo: medico.fallo },\n        plantillas: { encontrados: plantilla.total, fallo: plantilla.fallo },\n      },\n      composicion,\n      entrada: clasificacion.diagnostico_entrada,\n    },\n  },\n  binary: binarios,\n}];"
+        "jsCode": "// ── Nodo \"Armar Binarios\" (Code · Run Once for All Items) ─────────────────────\n// Deja listos los binarios que suben los POST al hospital:\n//\n//   data     -> hcpacfir : firma del paciente (con la huella al lado si la hay)\n//   data rep -> hcrepfir : firma del acudiente (sólo si existe)\n//\n// Cada imagen se resuelve en cascada, porque puede llegar de dos formas muy\n// distintas y antes sólo se contemplaba una:\n//\n//   1) La descargó el nodo HTTP correspondiente (la app subió la imagen a\n//      Storage y mandó la URL). Ojo: cuando n8n guarda los binarios fuera de\n//      memoria (N8N_DEFAULT_BINARY_DATA_MODE=filesystem o s3, lo normal en\n//      self-hosted) `binary.x.data` llega VACÍO y sólo trae un `id`; por eso\n//      hay que resolver la referencia con los helpers.\n//   2) Vino dentro del webhook como data URI, porque la subida a Storage falló.\n//      Un HTTP Request no puede resolver \"data:image/png;base64,...\" así que\n//      ese caso se decodifica aquí.\n//\n// Nunca se generan binarios de relleno: si una firma no existe, el campo no se\n// envía. El flujo anterior mandaba un PDF vacío en hcpacfir, y eso guardaba\n// consentimientos con una \"firma\" que no era una firma.\n\nconst clasificacion = $('Clasificar Imagenes').first().json;\nconst body = $('Recibir Consentimiento').first().json.body || {};\n\nconst ayudantes = (() => {\n  try { return (typeof this !== 'undefined' && this && this.helpers) ? this.helpers : null; }\n  catch (e) { return null; }\n})();\n\nasync function aBase64(bin) {\n  if (!bin) return '';\n  if (typeof bin.data === 'string' && bin.data.length > 0) return bin.data;\n  if (bin.id && ayudantes) {\n    for (const metodo of ['binaryToBuffer', 'getBinaryStream', 'getBinaryDataBuffer']) {\n      try {\n        if (typeof ayudantes[metodo] !== 'function') continue;\n        const buf = await ayudantes[metodo](bin);\n        if (buf && buf.length) return Buffer.from(buf).toString('base64');\n      } catch (e) {\n        // Método no disponible o con otra firma según la versión de n8n.\n      }\n    }\n  }\n  return '';\n}\n\nfunction desdeTexto(valor, nombreArchivo) {\n  const texto = typeof valor === 'string' ? valor.trim() : '';\n  if (!texto) return null;\n\n  const m = /^data:([^;,]*)(;base64)?,([\\s\\S]*)$/i.exec(texto);\n  if (m) {\n    const mime = m[1] || 'image/png';\n    const cuerpo = (m[3] || '').replace(/\\s+/g, '');\n    if (!cuerpo) return null;\n    const data = m[2]\n      ? cuerpo\n      : Buffer.from(decodeURIComponent(cuerpo), 'binary').toString('base64');\n    const ext = (mime.split('/')[1] || 'png').split('+')[0];\n    return { data, mimeType: mime, fileName: nombreArchivo, fileExtension: ext, origen: 'webhook_data_uri' };\n  }\n\n  const limpio = texto.replace(/\\s+/g, '');\n  if (limpio.length > 100 && /^[A-Za-z0-9+/]+={0,2}$/.test(limpio)) {\n    return { data: limpio, mimeType: 'image/png', fileName: nombreArchivo, fileExtension: 'png', origen: 'webhook_base64' };\n  }\n\n  return null;\n}\n\n// `leerDescarga` es una función para que n8n pueda reescribir el `$('Nodo')`\n// literal si al importar renombra los nodos. Pasar el nombre como texto —\n// primerOid('Medicos')— NO se reescribe y rompe el flujo en silencio.\nasync function resolver(leerDescarga, propiedad, crudo, nombreArchivo) {\n  try {\n    const item = leerDescarga();\n    const bin = item && item.binary ? item.binary[propiedad] : null;\n    const data = await aBase64(bin);\n    if (data) {\n      return {\n        data,\n        mimeType: bin.mimeType || 'image/png',\n        fileName: bin.fileName || nombreArchivo,\n        fileExtension: bin.fileExtension || 'png',\n        origen: 'descarga',\n      };\n    }\n  } catch (e) {\n    // El nodo de descarga no corrió (otra rama) o falló: seguimos con el webhook.\n  }\n  return desdeTexto(crudo, nombreArchivo);\n}\n\nconst binFirmaPaciente = await resolver(\n  () => $('Bajar Firma Paciente').first(), 'data', body.paciente_firma, 'firma_paciente.png');\n\nconst binFirmaAcudiente = await resolver(\n  () => $('Bajar Firma Acudiente').first(), 'data rep', body.acudiente_firma, 'firma_acudiente.png');\n\nconst binHuella = await resolver(\n  () => $('Bajar Huella').first(), 'data', body.paciente_foto, 'huella_paciente.png');\n\n// ── Datos maestros de la API ─────────────────────────────────────────────────\nfunction oidDe(leerRespuesta) {\n  try {\n    const res = leerRespuesta();\n    // Con onError=continueRegularOutput un fallo HTTP no detiene el flujo: el\n    // item llega con { error }. Eso NO es \"no existe\", es \"no se pudo consultar\",\n    // y confundirlos manda a corregir lo que no está roto.\n    if (res && res.error) {\n      const e = res.error;\n      const detalle = typeof e === 'string' ? e : (e.message || JSON.stringify(e));\n      return { leido: true, fallo: detalle, oid: null, total: 0 };\n    }\n    const lista = res && (res.data || res.results) ? (res.data || res.results) : (Array.isArray(res) ? res : []);\n    const total = lista ? lista.length : 0;\n    return { leido: true, fallo: null, oid: total > 0 ? (lista[0].oid ?? null) : null, total };\n  } catch (e) {\n    return { leido: false, fallo: null, oid: null, total: 0 };\n  }\n}\n\nconst medico = oidDe(() => $('Consultar Medicos').first().json);\nconst plantilla = oidDe(() => $('Consultar Plantillas').first().json);\n\n// ══ Composición firma + huella en una sola imagen ════════════════════════════\n// La API sólo tiene un campo para la firma del paciente (hcpacfir), así que\n// cuando además hay huella se pegan las dos en una imagen. Ante cualquier\n// problema se devuelve la firma intacta: mejor perder la composición que la\n// firma.\nfunction inflate(comprimido) {\n  let pos = 2, buf = 0, len = 0;\n  const bits = (n) => {\n    while (len < n) { buf |= comprimido[pos++] << len; len += 8; }\n    const v = buf & ((1 << n) - 1);\n    buf >>= n; len -= n;\n    return v;\n  };\n  const tabla = (longitudes, maxSym) => {\n    const maxLen = Math.max(...longitudes);\n    if (maxLen === 0) return { porLongitud: [], maxLen: 0 };\n    const cuenta = new Array(maxLen + 1).fill(0);\n    for (let i = 0; i <= maxSym; i++) if (longitudes[i]) cuenta[longitudes[i]]++;\n    const inicio = new Array(maxLen + 1).fill(0);\n    let c = 0;\n    for (let l = 1; l <= maxLen; l++) { c = (c + cuenta[l - 1]) << 1; inicio[l] = c; }\n    const porLongitud = [];\n    for (let l = 0; l <= maxLen; l++) porLongitud.push({});\n    for (let i = 0; i <= maxSym; i++) {\n      const l = longitudes[i];\n      if (l > 0) { porLongitud[l][inicio[l]] = i; inicio[l]++; }\n    }\n    return { porLongitud, maxLen };\n  };\n  const leerSimbolo = (arbol) => {\n    let code = 0;\n    for (let l = 1; l <= arbol.maxLen; l++) {\n      code = (code << 1) | bits(1);\n      const sym = arbol.porLongitud[l][code];\n      if (sym !== undefined) return sym;\n    }\n    throw new Error('simbolo huffman invalido');\n  };\n\n  const fijoLL = [];\n  for (let i = 0; i < 144; i++) fijoLL.push(8);\n  for (let i = 144; i < 256; i++) fijoLL.push(9);\n  for (let i = 256; i < 280; i++) fijoLL.push(7);\n  for (let i = 280; i < 288; i++) fijoLL.push(8);\n  const fijoD = new Array(32).fill(5);\n\n  const lExtra = [0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];\n  const lBase = [3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];\n  const dExtra = [0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];\n  const dBase = [1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];\n\n  const salida = [];\n  const bloque = (lt, dt) => {\n    for (;;) {\n      const s = leerSimbolo(lt);\n      if (s < 256) { salida.push(s); continue; }\n      if (s === 256) break;\n      const ei = s - 257;\n      const longitud = lBase[ei] + bits(lExtra[ei]);\n      const ds = leerSimbolo(dt);\n      const dist = dBase[ds] + bits(dExtra[ds]);\n      const desde = salida.length - dist;\n      for (let i = 0; i < longitud; i++) salida.push(salida[desde + i]);\n    }\n  };\n\n  let final = 0;\n  while (!final) {\n    final = bits(1);\n    const tipo = bits(2);\n    if (tipo === 0) {\n      buf = 0; len = 0;\n      const n = comprimido[pos] | (comprimido[pos + 1] << 8);\n      pos += 4;\n      for (let i = 0; i < n; i++) salida.push(comprimido[pos++]);\n    } else if (tipo === 1) {\n      bloque(tabla(fijoLL, 287), tabla(fijoD, 31));\n    } else if (tipo === 2) {\n      const hl = bits(5) + 257, hd = bits(5) + 1, hc = bits(4) + 4;\n      const orden = [16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];\n      const cl = new Array(19).fill(0);\n      for (let i = 0; i < hc; i++) cl[orden[i]] = bits(3);\n      const ct = tabla(cl, 18);\n      const longitudes = [];\n      while (longitudes.length < hl + hd) {\n        const s = leerSimbolo(ct);\n        if (s < 16) longitudes.push(s);\n        else if (s === 16) { const r = bits(2) + 3, p = longitudes[longitudes.length - 1]; for (let i = 0; i < r; i++) longitudes.push(p); }\n        else if (s === 17) { const r = bits(3) + 3; for (let i = 0; i < r; i++) longitudes.push(0); }\n        else { const r = bits(7) + 11; for (let i = 0; i < r; i++) longitudes.push(0); }\n      }\n      bloque(tabla(longitudes.slice(0, hl), hl - 1), tabla(longitudes.slice(hl), hd - 1));\n    } else {\n      throw new Error('bloque deflate reservado');\n    }\n  }\n  return Buffer.from(salida);\n}\n\nfunction pngARgb(png) {\n  let ancho, alto, tipoColor;\n  const idat = [];\n  let off = 8;\n  while (off < png.length - 8) {\n    const largo = png.readUInt32BE(off);\n    const tipo = png.slice(off + 4, off + 8).toString('ascii');\n    const datos = png.slice(off + 8, off + 8 + largo);\n    if (tipo === 'IHDR') { ancho = datos.readUInt32BE(0); alto = datos.readUInt32BE(4); tipoColor = datos[9]; }\n    else if (tipo === 'IDAT') idat.push(datos);\n    else if (tipo === 'IEND') break;\n    off += 12 + largo;\n  }\n  if (!ancho || !alto) throw new Error('PNG sin IHDR');\n  if (![0, 2, 4, 6].includes(tipoColor)) throw new Error('PNG con paleta no soportado');\n\n  const crudo = inflate(Buffer.concat(idat));\n  const bpp = tipoColor === 6 ? 4 : tipoColor === 4 ? 2 : tipoColor === 0 ? 1 : 3;\n  const gris = tipoColor === 0 || tipoColor === 4;\n  const conAlfa = tipoColor === 4 || tipoColor === 6;\n  const stride = ancho * bpp;\n\n  const filas = [];\n  for (let y = 0; y < alto; y++) {\n    const filtro = crudo[y * (stride + 1)];\n    const fila = crudo.slice(y * (stride + 1) + 1, y * (stride + 1) + 1 + stride);\n    const out = Buffer.alloc(stride);\n    const prev = filas[y - 1] || Buffer.alloc(stride, 0);\n    for (let x = 0; x < stride; x++) {\n      const a = x >= bpp ? out[x - bpp] : 0;\n      const b = prev[x];\n      const c = x >= bpp ? prev[x - bpp] : 0;\n      if (filtro === 0) out[x] = fila[x];\n      else if (filtro === 1) out[x] = (fila[x] + a) & 0xFF;\n      else if (filtro === 2) out[x] = (fila[x] + b) & 0xFF;\n      else if (filtro === 3) out[x] = (fila[x] + Math.floor((a + b) / 2)) & 0xFF;\n      else if (filtro === 4) {\n        const p = a + b - c, pa = Math.abs(p - a), pb = Math.abs(p - b), pc = Math.abs(p - c);\n        out[x] = (fila[x] + (pa <= pb && pa <= pc ? a : pb <= pc ? b : c)) & 0xFF;\n      } else out[x] = fila[x];\n    }\n    filas.push(out);\n  }\n\n  // Aplana sobre blanco: las firmas suelen venir con fondo transparente y sin\n  // esto quedarían negras sobre negro al quitar el canal alfa.\n  const rgb = Buffer.alloc(ancho * alto * 3);\n  let p = 0;\n  for (let y = 0; y < alto; y++) {\n    const fila = filas[y];\n    for (let x = 0; x < ancho; x++) {\n      const i = x * bpp;\n      let r, g, b;\n      if (gris) { r = g = b = fila[i]; } else { r = fila[i]; g = fila[i + 1]; b = fila[i + 2]; }\n      if (conAlfa) {\n        const alfa = fila[i + bpp - 1] / 255;\n        r = Math.round(r * alfa + 255 * (1 - alfa));\n        g = Math.round(g * alfa + 255 * (1 - alfa));\n        b = Math.round(b * alfa + 255 * (1 - alfa));\n      }\n      rgb[p++] = r; rgb[p++] = g; rgb[p++] = b;\n    }\n  }\n  return { ancho, alto, rgb };\n}\n\nfunction crc32(buf) {\n  const tabla = [];\n  for (let i = 0; i < 256; i++) {\n    let c = i;\n    for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1;\n    tabla.push(c);\n  }\n  let c = 0xFFFFFFFF;\n  for (let i = 0; i < buf.length; i++) c = tabla[(c ^ buf[i]) & 0xFF] ^ (c >>> 8);\n  return (c ^ 0xFFFFFFFF) >>> 0;\n}\n\n// Comprime con zlib si el sandbox de n8n lo permite; si no, emite bloques\n// DEFLATE \"stored\" (válidos y legibles por cualquier visor, sólo más pesados).\nfunction comprimir(datos) {\n  try {\n    // eslint-disable-next-line\n    const zlib = require('zlib');\n    if (zlib && zlib.deflateSync) return zlib.deflateSync(datos, { level: 9 });\n  } catch (e) {\n    // require no disponible en el sandbox: seguimos con \"stored\".\n  }\n  const BLOQUE = 65535;\n  const partes = [Buffer.from([0x78, 0x01])];\n  let off = 0;\n  for (;;) {\n    const fin = Math.min(off + BLOQUE, datos.length);\n    const trozo = datos.slice(off, fin);\n    const ultimo = fin >= datos.length ? 1 : 0;\n    const n = trozo.length, nn = (~n) & 0xFFFF;\n    partes.push(Buffer.from([ultimo, n & 0xFF, (n >> 8) & 0xFF, nn & 0xFF, (nn >> 8) & 0xFF]));\n    partes.push(trozo);\n    off = fin;\n    if (ultimo) break;\n  }\n  let s1 = 1, s2 = 0;\n  for (let i = 0; i < datos.length; i++) { s1 = (s1 + datos[i]) % 65521; s2 = (s2 + s1) % 65521; }\n  const adler = ((s2 << 16) | s1) >>> 0;\n  partes.push(Buffer.from([(adler >>> 24) & 0xFF, (adler >>> 16) & 0xFF, (adler >>> 8) & 0xFF, adler & 0xFF]));\n  return Buffer.concat(partes);\n}\n\n// PNG en escala de grises (8 bits, 1 canal): una firma y una huella no necesitan\n// color, y así la imagen compuesta pesa un tercio.\nfunction construirPngGris(ancho, alto, gris) {\n  const u32 = (n) => Buffer.from([(n >>> 24) & 0xFF, (n >>> 16) & 0xFF, (n >>> 8) & 0xFF, n & 0xFF]);\n  const chunk = (tipo, datos) => {\n    const t = Buffer.from(tipo, 'ascii');\n    const d = Buffer.isBuffer(datos) ? datos : Buffer.from(datos);\n    return Buffer.concat([u32(d.length), t, d, u32(crc32(Buffer.concat([t, d])))]);\n  };\n  const ihdr = Buffer.concat([u32(ancho), u32(alto), Buffer.from([8, 0, 0, 0, 0])]);\n  const filas = Buffer.alloc(alto * (ancho + 1));\n  for (let y = 0; y < alto; y++) {\n    filas[y * (ancho + 1)] = 0; // filtro None\n    gris.copy(filas, y * (ancho + 1) + 1, y * ancho, (y + 1) * ancho);\n  }\n  return Buffer.concat([\n    Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]),\n    chunk('IHDR', ihdr),\n    chunk('IDAT', comprimir(filas)),\n    chunk('IEND', Buffer.alloc(0)),\n  ]);\n}\n\nfunction componerFirmaYHuella(imgIzq, imgDer) {\n  // Tamaño contenido a propósito: si el sandbox de n8n no deja usar zlib, el PNG\n  // sale sin comprimir y pesa ancho*alto bytes. A 760x340 son ~260 kB en el peor\n  // caso (con zlib baja a unas pocas decenas de kB).\n  const W = 760, H = 340, PAD = 18, DIV = 3;\n  const mitad = Math.floor(W / 2);\n  const lienzo = Buffer.alloc(W * H, 255);\n\n  const pintar = (x, y, v) => {\n    if (x < 0 || x >= W || y < 0 || y >= H) return;\n    lienzo[y * W + x] = v;\n  };\n\n  // Separador vertical\n  for (let y = 0; y < H; y++) {\n    for (let d = 0; d < DIV; d++) pintar(mitad - Math.floor(DIV / 2) + d, y, 180);\n  }\n\n  const dibujar = (img, destX, destY, destW, destH) => {\n    const ratio = Math.min(destW / img.ancho, destH / img.alto);\n    const w = Math.max(1, Math.round(img.ancho * ratio));\n    const h = Math.max(1, Math.round(img.alto * ratio));\n    const offX = destX + Math.round((destW - w) / 2);\n    const offY = destY + Math.round((destH - h) / 2);\n    for (let py = 0; py < h; py++) {\n      for (let px = 0; px < w; px++) {\n        const i = (Math.floor(py / ratio) * img.ancho + Math.floor(px / ratio)) * 3;\n        // Luminancia BT.601\n        const v = Math.round(0.299 * img.rgb[i] + 0.587 * img.rgb[i + 1] + 0.114 * img.rgb[i + 2]);\n        pintar(offX + px, offY + py, v);\n      }\n    }\n  };\n\n  const areaW = mitad - PAD * 2;\n  const areaH = H - PAD * 2;\n  dibujar(imgIzq, PAD, PAD, areaW, areaH);\n  dibujar(imgDer, mitad + PAD, PAD, areaW, areaH);\n\n  return construirPngGris(W, H, lienzo);\n}\n\n// ── Firma del paciente final (compuesta o intacta) ────────────────────────────\nlet firmaPacienteFinal = binFirmaPaciente;\nlet composicion = 'no_aplica';\n\nif (binFirmaPaciente && binHuella) {\n  const ambosPng = String(binFirmaPaciente.mimeType || '').includes('png')\n    && String(binHuella.mimeType || '').includes('png');\n  if (!ambosPng) {\n    composicion = 'omitida_formato_no_png';\n  } else {\n    try {\n      const compuesto = componerFirmaYHuella(\n        pngARgb(Buffer.from(binFirmaPaciente.data, 'base64')),\n        pngARgb(Buffer.from(binHuella.data, 'base64')),\n      );\n      firmaPacienteFinal = {\n        data: compuesto.toString('base64'),\n        mimeType: 'image/png',\n        fileName: 'firma_huella_paciente.png',\n        fileExtension: 'png',\n      };\n      composicion = 'ok';\n    } catch (e) {\n      composicion = 'fallo: ' + e.message;\n    }\n  }\n}\n\n// `origen` es diagnóstico nuestro: no debe viajar dentro del binario de n8n.\nfunction soloBinario(bin) {\n  if (!bin) return null;\n  return {\n    data: bin.data,\n    mimeType: bin.mimeType,\n    fileName: bin.fileName,\n    fileExtension: bin.fileExtension,\n  };\n}\n\n// ── Validaciones antes de tocar la API ───────────────────────────────────────\nconst errores = [];\n\nif (!firmaPacienteFinal) {\n  errores.push(\n    'No se pudo obtener la firma del paciente (llegó como \"'\n    + clasificacion.diagnostico_entrada.firma_paciente + '\").'\n  );\n}\n\nif (clasificacion.tiene_firma_acudiente && !binFirmaAcudiente) {\n  errores.push(\n    'Llegó firma de acudiente pero no se pudo obtener (llegó como \"'\n    + clasificacion.diagnostico_entrada.firma_acudiente + '\").'\n  );\n}\n\nif (medico.fallo) {\n  errores.push('No se pudo consultar /medicos del hospital: ' + medico.fallo);\n} else if (medico.leido && !medico.oid) {\n  errores.push(\n    'El profesional \"' + (body.profesional_nombre_completo || '(vacío)')\n    + '\" no existe en /medicos del hospital. Verifique que el consentimiento se '\n    + 'esté generando a nombre del profesional que atendió y que ese nombre esté '\n    + 'registrado en el hospital tal cual.'\n  );\n} else if (!medico.leido) {\n  errores.push('No se pudo leer la respuesta de la búsqueda de médicos.');\n}\n\nif (plantilla.fallo) {\n  errores.push('No se pudo consultar /plantillas-consentimiento del hospital: ' + plantilla.fallo);\n} else if (plantilla.leido && !plantilla.oid) {\n  errores.push(\n    'No existe la plantilla de consentimiento \"' + (body.nombre_consentimiento || '(vacío)')\n    + '\" en /plantillas-consentimiento.'\n  );\n} else if (!plantilla.leido) {\n  errores.push('No se pudo leer la respuesta de la búsqueda de plantillas.');\n}\n\n// ── Salida ───────────────────────────────────────────────────────────────────\n// El item de error va sin binarios a propósito: con binario, el editor de n8n\n// abre la pestaña Binary y los motivos de `errores` quedan escondidos en JSON.\nconst binarios = {};\nif (errores.length === 0) {\n  if (firmaPacienteFinal) binarios.data = soloBinario(firmaPacienteFinal);\n  if (binFirmaAcudiente) binarios['data rep'] = soloBinario(binFirmaAcudiente);\n}\n\nreturn [{\n  json: {\n    ok: errores.length === 0,\n    errores,\n    medico_oid: medico.oid,\n    plantilla_oid: plantilla.oid,\n    tipo_firmante: clasificacion.tipo_firmante,\n    con_acudiente: !!binFirmaAcudiente,\n\n    // Por aquí reparte el Switch. Es texto a propósito: una condición booleana\n    // con validación estricta no encaja y el item se iba a la rama de error.\n    ruta: errores.length > 0 ? 'error' : (binFirmaAcudiente ? 'con_acudiente' : 'sin_acudiente'),\n    diagnostico: {\n      firma_paciente: firmaPacienteFinal ? firmaPacienteFinal.origen || 'compuesta' : 'ausente',\n      firma_acudiente: binFirmaAcudiente ? binFirmaAcudiente.origen : 'ausente',\n      huella: binHuella ? binHuella.origen : 'ausente',\n      busquedas: {\n        medicos: { encontrados: medico.total, fallo: medico.fallo },\n        plantillas: { encontrados: plantilla.total, fallo: plantilla.fallo },\n      },\n      composicion,\n      entrada: clasificacion.diagnostico_entrada,\n    },\n  },\n  binary: binarios,\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         1180,
-        0
+        40
       ],
       "id": "f7400270-38ec-1520-8228-ff617d3ec61a",
-      "name": "Code in JavaScript1"
+      "name": "Armar Binarios"
     },
     {
       "parameters": {
@@ -368,7 +382,7 @@
         0
       ],
       "id": "6761b760-6e26-0b08-f0ca-077fd80eddec",
-      "name": "Switch"
+      "name": "Decidir Envio"
     },
     {
       "parameters": {
@@ -389,59 +403,59 @@
           "parameters": [
             {
               "name": "hcnplconsinf",
-              "value": "={{ $('Code in JavaScript1').first().json.plantilla_oid }}"
+              "value": "={{ $('Armar Binarios').first().json.plantilla_oid }}"
             },
             {
               "name": "genmedico",
-              "value": "={{ $('Code in JavaScript1').first().json.medico_oid }}"
+              "value": "={{ $('Armar Binarios').first().json.medico_oid }}"
             },
             {
               "name": "pacnumdoc",
-              "value": "={{ $('wh').first().json.body.paciente_numero_documento }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.paciente_numero_documento }}"
             },
             {
               "name": "hcadetdoc",
-              "value": "={{ $('wh').first().json.body.paciente_tipo_documento }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.paciente_tipo_documento }}"
             },
             {
               "name": "hcaproced",
-              "value": "={{ $('wh').first().json.body.procedimiento_medico }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.procedimiento_medico }}"
             },
             {
               "name": "hccfecdoc",
-              "value": "={{ $('wh').first().json.body.fecha_documento }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.fecha_documento }}"
             },
             {
               "name": "hcarieind",
-              "value": "={{ $('wh').first().json.body.riesgos_situacion_clinica ?? '' }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.riesgos_situacion_clinica ?? '' }}"
             },
             {
               "name": "hcaautinf",
-              "value": "={{ $('Code in JavaScript').first().json.estado }}"
+              "value": "={{ $('Estado Autorizacion').first().json.estado }}"
             },
             {
               "name": "hcaautoproc",
-              "value": "={{ $('Code in JavaScript').first().json.estado }}"
+              "value": "={{ $('Estado Autorizacion').first().json.estado }}"
             },
             {
               "name": "hcaautent",
-              "value": "={{ $('Code in JavaScript').first().json.estado }}"
+              "value": "={{ $('Estado Autorizacion').first().json.estado }}"
             },
             {
               "name": "hcatipaut",
-              "value": "={{ $('Code in JavaScript3').first().json.tipo_firmante }}"
+              "value": "={{ $('Clasificar Imagenes').first().json.tipo_firmante }}"
             },
             {
               "name": "hcaresaut",
-              "value": "={{ $('wh').first().json.body.acudiente_nombre_completo ?? '' }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.acudiente_nombre_completo ?? '' }}"
             },
             {
               "name": "hcadocresaut",
-              "value": "={{ $('wh').first().json.body.acudiente_documento ?? '' }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.acudiente_documento ?? '' }}"
             },
             {
               "name": "hcaparent",
-              "value": "={{ $('wh').first().json.body.acudiente_parentesco ?? '' }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.acudiente_parentesco ?? '' }}"
             },
             {
               "parameterType": "formBinaryData",
@@ -463,10 +477,10 @@
       "typeVersion": 4.2,
       "position": [
         1600,
-        -120
+        -80
       ],
       "id": "fdb2eb3d-348f-7a88-1e83-929c9dc14a20",
-      "name": "Crear Consentimiento3",
+      "name": "Enviar Con Acudiente",
       "alwaysOutputData": true,
       "onError": "continueRegularOutput"
     },
@@ -489,59 +503,59 @@
           "parameters": [
             {
               "name": "hcnplconsinf",
-              "value": "={{ $('Code in JavaScript1').first().json.plantilla_oid }}"
+              "value": "={{ $('Armar Binarios').first().json.plantilla_oid }}"
             },
             {
               "name": "genmedico",
-              "value": "={{ $('Code in JavaScript1').first().json.medico_oid }}"
+              "value": "={{ $('Armar Binarios').first().json.medico_oid }}"
             },
             {
               "name": "pacnumdoc",
-              "value": "={{ $('wh').first().json.body.paciente_numero_documento }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.paciente_numero_documento }}"
             },
             {
               "name": "hcadetdoc",
-              "value": "={{ $('wh').first().json.body.paciente_tipo_documento }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.paciente_tipo_documento }}"
             },
             {
               "name": "hcaproced",
-              "value": "={{ $('wh').first().json.body.procedimiento_medico }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.procedimiento_medico }}"
             },
             {
               "name": "hccfecdoc",
-              "value": "={{ $('wh').first().json.body.fecha_documento }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.fecha_documento }}"
             },
             {
               "name": "hcarieind",
-              "value": "={{ $('wh').first().json.body.riesgos_situacion_clinica ?? '' }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.riesgos_situacion_clinica ?? '' }}"
             },
             {
               "name": "hcaautinf",
-              "value": "={{ $('Code in JavaScript').first().json.estado }}"
+              "value": "={{ $('Estado Autorizacion').first().json.estado }}"
             },
             {
               "name": "hcaautoproc",
-              "value": "={{ $('Code in JavaScript').first().json.estado }}"
+              "value": "={{ $('Estado Autorizacion').first().json.estado }}"
             },
             {
               "name": "hcaautent",
-              "value": "={{ $('Code in JavaScript').first().json.estado }}"
+              "value": "={{ $('Estado Autorizacion').first().json.estado }}"
             },
             {
               "name": "hcatipaut",
-              "value": "={{ $('Code in JavaScript3').first().json.tipo_firmante }}"
+              "value": "={{ $('Clasificar Imagenes').first().json.tipo_firmante }}"
             },
             {
               "name": "hcaresaut",
-              "value": "={{ $('wh').first().json.body.acudiente_nombre_completo ?? '' }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.acudiente_nombre_completo ?? '' }}"
             },
             {
               "name": "hcadocresaut",
-              "value": "={{ $('wh').first().json.body.acudiente_documento ?? '' }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.acudiente_documento ?? '' }}"
             },
             {
               "name": "hcaparent",
-              "value": "={{ $('wh').first().json.body.acudiente_parentesco ?? '' }}"
+              "value": "={{ $('Recibir Consentimiento').first().json.body.acudiente_parentesco ?? '' }}"
             },
             {
               "parameterType": "formBinaryData",
@@ -558,25 +572,25 @@
       "typeVersion": 4.2,
       "position": [
         1600,
-        120
+        160
       ],
       "id": "f70b400d-2917-98c9-1e7e-0ac383fa5f48",
-      "name": "Crear Consentimiento2",
+      "name": "Enviar Sin Acudiente",
       "alwaysOutputData": true,
       "onError": "continueRegularOutput"
     },
     {
       "parameters": {
-        "jsCode": "// ── Nodo \"Code in JavaScript2\" (Code · Run Once for All Items) ────────────────\n// Único punto de salida: arma el cuerpo que \"Responder OK\" devuelve a la app.\n// Recibe tres orígenes distintos:\n//   · la respuesta de \"Crear Consentimiento2\" (sin acudiente)\n//   · la respuesta de \"Crear Consentimiento3\" (con acudiente)\n//   · la rama de error del Switch, cuando ni siquiera se intentó el POST\n//\n// Siempre responde con un `ok` explícito para que la app pueda distinguir\n// \"guardado\" de \"no guardado\" sin tener que leer logs de n8n.\n\nconst construccion = $('Code in JavaScript1').first().json;\nconst entrada = $input.first().json || {};\n\n// Un POST con onError=continueRegularOutput deja el fallo dentro del item.\nconst errorPost = entrada && entrada.error ? entrada.error : null;\n\nconst errores = Array.isArray(construccion.errores) ? construccion.errores.slice() : [];\n\nlet ok;\nlet respuestaApi = null;\n\nif (!construccion.ok) {\n  ok = false;\n} else if (errorPost) {\n  ok = false;\n  const detalle = typeof errorPost === 'string' ? errorPost : (errorPost.message || JSON.stringify(errorPost));\n  errores.push('El hospital rechazó el consentimiento: ' + detalle);\n\n  // Causa operativa habitual, y no se entiende leyendo el mensaje crudo.\n  if (detalle.includes('HCNFOLIO') || detalle.toLowerCase().includes('folio')) {\n    errores.push(\n      'El paciente existe en el hospital pero no tiene un folio de historia '\n      + 'clínica abierto. Hay que admitirlo / abrirle el folio en el sistema del '\n      + 'hospital antes de registrar el consentimiento.'\n    );\n  }\n} else {\n  ok = true;\n  respuestaApi = entrada;\n}\n\nreturn [{\n  json: {\n    ok,\n    mensaje: ok\n      ? 'Consentimiento creado en la historia clínica'\n      : 'No se pudo crear el consentimiento',\n    errores,\n    respuesta_api: respuestaApi,\n    diagnostico: construccion.diagnostico,\n  },\n}];"
+        "jsCode": "// ── Nodo \"Armar Respuesta\" (Code · Run Once for All Items) ────────────────────\n// Único punto de salida: arma el cuerpo que \"Responder Webhook\" devuelve a la app.\n// Recibe tres orígenes distintos:\n//   · la respuesta de \"Enviar Sin Acudiente\"\n//   · la respuesta de \"Enviar Con Acudiente\"\n//   · la rama de error del Switch, cuando ni siquiera se intentó el POST\n//\n// Siempre responde con un `ok` explícito para que la app pueda distinguir\n// \"guardado\" de \"no guardado\" sin tener que leer logs de n8n.\n\nconst construccion = $('Armar Binarios').first().json;\nconst entrada = $input.first().json || {};\n\n// Un POST con onError=continueRegularOutput deja el fallo dentro del item.\nconst errorPost = entrada && entrada.error ? entrada.error : null;\n\nconst errores = Array.isArray(construccion.errores) ? construccion.errores.slice() : [];\n\nlet ok;\nlet respuestaApi = null;\n\nif (!construccion.ok) {\n  ok = false;\n} else if (errorPost) {\n  ok = false;\n  const detalle = typeof errorPost === 'string' ? errorPost : (errorPost.message || JSON.stringify(errorPost));\n  errores.push('El hospital rechazó el consentimiento: ' + detalle);\n\n  // Causa operativa habitual, y no se entiende leyendo el mensaje crudo.\n  if (detalle.includes('HCNFOLIO') || detalle.toLowerCase().includes('folio')) {\n    errores.push(\n      'El paciente existe en el hospital pero no tiene un folio de historia '\n      + 'clínica abierto. Hay que admitirlo / abrirle el folio en el sistema del '\n      + 'hospital antes de registrar el consentimiento.'\n    );\n  }\n} else {\n  ok = true;\n  respuestaApi = entrada;\n}\n\nreturn [{\n  json: {\n    ok,\n    mensaje: ok\n      ? 'Consentimiento creado en la historia clínica'\n      : 'No se pudo crear el consentimiento',\n    errores,\n    respuesta_api: respuestaApi,\n    diagnostico: construccion.diagnostico,\n  },\n}];"
       },
       "type": "n8n-nodes-base.code",
       "typeVersion": 2,
       "position": [
         1820,
-        0
+        40
       ],
       "id": "521d6f27-f471-1ac9-147f-a001bc859a1b",
-      "name": "Code in JavaScript2"
+      "name": "Armar Respuesta"
     },
     {
       "parameters": {
@@ -593,179 +607,179 @@
         0
       ],
       "id": "cf78f9f1-8a53-02d2-d527-cb8e749d4909",
-      "name": "Responder OK"
+      "name": "Responder Webhook"
     }
   ],
   "connections": {
-    "wh": {
+    "Recibir Consentimiento": {
       "main": [
         [
           {
-            "node": "Code in JavaScript3",
+            "node": "Clasificar Imagenes",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript3": {
+    "Clasificar Imagenes": {
       "main": [
         [
           {
-            "node": "Code in JavaScript",
+            "node": "Estado Autorizacion",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript": {
+    "Estado Autorizacion": {
       "main": [
         [
           {
-            "node": "Medicos",
+            "node": "Consultar Medicos",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Medicos": {
+    "Consultar Medicos": {
       "main": [
         [
           {
-            "node": "Plantilla Consentimiento2",
+            "node": "Consultar Plantillas",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Plantilla Consentimiento2": {
+    "Consultar Plantillas": {
       "main": [
         [
           {
-            "node": "If",
+            "node": "Hay Acudiente",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "If": {
+    "Hay Acudiente": {
       "main": [
         [
           {
-            "node": "firma acudiente",
+            "node": "Bajar Firma Acudiente",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "firma paciente",
+            "node": "Bajar Firma Paciente",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "firma acudiente": {
+    "Bajar Firma Acudiente": {
       "main": [
         [
           {
-            "node": "firma paciente",
+            "node": "Bajar Firma Paciente",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "firma paciente": {
+    "Bajar Firma Paciente": {
       "main": [
         [
           {
-            "node": "huella paciente",
+            "node": "Bajar Huella",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "huella paciente": {
+    "Bajar Huella": {
       "main": [
         [
           {
-            "node": "Code in JavaScript1",
+            "node": "Armar Binarios",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript1": {
+    "Armar Binarios": {
       "main": [
         [
           {
-            "node": "Switch",
+            "node": "Decidir Envio",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Switch": {
+    "Decidir Envio": {
       "main": [
         [
           {
-            "node": "Code in JavaScript2",
+            "node": "Armar Respuesta",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Crear Consentimiento3",
+            "node": "Enviar Con Acudiente",
             "type": "main",
             "index": 0
           }
         ],
         [
           {
-            "node": "Crear Consentimiento2",
+            "node": "Enviar Sin Acudiente",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Crear Consentimiento3": {
+    "Enviar Con Acudiente": {
       "main": [
         [
           {
-            "node": "Code in JavaScript2",
+            "node": "Armar Respuesta",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Crear Consentimiento2": {
+    "Enviar Sin Acudiente": {
       "main": [
         [
           {
-            "node": "Code in JavaScript2",
+            "node": "Armar Respuesta",
             "type": "main",
             "index": 0
           }
         ]
       ]
     },
-    "Code in JavaScript2": {
+    "Armar Respuesta": {
       "main": [
         [
           {
-            "node": "Responder OK",
+            "node": "Responder Webhook",
             "type": "main",
             "index": 0
           }

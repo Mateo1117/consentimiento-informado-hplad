@@ -1,4 +1,4 @@
-// ── Nodo "Code in JavaScript1" (Code · Run Once for All Items) ────────────────
+// ── Nodo "Armar Binarios" (Code · Run Once for All Items) ─────────────────────
 // Deja listos los binarios que suben los POST al hospital:
 //
 //   data     -> hcpacfir : firma del paciente (con la huella al lado si la hay)
@@ -20,8 +20,8 @@
 // envía. El flujo anterior mandaba un PDF vacío en hcpacfir, y eso guardaba
 // consentimientos con una "firma" que no era una firma.
 
-const clasificacion = $('Code in JavaScript3').first().json;
-const body = $('wh').first().json.body || {};
+const clasificacion = $('Clasificar Imagenes').first().json;
+const body = $('Recibir Consentimiento').first().json.body || {};
 
 const ayudantes = (() => {
   try { return (typeof this !== 'undefined' && this && this.helpers) ? this.helpers : null; }
@@ -93,13 +93,13 @@ async function resolver(leerDescarga, propiedad, crudo, nombreArchivo) {
 }
 
 const binFirmaPaciente = await resolver(
-  () => $('firma paciente').first(), 'data', body.paciente_firma, 'firma_paciente.png');
+  () => $('Bajar Firma Paciente').first(), 'data', body.paciente_firma, 'firma_paciente.png');
 
 const binFirmaAcudiente = await resolver(
-  () => $('firma acudiente').first(), 'data rep', body.acudiente_firma, 'firma_acudiente.png');
+  () => $('Bajar Firma Acudiente').first(), 'data rep', body.acudiente_firma, 'firma_acudiente.png');
 
 const binHuella = await resolver(
-  () => $('huella paciente').first(), 'data', body.paciente_foto, 'huella_paciente.png');
+  () => $('Bajar Huella').first(), 'data', body.paciente_foto, 'huella_paciente.png');
 
 // ── Datos maestros de la API ─────────────────────────────────────────────────
 function oidDe(leerRespuesta) {
@@ -121,8 +121,8 @@ function oidDe(leerRespuesta) {
   }
 }
 
-const medico = oidDe(() => $('Medicos').first().json);
-const plantilla = oidDe(() => $('Plantilla Consentimiento2').first().json);
+const medico = oidDe(() => $('Consultar Medicos').first().json);
+const plantilla = oidDe(() => $('Consultar Plantillas').first().json);
 
 // ══ Composición firma + huella en una sola imagen ════════════════════════════
 // La API sólo tiene un campo para la firma del paciente (hcpacfir), así que

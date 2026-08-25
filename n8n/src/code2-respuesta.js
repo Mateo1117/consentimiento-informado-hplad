@@ -1,14 +1,14 @@
-// ── Nodo "Code in JavaScript2" (Code · Run Once for All Items) ────────────────
-// Único punto de salida: arma el cuerpo que "Responder OK" devuelve a la app.
+// ── Nodo "Armar Respuesta" (Code · Run Once for All Items) ────────────────────
+// Único punto de salida: arma el cuerpo que "Responder Webhook" devuelve a la app.
 // Recibe tres orígenes distintos:
-//   · la respuesta de "Crear Consentimiento2" (sin acudiente)
-//   · la respuesta de "Crear Consentimiento3" (con acudiente)
+//   · la respuesta de "Enviar Sin Acudiente"
+//   · la respuesta de "Enviar Con Acudiente"
 //   · la rama de error del Switch, cuando ni siquiera se intentó el POST
 //
 // Siempre responde con un `ok` explícito para que la app pueda distinguir
 // "guardado" de "no guardado" sin tener que leer logs de n8n.
 
-const construccion = $('Code in JavaScript1').first().json;
+const construccion = $('Armar Binarios').first().json;
 const entrada = $input.first().json || {};
 
 // Un POST con onError=continueRegularOutput deja el fallo dentro del item.

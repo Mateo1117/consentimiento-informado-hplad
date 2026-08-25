@@ -14,32 +14,36 @@ node n8n/build-workflow.mjs && node n8n/test-flujo.mjs
 
 ## Nombres de nodo
 
-Se conservan **exactamente** los del flujo que ya está en producción (`wh`,
-`Code in JavaScript3`, `Medicos`, `Plantilla Consentimiento2`, `If`,
-`firma paciente`, `firma acudiente`, `huella paciente`, `Code in JavaScript1`,
-`Switch`, `Crear Consentimiento2`, `Crear Consentimiento3`,
-`Code in JavaScript2`, `Responder OK`), para poder reemplazarlo sin renombrar
-nada.
+Los nodos tienen nombres propios (`Recibir Consentimiento`, `Clasificar
+Imagenes`, `Consultar Medicos`, `Armar Binarios`, `Decidir Envio`, ...) que no
+chocan con los del flujo viejo ni con importaciones anteriores. Si al importar
+algún nombre aparece con un número pegado al final, se importó sobre un lienzo
+que no estaba vacío: borre e importe en un workflow **nuevo**.
+
+**Importante:** sólo puede existir un webhook con la ruta
+`crear_consentimiento` en toda la instancia. Mientras el flujo viejo (nodo
+`wh`) siga existiendo/activo, la app seguirá cayendo en la cadena vieja aunque
+la nueva esté perfecta.
 
 ## Recorrido
 
 ```
-wh
- └ Code in JavaScript3      ¿qué llegó en cada imagen? (URL / data URI / nada)
-    └ Code in JavaScript    aceptado → 1, rechazado → 0
-       └ Medicos                     busca al profesional
-          └ Plantilla Consentimiento2
-             └ If  ¿hay firma de acudiente?
-                ├ sí → firma acudiente ┐
-                └ no ─────────────────┴→ firma paciente
-                                          └ huella paciente
-                                             └ Code in JavaScript1   arma los binarios
-                                                └ Switch
-                                                   ├ Con error      → Code in JavaScript2
-                                                   ├ Con acudiente  → Crear Consentimiento3
-                                                   └ Sin acudiente  → Crear Consentimiento2
-                                                                       └ Code in JavaScript2
-                                                                          └ Responder OK
+Recibir Consentimiento
+ └ Clasificar Imagenes       ¿qué llegó en cada imagen? (URL / data URI / nada)
+    └ Estado Autorizacion    aceptado → 1, rechazado → 0
+       └ Consultar Medicos
+          └ Consultar Plantillas
+             └ Hay Acudiente
+                ├ sí → Bajar Firma Acudiente ┐
+                └ no ────────────────────────┴→ Bajar Firma Paciente
+                                                 └ Bajar Huella
+                                                    └ Armar Binarios
+                                                       └ Decidir Envio (por `ruta`)
+                                                          ├ Con error     → Armar Respuesta
+                                                          ├ Con acudiente → Enviar Con Acudiente
+                                                          └ Sin acudiente → Enviar Sin Acudiente
+                                                                             └ Armar Respuesta
+                                                                                └ Responder Webhook
 ```
 
 ## Qué se arregló y por qué

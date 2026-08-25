@@ -125,29 +125,29 @@ async function correr(body, {
   plantillas = { data: [{ oid: 99 }] },
 } = {}) {
   const wh = { json: { body } };
-  const clasif = (await ejecutar('Code in JavaScript3', { nodos: { wh }, entrada: wh }))[0];
-  const estado = (await ejecutar('Code in JavaScript', { nodos: { wh }, entrada: clasif }))[0];
+  const clasif = (await ejecutar('Clasificar Imagenes', { nodos: { 'Recibir Consentimiento': wh }, entrada: wh }))[0];
+  const estado = (await ejecutar('Estado Autorizacion', { nodos: { 'Recibir Consentimiento': wh }, entrada: clasif }))[0];
 
   const nodos = {
-    wh,
-    'Code in JavaScript3': clasif,
-    'Code in JavaScript': estado,
-    Medicos: { json: medicos },
-    'Plantilla Consentimiento2': { json: plantillas },
+    'Recibir Consentimiento': wh,
+    'Clasificar Imagenes': clasif,
+    'Estado Autorizacion': estado,
+    'Consultar Medicos': { json: medicos },
+    'Consultar Plantillas': { json: plantillas },
   };
-  if (descargaFirma) nodos['firma paciente'] = { json: {}, binary: { data: descargaFirma } };
-  if (descargaAcudiente) nodos['firma acudiente'] = { json: {}, binary: { 'data rep': descargaAcudiente } };
-  if (descargaHuella) nodos['huella paciente'] = { json: {}, binary: { data: descargaHuella } };
+  if (descargaFirma) nodos['Bajar Firma Paciente'] = { json: {}, binary: { data: descargaFirma } };
+  if (descargaAcudiente) nodos['Bajar Firma Acudiente'] = { json: {}, binary: { 'data rep': descargaAcudiente } };
+  if (descargaHuella) nodos['Bajar Huella'] = { json: {}, binary: { data: descargaHuella } };
 
-  const bin = (await ejecutar('Code in JavaScript1', {
-    nodos, entrada: nodos['huella paciente'] || { json: {} },
+  const bin = (await ejecutar('Armar Binarios', {
+    nodos, entrada: nodos['Bajar Huella'] || { json: {} },
   }))[0];
 
-  return { clasif, estado, bin, nodos: { ...nodos, 'Code in JavaScript1': bin } };
+  return { clasif, estado, bin, nodos: { ...nodos, 'Armar Binarios': bin } };
 }
 
 const respuesta = (contexto, entrada) =>
-  ejecutar('Code in JavaScript2', { nodos: contexto.nodos, entrada }).then((r) => r[0]);
+  ejecutar('Armar Respuesta', { nodos: contexto.nodos, entrada }).then((r) => r[0]);
 
 // ── Escenarios ───────────────────────────────────────────────────────────────
 console.log('\n1) Firma del paciente como URL de Storage (la descarga el nodo HTTP)');
@@ -279,7 +279,7 @@ console.log('\n11) Grafo del workflow');
     }
   }
   for (const n of workflow.nodes) {
-    if (n.type === 'n8n-nodes-base.webhook') continue;
+    if (n.type === 'n8n-nodes-base.webhook' || n.type === 'n8n-nodes-base.stickyNote') continue;
     if (!destinos.has(n.name)) problemas.push(`nodo huérfano (nadie lo alimenta): ${n.name}`);
   }
 
@@ -308,8 +308,8 @@ console.log('\n11) Grafo del workflow');
   }
 
   // El Switch reparte por texto y sus destinos tienen que existir de verdad.
-  const conmutador = porNombre.Switch;
-  const salidasSwitch = workflow.connections.Switch.main;
+  const conmutador = porNombre['Decidir Envio'];
+  const salidasSwitch = workflow.connections['Decidir Envio'].main;
   const rutas = ['error', 'con_acudiente', 'sin_acudiente'];
   conmutador.parameters.rules.values.forEach((r, i) => {
     const c = r.conditions.conditions[0];

@@ -18,10 +18,10 @@ const API = 'http://190.145.223.146:99';
 // Todas las referencias entre nodos se escriben como $('Nombre') literal: si al
 // importar n8n renombra un nodo, reescribe esas apariciones (incluso dentro del
 // jsCode). Un nombre pasado como texto suelto NO se reescribe.
-const WH = "$('wh').first().json.body";
-const CLASIF = "$('Code in JavaScript3').first().json";
-const ESTADO = "$('Code in JavaScript').first().json";
-const BIN = "$('Code in JavaScript1').first().json";
+const WH = "$('Recibir Consentimiento').first().json.body";
+const CLASIF = "$('Clasificar Imagenes').first().json";
+const ESTADO = "$('Estado Autorizacion').first().json";
+const BIN = "$('Armar Binarios').first().json";
 
 const nodo = (name, type, typeVersion, parameters, extra = {}) => ({
   parameters,
@@ -157,22 +157,23 @@ const regla = (outputKey, condiciones) => ({
 
 const nodes = [
   nodo(
-    'wh',
+    'Recibir Consentimiento',
     'n8n-nodes-base.webhook',
     2.1,
     { httpMethod: 'POST', path: 'crear_consentimiento', responseMode: 'responseNode', options: {} },
-    { position: [-620, 0], webhookId: 'c79c363a-8d30-4f48-8135-7bf21d2feb08' },
+    // Sin webhookId fijo: el viejo sigue vivo en la instancia y chocarían.
+    { position: [-620, 40] },
   ),
 
-  code('Code in JavaScript3', 'code3-clasificar.js', [-420, 0]),
-  code('Code in JavaScript', 'code-estado.js', [-220, 0]),
+  code('Clasificar Imagenes', 'code3-clasificar.js', [-420, 40]),
+  code('Estado Autorizacion', 'code-estado.js', [-220, 40]),
 
-  busqueda('Medicos', '/medicos', 'profesional_nombre_completo', [{ name: 'limit', value: '100' }], [-20, 0]),
-  busqueda('Plantilla Consentimiento2', '/plantillas-consentimiento', 'nombre_consentimiento', [], [180, 0]),
+  busqueda('Consultar Medicos', '/medicos', 'profesional_nombre_completo', [{ name: 'limit', value: '100' }], [-20, 40]),
+  busqueda('Consultar Plantillas', '/plantillas-consentimiento', 'nombre_consentimiento', [], [180, 40]),
 
   // ¿Hay firma de acudiente? Sólo entonces se intenta descargarla.
   nodo(
-    'If',
+    'Hay Acudiente',
     'n8n-nodes-base.if',
     2.2,
     {
@@ -189,18 +190,18 @@ const nodes = [
     { position: [380, 0] },
   ),
 
-  descarga('firma acudiente', 'url_firma_acudiente', 'data rep', [580, -120]),
-  descarga('firma paciente', 'url_firma_paciente', 'data', [780, 0]),
-  descarga('huella paciente', 'url_huella', 'data', [980, 0]),
+  descarga('Bajar Firma Acudiente', 'url_firma_acudiente', 'data rep', [580, -80]),
+  descarga('Bajar Firma Paciente', 'url_firma_paciente', 'data', [780, 40]),
+  descarga('Bajar Huella', 'url_huella', 'data', [980, 40]),
 
-  code('Code in JavaScript1', 'code1-binarios.js', [1180, 0]),
+  code('Armar Binarios', 'code1-binarios.js', [1180, 40]),
 
   // Reparto final: error / con acudiente / sin acudiente.
   // Se compara el texto `ruta` en vez de dos booleanos: n8n importa el Switch
   // con typeValidation "strict" y ahí una condición booleana sin rightValue
   // válido no encaja, así que TODO se iba al fallback (la rama de error).
   nodo(
-    'Switch',
+    'Decidir Envio',
     'n8n-nodes-base.switch',
     3.2,
     {
@@ -224,13 +225,13 @@ const nodes = [
     { position: [1380, 0] },
   ),
 
-  crearConsentimiento('Crear Consentimiento3', true, [1600, -120]),
-  crearConsentimiento('Crear Consentimiento2', false, [1600, 120]),
+  crearConsentimiento('Enviar Con Acudiente', true, [1600, -80]),
+  crearConsentimiento('Enviar Sin Acudiente', false, [1600, 160]),
 
-  code('Code in JavaScript2', 'code2-respuesta.js', [1820, 0]),
+  code('Armar Respuesta', 'code2-respuesta.js', [1820, 40]),
 
   nodo(
-    'Responder OK',
+    'Responder Webhook',
     'n8n-nodes-base.respondToWebhook',
     1.1,
     {
@@ -247,31 +248,31 @@ const a = (...destinos) => ({
 });
 
 const connections = {
-  wh: a('Code in JavaScript3'),
-  'Code in JavaScript3': a('Code in JavaScript'),
-  'Code in JavaScript': a('Medicos'),
-  Medicos: a('Plantilla Consentimiento2'),
-  'Plantilla Consentimiento2': a('If'),
-  If: {
+  'Recibir Consentimiento': a('Clasificar Imagenes'),
+  'Clasificar Imagenes': a('Estado Autorizacion'),
+  'Estado Autorizacion': a('Consultar Medicos'),
+  'Consultar Medicos': a('Consultar Plantillas'),
+  'Consultar Plantillas': a('Hay Acudiente'),
+  'Hay Acudiente': {
     main: [
-      [{ node: 'firma acudiente', type: 'main', index: 0 }],
-      [{ node: 'firma paciente', type: 'main', index: 0 }],
+      [{ node: 'Bajar Firma Acudiente', type: 'main', index: 0 }],
+      [{ node: 'Bajar Firma Paciente', type: 'main', index: 0 }],
     ],
   },
-  'firma acudiente': a('firma paciente'),
-  'firma paciente': a('huella paciente'),
-  'huella paciente': a('Code in JavaScript1'),
-  'Code in JavaScript1': a('Switch'),
-  Switch: {
+  'Bajar Firma Acudiente': a('Bajar Firma Paciente'),
+  'Bajar Firma Paciente': a('Bajar Huella'),
+  'Bajar Huella': a('Armar Binarios'),
+  'Armar Binarios': a('Decidir Envio'),
+  'Decidir Envio': {
     main: [
-      [{ node: 'Code in JavaScript2', type: 'main', index: 0 }],
-      [{ node: 'Crear Consentimiento3', type: 'main', index: 0 }],
-      [{ node: 'Crear Consentimiento2', type: 'main', index: 0 }],
+      [{ node: 'Armar Respuesta', type: 'main', index: 0 }],
+      [{ node: 'Enviar Con Acudiente', type: 'main', index: 0 }],
+      [{ node: 'Enviar Sin Acudiente', type: 'main', index: 0 }],
     ],
   },
-  'Crear Consentimiento3': a('Code in JavaScript2'),
-  'Crear Consentimiento2': a('Code in JavaScript2'),
-  'Code in JavaScript2': a('Responder OK'),
+  'Enviar Con Acudiente': a('Armar Respuesta'),
+  'Enviar Sin Acudiente': a('Armar Respuesta'),
+  'Armar Respuesta': a('Responder Webhook'),
 };
 
 // ids estables para que el diff del JSON no cambie en cada build
@@ -288,8 +289,32 @@ const idEstable = () => {
 
 for (const n of nodes) if (!n.id) n.id = idEstable();
 
+// Nota visible en el lienzo con las condiciones para que el flujo reciba tráfico.
+nodes.unshift({
+  parameters: {
+    content: [
+      '## ⚠️ Antes de activar',
+      '',
+      'Sólo puede existir **un** webhook con la ruta `crear_consentimiento` en todo n8n.',
+      '',
+      '1. Borre o desactive el flujo viejo (el nodo `wh` y toda su cadena, y cualquier copia anterior).',
+      '2. Si algún nodo de este flujo quedó con un número pegado al final (p. ej. `Recibir Consentimiento1`), se importó sobre un lienzo que no estaba vacío: borre e importe de nuevo en un workflow NUEVO.',
+      '3. Active este flujo y pruebe desde la app.',
+      '',
+      'Si la ejecución cae en **Con error**, el motivo exacto está en el campo `errores` (pestaña JSON de "Decidir Envio") y también le llega a la app en la respuesta 422.',
+    ].join('\n'),
+    height: 340,
+    width: 460,
+    color: 3,
+  },
+  type: 'n8n-nodes-base.stickyNote',
+  typeVersion: 1,
+  position: [-640, -360],
+  name: 'Leame',
+});
+
 const workflow = {
-  name: 'Crear Consentimiento HPLAD',
+  name: 'Crear Consentimiento HPLAD v2',
   nodes,
   connections,
   settings: { executionOrder: 'v1' },
