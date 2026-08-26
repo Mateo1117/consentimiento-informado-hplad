@@ -79,9 +79,12 @@ export const ConsentFormVenopuncion = ({ patientData, onBack }: ConsentFormProps
           .eq('created_by', user.id)
           .single();
         if (profSig) {
-          if (!professionalName) setProfessionalName(profSig.professional_name);
-          if (!professionalDocument) setProfessionalDocument(profSig.professional_document);
-          if (profSig.signature_data) setProfessionalSignature(profSig.signature_data);
+          // Sólo rellenar lo que siga vacío: si el usuario ya eligió profesional
+          // en el selector, esta carga no debe pisarlo (antes lo pisaba porque
+          // el efecto leía el valor congelado del primer render).
+          setProfessionalName((actual) => actual || profSig.professional_name);
+          setProfessionalDocument((actual) => actual || profSig.professional_document);
+          setProfessionalSignature((actual) => actual || profSig.signature_data || '');
         }
       } catch { /* silently ignore */ }
     };
