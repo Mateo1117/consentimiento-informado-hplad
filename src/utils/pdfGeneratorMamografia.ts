@@ -52,23 +52,23 @@ const MAMOGRAFIA_PROCEDURE_DATA: BasePDFProcedureItem[] = [
   },
   {
     label: 'BENEFICIOS ESPERADOS',
-    value: 'Detección temprana de lesiones no palpables, microcalcificaciones sospechosas y tumores en etapas subclínicas tempranas. Incrementa las probabilidades de curación o control de la enfermedad mediante el diagnóstico oportuno del cáncer de mama. Permite detectar alteraciones en estadios iniciales, disminuye la necesidad de intervenciones quirúrgicas agresivas o esquemas de tratamiento complejos. Facilitar el seguimiento comparativo anual de cambios tisulares evolutivos.'
+    value: '- Detección temprana de lesiones no palpables, microcalcificaciones sospechosas y tumores en etapas subclínicas tempranas.\n- Incrementa las probabilidades de curación o control de la enfermedad mediante el diagnóstico oportuno del cáncer de mama.\n- Permite detectar alteraciones en estadios iniciales, disminuye la necesidad de intervenciones quirúrgicas agresivas o esquemas de tratamiento complejos.\n- Facilitar el seguimiento comparativo anual de cambios tisulares evolutivos.'
   },
   {
     label: 'RIESGOS Y POSIBLES COMPLICACIONES',
-    value: 'Son riesgos: Riesgo de omitir lesiones no visibles (por alta densidad mamaria) o de requerir estudios adicionales y biopsias. Exposición a una dosis bajas de rayos X. Aunque la dosis es mínima y controlada. Riesgo de requerir repetición de la toma por movimiento involuntario, baja tolerancia a la compresión o presencia de implantes/cuerpos extraños que oculten tejido. Son complicaciones: Mareo, hipotensión o desmayo transitorio desencadenado por dolor agudo o estrés durante la compresión del tejido. Extravasación de sangre y morados por rotura de pequeños vasos capilares debido a la presión ejercida sobre la mama. Lesión o irritación de la piel por fricción o compresión directa, especialmente en pacientes con piel frágil, atrófica o con intertrigo submamario.'
+    value: 'Son Riesgos:\n- Riesgo de omitir lesiones no visibles (por alta densidad mamaria) o de requerir estudios adicionales y biopsias.\n- Exposición a una dosis bajas de rayos X. Aunque la dosis es mínima y controlada.\n- Riesgo de requerir repetición de la toma por movimiento involuntario, baja tolerancia a la compresión o presencia de implantes/cuerpos extraños que oculten tejido.\n\nSon Complicaciones:\n- Mareo, hipotensión o desmayo transitorio desencadenado por dolor agudo o estrés durante la compresión del tejido.\n- Extravasación de sangre y morados por rotura de pequeños vasos capilares debido a la presión ejercida sobre la mama.\n- Lesión o irritación de la piel por fricción o compresión directa, especialmente en pacientes con piel frágil, atrófica o con intertrigo submamario.'
   },
   {
     label: 'EFECTOS INEVITABLES',
-    value: 'Exposición a baja temperatura ambiental dentro de la sala de examen (necesaria para el mantenimiento técnico del equipo radiológico). Posible fatiga muscular derivada de la inmovilización postural requerida durante la adquisición de las proyecciones, o disconfort osteomioarticular asociado al decúbito sobre la mesa de exploración.'
+    value: 'Exposición a baja temperatura ambiental dentro de la sala de examen (necesaria para el mantenimiento técnico del equipo radiológico).\nPosible fatiga muscular derivada de la inmovilización postural requerida durante la adquisición de las proyecciones, o disconfort osteomioarticular asociado al decúbito sobre la mesa de exploración.'
   },
   {
     label: 'ALTERNATIVAS RAZONABLES A ESTE PROCEDIMIENTO',
-    value: 'Ecografía mamaria (Ultrasonido). Limitación: No detecta microcalcificaciones con la misma sensibilidad que la mamografía; no es un método sustitutivo de tamizaje primario en población general. Resonancia Magnética Mamaria (RMM). Limitación: Alta tasa de falsos positivos, requiere administración de medio de contraste (gadolinio) y no sustituye la evaluación inicial de microcalcificaciones. Tomosíntesis (Mamografía 3D). Limitación: Utiliza radiación ionizante (variación avanzada del mismo principio físico de la mamografía estándar). Mamografía por contraste (CEM). Limitación: Uso de contraste yodado (riesgo de refracción alérgica o nefrotoxicidad) y mayor exposición a radiación que el estudio convencional.'
+    value: 'Ecografía mamaria (Ultrasonido). Limitación: No detecta microcalcificaciones con la misma sensibilidad que la mamografía; no es un método sustitutivo de tamizaje primario en población general.\nResonancia Magnética Mamaria (RMM). Limitación: Alta tasa de falsos positivos, requiere administración de medio de contraste (gadolinio) y no sustituye la evaluación inicial de microcalcificaciones.\nTomosíntesis (Mamografía 3D). Limitación: Utiliza radiación ionizante (variación avanzada del mismo principio físico de la mamografía estándar).\nMamografía por contraste (CEM). Limitación: Uso de contraste yodado (riesgo de refracción alérgica o nefrotoxicidad) y mayor exposición a radiación que el estudio convencional.'
   },
   {
     label: 'POSIBLES CONSECUENCIAS EN CASO QUE DECIDA NO ACEPTAR EL PROCEDIMIENTO',
-    value: 'Diagnóstico tardío Progresión de la enfermedad Requerimiento de tratamientos más invasivos Menor tasa de supervivencia Pérdida de la ventana de oportunidad terapéutica'
+    value: '- Diagnóstico tardío\n- Progresión de la enfermedad\n- Requerimiento de tratamientos más invasivos\n- Menor tasa de supervivencia\n- Pérdida de la ventana de oportunidad terapéutica'
   },
   {
     label: 'RIESGOS EN FUNCIÓN DE LA SITUACIÓN CLÍNICA DEL PACIENTE',
