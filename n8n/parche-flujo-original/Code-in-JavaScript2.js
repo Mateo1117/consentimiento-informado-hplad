@@ -1,149 +1,61 @@
-// ═════════════════════════════════════════════════════════════════════════════
-// PARCHE para el nodo "Code in JavaScript2" del flujo original (FLUJO APIS MESA)
-//
-// Pegar TODO este código dentro del nodo, reemplazando el que tiene.
-// Rama del acudiente: If (sí hay firma de acudiente) → firma acudiente →
-// ESTE nodo → Crear Consentimiento3. Recomendado además conectar
-// "Crear Consentimiento3" → "Responder OK" (hoy no lleva a ninguna parte).
-//
-// Qué arregla:
-//  · La firma del acudiente que llega como data URI se decodifica aquí.
-//  · La firma del PACIENTE también se resuelve en esta rama (el nodo
-//    'firma paciente' no corre aquí): del data URI del webhook o, si vino como
-//    URL, descargándola directamente desde este nodo.
-//  · Se eliminan los PDF vacíos "Sin informacion": nunca más una "firma" falsa
-//    en la historia clínica. Si falta una firma real, el flujo se detiene con
-//    un error que dice qué llegó.
-// ═════════════════════════════════════════════════════════════════════════════
+let item = $input.item;
 
-const body = $('wh').first().json.body || {};
-
-const ayudantes = (() => {
-  try { return (typeof this !== 'undefined' && this && this.helpers) ? this.helpers : null; }
-  catch (e) { return null; }
-})();
-
-// Resuelve el binario aunque n8n guarde los archivos en disco/S3 (ahí
-// `binary.x.data` llega vacío y sólo trae un `id` de referencia).
-async function aBase64(bin) {
-  if (!bin) return '';
-  if (typeof bin.data === 'string' && bin.data.length > 0) return bin.data;
-  if (bin.id && ayudantes) {
-    for (const metodo of ['binaryToBuffer', 'getBinaryStream', 'getBinaryDataBuffer']) {
-      try {
-        if (typeof ayudantes[metodo] !== 'function') continue;
-        const buf = await ayudantes[metodo](bin);
-        if (buf && buf.length) return Buffer.from(buf).toString('base64');
-      } catch (e) { /* método no disponible en esta versión de n8n */ }
-    }
-  }
-  return '';
+// ── CORRECCIÓN 1: decodificar imágenes que llegan como "data:image/...;base64,"
+// dentro del webhook (cuando a la app le falla la subida a Storage el nodo de
+// descarga no puede con ese esquema). ──
+function desdeDataUri(texto, nombre) {
+  const m = /^data:(image\/[a-z0-9.+-]+)?;?base64,([\s\S]+)$/i.exec(String(texto || '').trim());
+  if (!m) return null;
+  return {
+    data: m[2].replace(/\s+/g, ''),
+    mimeType: m[1] || 'image/png',
+    fileName: nombre,
+    fileExtension: 'png',
+  };
 }
 
-// La app manda la imagen como URL de Storage o, cuando esa subida falla, como
-// "data:image/png;base64,..." dentro del JSON. Esto decodifica el segundo caso.
-function desdeTexto(valor, nombreArchivo) {
-  const texto = typeof valor === 'string' ? valor.trim() : '';
-  if (!texto) return null;
-  const m = /^data:([^;,]*)(;base64)?,([\s\S]*)$/i.exec(texto);
-  if (m) {
-    const mime = m[1] || 'image/png';
-    const cuerpo = (m[3] || '').replace(/\s+/g, '');
-    if (!cuerpo) return null;
-    const data = m[2] ? cuerpo : Buffer.from(decodeURIComponent(cuerpo), 'binary').toString('base64');
-    const ext = (mime.split('/')[1] || 'png').split('+')[0];
-    return { data, mimeType: mime, fileName: nombreArchivo, fileExtension: ext, origen: 'webhook_data_uri' };
-  }
-  const limpio = texto.replace(/\s+/g, '');
-  if (limpio.length > 100 && /^[A-Za-z0-9+/]+={0,2}$/.test(limpio)) {
-    return { data: limpio, mimeType: 'image/png', fileName: nombreArchivo, fileExtension: 'png', origen: 'webhook_base64' };
-  }
-  return null;
+const cuerpoWh = $('wh').item.json.body || {};
+
+// Verificar si el PDF de firma acudiente existe
+// ── CORRECCIÓN 2: exigir contenido de verdad (la descarga fallida deja el
+// binario vacío) y, si no está, recuperar la firma del acudiente del webhook. ──
+const acudienteDescargada = item.binary && item.binary['data rep'] && item.binary['data rep'].data
+  ? item.binary['data rep'] : null;
+const acudienteBinario = acudienteDescargada || desdeDataUri(cuerpoWh.acudiente_firma, 'firma_acudiente.png');
+const hasAcudientePDF = !!acudienteBinario;
+
+// ── CORRECCIÓN 3: en esta rama el nodo 'firma paciente' nunca corre, así que
+// la firma del paciente se recupera del propio webhook. ──
+const pacienteBinario = desdeDataUri(cuerpoWh.paciente_firma, 'firma_paciente.png');
+
+// PDF vacío base64
+const pdfVacio = 'JVBERi0xLjQKJeLjz9MKMSAwIG9iago8PC9UeXBlL0NhdGFsb2cvUGFnZXMgMiAwIFI+PgplbmRvYmoKMiAwIG9iago8PC9UeXBlL1BhZ2VzL0tpZHNbMyAwIFJdL0NvdW50IDE+PgplbmRvYmoKMyAwIG9iago8PC9UeXBlL1BhZ2UvTWVkaWFCb3hbMCAwIDYxMiA3OTJdL1Jlc291cmNlczw8L0ZvbnQ8PC9GMSA8PC9UeXBlL0ZvbnQvU3VidHlwZS9UeXBlMS9CYXNlRm9udC9IZWx2ZXRpY2E+Pj4+Pj4vQ29udGVudHMgNCAwIFI+PgplbmRvYmoKNCAwIG9iago8PC9MZW5ndGggNTU+PgpzdHJlYW0KQlQKL0YxIDEyIFRmCjEwMCA3MDAgVGQKKFNpbiBpbmZvcm1hY2lvbikgVGoKRVQKZW5kc3RyZWFtCmVuZG9iagp4cmVmCjAgNQowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwMTUgMDAwMDAgbiAKMDAwMDAwMDA2NCAwMDAwMCBuIAowMDAwMDAwMTIxIDAwMDAwIG4gCjAwMDAwMDAyODYgMDAwMDAgbiAKdHJhaWxlcgo8PC9TaXplIDUvUm9vdCAxIDAgUj4+CnN0YXJ0eHJlZgozOTEKJSVFT0Y=';
+
+// Preparar el objeto de salida
+let output = {
+  json: item.json,
+  binary: {}
+};
+
+// Campo "data rep": firma del acudiente (o PDF vacío si no existe)
+if (hasAcudientePDF) {
+  output.binary['data rep'] = acudienteBinario;
+} else {
+  output.binary['data rep'] = {
+    data: pdfVacio,
+    mimeType: 'application/pdf',
+    fileName: 'sin_firma_acudiente.pdf',
+    fileExtension: 'pdf'
+  };
 }
 
-// Último recurso: si la imagen vino como URL pero el nodo de descarga no corrió
-// en esta rama (o quedó mal configurado), se intenta descargar desde aquí.
-async function descargarDirecto(url, nombreArchivo) {
-  if (!/^https?:\/\//i.test(String(url || ''))) return null;
-  if (!ayudantes || typeof ayudantes.httpRequest !== 'function') return null;
-  try {
-    const r = await ayudantes.httpRequest({
-      url, method: 'GET', encoding: 'arraybuffer', returnFullResponse: true, timeout: 20000,
-      headers: { 'User-Agent': 'n8n-image-downloader', Accept: 'image/*,*/*' },
-    });
-    const cuerpo = r && r.body != null ? Buffer.from(r.body) : null;
-    if (!cuerpo || !cuerpo.length) return null;
-    const mime = String((r.headers && r.headers['content-type']) || 'image/png').split(';')[0];
-    return { data: cuerpo.toString('base64'), mimeType: mime, fileName: nombreArchivo,
-             fileExtension: (mime.split('/')[1] || 'png').split('+')[0], origen: 'descarga_directa' };
-  } catch (e) { return null; }
-}
+// Campo data: firma del paciente si vino en el webhook; si no, PDF vacío
+// (── CORRECCIÓN 4: antes era SIEMPRE el PDF vacío, aunque la firma sí llegara ──)
+output.binary.data = pacienteBinario || {
+  data: pdfVacio,
+  mimeType: 'application/pdf',
+  fileName: 'sin_firma_paciente.pdf',
+  fileExtension: 'pdf'
+};
 
-// `leerDescarga` va como función con el $('Nodo') literal adentro: si n8n
-// renombra el nodo, reescribe esa referencia; un nombre en texto suelto no.
-async function resolver(leerDescarga, propiedad, crudo, nombreArchivo) {
-  try {
-    const item = leerDescarga();
-    const bin = item && item.binary ? item.binary[propiedad] : null;
-    const data = await aBase64(bin);
-    if (data) {
-      return { data, mimeType: bin.mimeType || 'image/png', fileName: bin.fileName || nombreArchivo,
-               fileExtension: bin.fileExtension || 'png', origen: 'descarga' };
-    }
-  } catch (e) { /* el nodo no corrió en esta rama o falló: seguimos */ }
-  const inline = desdeTexto(crudo, nombreArchivo);
-  if (inline) return inline;
-  return await descargarDirecto(crudo, nombreArchivo);
-}
-
-function soloBinario(bin) {
-  if (!bin) return null;
-  return { data: bin.data, mimeType: bin.mimeType, fileName: bin.fileName, fileExtension: bin.fileExtension };
-}
-
-function comoLlego(valor) {
-  const t = typeof valor === 'string' ? valor.trim() : '';
-  if (!t || t === 'null') return 'no venía en el webhook';
-  if (/^https?:\/\//i.test(t)) return 'venía como URL pero no se pudo descargar';
-  if (/^data:/i.test(t)) return 'venía como data URI pero no se pudo decodificar';
-  return 'venía en un formato no reconocido';
-}
-
-// ── Resolver las dos firmas de esta rama ─────────────────────────────────────
-const binAcudiente = await resolver(
-  () => $('firma acudiente').first(), 'data rep', body.acudiente_firma, 'firma_acudiente.png');
-
-// 'firma paciente' no corre en esta rama; resolver() lo tolera y usa el
-// webhook o la descarga directa.
-const binPaciente = await resolver(
-  () => $('firma paciente').first(), 'data', body.paciente_firma, 'firma_paciente.png');
-
-if (!binAcudiente) {
-  throw new Error(
-    'Esta rama es la del acudiente pero su firma no se pudo obtener: '
-    + comoLlego(body.acudiente_firma) + '.'
-  );
-}
-if (!binPaciente) {
-  throw new Error(
-    'No se pudo obtener la firma del paciente para hcpacfir: '
-    + comoLlego(body.paciente_firma)
-    + '. "Crear Consentimiento3" sube hcpacfir y hcrepfir; sin la del paciente '
-    + 'fallaría igual, así que se detiene aquí con el motivo claro. (Antes se '
-    + 'enviaba un PDF vacío: consentimientos sin firma en la historia clínica.)'
-  );
-}
-
-return [{
-  json: {
-    ...$input.first().json,
-    _firma: {
-      origen_firma_paciente: binPaciente.origen,
-      origen_firma_acudiente: binAcudiente.origen,
-    },
-  },
-  binary: {
-    data: soloBinario(binPaciente),        // hcpacfir
-    'data rep': soloBinario(binAcudiente), // hcrepfir
-  },
-}];
+return output;

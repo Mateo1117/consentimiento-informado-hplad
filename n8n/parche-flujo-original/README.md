@@ -25,18 +25,24 @@ descargar el esquema `data:` y el POST llega sin binario. Además la salida
    acudiente termina sin responderle a la app).
 6. Guardar. No hay que desactivar ni reimportar nada.
 
-## Qué cambia
+## Qué cambia (es SU mismo código, sólo con bloques `// ── CORRECCIÓN`)
 
-- La firma en `data:image/png;base64,...` se decodifica dentro del Code node.
-- Los binarios guardados en disco/S3 (`data` vacío + `id`) se resuelven.
-- Si la imagen vino como URL y el nodo de descarga no corrió o quedó mal
-  configurado, el Code node la descarga directamente como último recurso.
-- Con huella: se compone firma+huella en un PNG gris liviano; si algo falla,
-  se manda la firma sola (nunca se pierde la firma).
-- Se eliminan los PDF vacíos "Sin informacion": si no hay firma real, la
-  ejecución falla con un mensaje que dice exactamente qué llegó, en vez de
-  registrar un consentimiento con una firma falsa.
+Se conserva todo lo que ya tenían los nodos (el motor de composición
+`buildImagenUnificada`, el `pdfVacio` de respaldo del acudiente, la salida
+`data rep`). Las correcciones insertadas:
 
-Probado con `node <scratchpad>/probar-parche.mjs`: 12/12 escenarios
-(data URI, URL descargada, binario en disco, descarga directa, composición
-con huella, sin firma, y la rama del acudiente completa).
+1. Leer `huella paciente` con try/catch: en la rama "Sin huella" ese nodo no
+   corre y leerlo directo tumbaba el nodo.
+2. Exigir que el binario descargado traiga contenido de verdad.
+3. Si no hay binario, decodificar el `data:image/png;base64,...` que manda la
+   app cuando le falla la subida a Storage (la causa de las ejecuciones rojas).
+4. Sin firma: error con mensaje claro en vez de dejar reventar el POST.
+5. Sólo componer cuando HAY huella; sin huella la firma va tal cual (lo mismo
+   que hacía la rama "Sin huella" original). Si la composición falla, se manda
+   la firma sola.
+6. En la rama del acudiente, `hcpacfir` lleva la firma del paciente cuando
+   viene en el webhook (antes iba SIEMPRE el PDF vacío, aunque la firma
+   llegara).
+
+Probado en simulador: 11/11 escenarios (data URI, URL descargada, con y sin
+huella, sin firma, rama del acudiente).
