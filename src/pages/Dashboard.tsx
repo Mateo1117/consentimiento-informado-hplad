@@ -18,6 +18,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfWeek, startOfMonth, differenceInDays } from "date-fns";
 import { es } from "date-fns/locale";
 import { fetchAnalyticsConsents } from "@/services/dashboardAnalyticsService";
+import { exportDashboardToPdf } from "@/services/dashboardPdfExportService";
 import { toast } from "sonner";
 
 interface StatsData {
@@ -62,6 +63,7 @@ const Dashboard = () => {
     signedConsents: 0, pendingConsents: 0, weekChange: 0, monthChange: 0,
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const [activeTab, setActiveTab] = useState("resumen");
   const [dateFrom, setDateFrom] = useState<Date | undefined>(subDays(new Date(), 30));
   const [dateTo, setDateTo] = useState<Date | undefined>(new Date());
@@ -199,6 +201,22 @@ const Dashboard = () => {
     fetchStats();
   };
 
+  const handleExportPdf = async () => {
+    setIsExporting(true);
+    try {
+      const fileName = await exportDashboardToPdf({
+        dateFrom: dateFrom ? localDayStart(dateFrom) : undefined,
+        dateTo: dateTo ? localDayEnd(dateTo) : undefined,
+      });
+      toast.success(`Informe generado: ${fileName}`);
+    } catch (error) {
+      console.error('Error exporting dashboard PDF:', error);
+      toast.error(error instanceof Error ? error.message : 'Error al generar el informe PDF');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // Date range props for tab components
   const dateRangeProps = {
     dateFrom: dateFrom ? localDayStart(dateFrom) : undefined,
@@ -215,6 +233,8 @@ const Dashboard = () => {
           onDateToChange={setDateTo}
           onRefresh={handleRefresh}
           isLoading={isLoading}
+          onExportPdf={handleExportPdf}
+          isExporting={isExporting}
         />
 
         <div className="mb-6">

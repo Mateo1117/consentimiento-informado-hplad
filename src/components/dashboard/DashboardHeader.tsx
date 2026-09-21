@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Calendar, RefreshCw, TrendingUp } from "lucide-react";
+import { Calendar, RefreshCw, TrendingUp, FileDown, Loader2 } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { format } from "date-fns";
@@ -12,6 +12,8 @@ interface DashboardHeaderProps {
   onDateToChange: (date: Date | undefined) => void;
   onRefresh: () => void;
   isLoading: boolean;
+  onExportPdf?: () => void;
+  isExporting?: boolean;
 }
 
 export function DashboardHeader({
@@ -21,6 +23,8 @@ export function DashboardHeader({
   onDateToChange,
   onRefresh,
   isLoading,
+  onExportPdf,
+  isExporting = false,
 }: DashboardHeaderProps) {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
@@ -70,6 +74,20 @@ export function DashboardHeader({
             />
           </PopoverContent>
         </Popover>
+
+        {onExportPdf && (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onExportPdf}
+            disabled={isExporting}
+            className="gap-2 h-11 sm:h-9"
+            aria-label="Exportar informe del dashboard a PDF"
+          >
+            {isExporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileDown className="h-4 w-4" />}
+            {isExporting ? "Generando PDF..." : "Exportar PDF"}
+          </Button>
+        )}
 
         <Button onClick={onRefresh} disabled={isLoading} className="gap-2">
           <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
