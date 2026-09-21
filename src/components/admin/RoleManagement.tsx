@@ -363,6 +363,7 @@ export function RoleManagement() {
 
       toast.success("Permiso actualizado");
       loadRolePermissions(selectedRoleForPermissions);
+      loadEnabledPermissionsByRole();
     } catch (error: any) {
       console.error('Error updating permission:', error);
       toast.error("Error al actualizar permiso: " + error.message);
