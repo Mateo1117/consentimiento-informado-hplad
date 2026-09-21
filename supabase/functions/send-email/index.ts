@@ -93,7 +93,7 @@ serve(async (req) => {
               </div>
               
               <div style="text-align: center; margin: 20px 0;">
-                <a href="${Deno.env.get('SUPABASE_URL')?.replace('https://', 'https://af1951d7-255f-4edf-8d9f-67b1b4c15e8c.lovableproject.com')}/admin" 
+                <a href="${Deno.env.get('APP_URL') ?? 'https://consentimientohplad.mcmasociados.tech'}/admin"
                    style="background: #7c3aed; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block;">
                   Ver en Panel Administrativo
                 </a>

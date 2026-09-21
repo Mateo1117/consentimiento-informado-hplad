@@ -453,11 +453,9 @@ export const FingerprintCapture = forwardRef<FingerprintCaptureRef, FingerprintC
 
   const isPreviewOrEmbedded = useCallback(() => {
     if (typeof window === 'undefined') return false;
-    const inIframe = window.self !== window.top;
-    const host = window.location.hostname;
-    const isPreviewHost = host.includes('lovableproject.com') || host.includes('id-preview--');
-    const hasPreviewToken = window.location.search.includes('__lovable_token=');
-    return inIframe || isPreviewHost || hasPreviewToken;
+    // El navegador bloquea WebUSB y Web Bluetooth dentro de un iframe,
+    // así que ahí se omite la detección del lector.
+    return window.self !== window.top;
   }, []);
 
   // ── Camera helpers ──────────────────────────────────────────────────────────

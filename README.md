@@ -1,73 +1,102 @@
-# Welcome to your Lovable project
+# Sistema de Consentimientos Informados — E.S.E. Hospital Pedro León Álvarez Díaz (La Mesa)
 
-## Project info
+Aplicación web para generar, enviar, firmar y archivar consentimientos informados
+digitales. Permite la firma remota del paciente mediante enlace con token, la firma
+presencial en tablet, la captura de huella dactilar y la generación del PDF firmado.
 
-**URL**: https://lovable.dev/projects/af1951d7-255f-4edf-8d9f-67b1b4c15e8c
+Originalmente construida en Lovable; exportada y ahora autónoma.
 
-## How can I edit this code?
+## Consentimientos disponibles
 
-There are several ways of editing your application.
+| Clave | Consentimiento | Especialidad |
+|---|---|---|
+| `venopuncion` | Venopunción | Laboratorio Clínico |
+| `carga_glucosa` | Curva de Tolerancia a la Glucosa | Laboratorio Clínico |
+| `vih` (alias `hiv`) | Prueba de VIH | Laboratorio Clínico |
+| `frotis_vaginal` | Frotis Vaginal | Ginecología / Laboratorio |
+| `hemocomponentes` | Transfusión de Hemocomponentes | Banco de Sangre / Medicina Transfusional |
 
-**Use Lovable**
+El texto de cada uno (descripción, propósito, procedimientos, beneficios, riesgos y
+alternativas) vive en `src/data/procedureInfo.ts`. Las etiquetas y los alias de tipo
+se normalizan en `src/utils/consentTypeNormalizer.ts`.
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/af1951d7-255f-4edf-8d9f-67b1b4c15e8c) and start prompting.
+## Stack
 
-Changes made via Lovable will be committed automatically to this repo.
+- Vite + React 18 + TypeScript
+- Tailwind CSS + shadcn/ui (Radix)
+- Supabase (PostgreSQL + Auth + Storage + Edge Functions) — proyecto `dbhamokkweyadibngphq`
+- jsPDF + html2canvas para la generación del PDF
+- react-signature-canvas para la firma
+- WebUSB / Web Bluetooth + DigitalPersona para el lector de huella
 
-**Use your preferred IDE**
+## Desarrollo local
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+npm install
+npm run dev          # http://localhost:8080
 ```
 
-**Edit a file directly in GitHub**
+## Build de producción
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+```bash
+npm run build        # genera dist/
+npm run preview      # sirve dist/ localmente para verificar
+```
 
-**Use GitHub Codespaces**
+El resultado es estático: `dist/` se puede servir con cualquier servidor web.
+Al ser una SPA con react-router, el servidor debe reescribir todas las rutas a
+`index.html` (ver `nginx.conf`).
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+### Docker
 
-## What technologies are used for this project?
+```bash
+docker build -t consentimientos-hplad .
+docker run -p 8080:80 consentimientos-hplad
+```
 
-This project is built with:
+## Configuración
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+Las credenciales de Supabase están embebidas por defecto en
+`src/integrations/supabase/client.ts` y se pueden sobreescribir en tiempo de
+**build** (no de runtime — Vite las hornea en el bundle) mediante `.env`:
 
-## How can I deploy this project?
+```
+VITE_SUPABASE_URL="https://<proyecto>.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY="<anon key>"
+VITE_PUBLIC_APP_URL="https://<dominio-publico>"
+```
 
-Simply open [Lovable](https://lovable.dev/projects/af1951d7-255f-4edf-8d9f-67b1b4c15e8c) and click on Share -> Publish.
+`VITE_PUBLIC_APP_URL` es el dominio con el que se construyen los enlaces de firma
+remota que se envían al paciente por correo, SMS o WhatsApp.
 
-## Can I connect a custom domain to my Lovable project?
+## Backend
 
-Yes, you can!
+El esquema y las funciones viven en `supabase/`:
 
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
+- `supabase/migrations/` — historial de migraciones SQL
+- `supabase/functions/` — edge functions (Deno): `consulta-paciente`,
+  `enviar-consentimiento`, `public-sign-consent`, `upload-signed-pdf`,
+  `send-consent-email`, `send-consent-sms`, `send-consent-whatsapp`, `send-email`,
+  `send-sms`, `create-user`, `admin-reset-password`, `receive-webhook`,
+  `trigger-webhooks`, `test-webhook`
 
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+Se despliegan con la CLI de Supabase:
+
+```bash
+supabase link --project-ref dbhamokkweyadibngphq
+supabase functions deploy <nombre>
+```
+
+La función `send-email` construye el enlace al panel administrativo con la variable
+de entorno `APP_URL` (configurable en el dashboard de Supabase).
+
+## Tablas principales
+
+- `consents` — consentimientos enviados y firmados (paciente, tipo, estado, token de
+  firma, firma del paciente, PDF)
+- `profiles`, `user_roles`, `roles`, `role_permissions` — usuarios y permisos
+- `professional_signatures` — firmas de los profesionales
+- `consent_access_logs`, `consent_signature_logs`, `consent_delivery_logs`,
+  `webhook_logs` — auditoría
+
+Todas con Row Level Security activada.
