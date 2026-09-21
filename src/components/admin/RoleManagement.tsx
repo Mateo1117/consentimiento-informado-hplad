@@ -100,6 +100,28 @@ const ROLE_DEFINITIONS: RoleDefinition[] = [
   }
 ];
 
+// Permisos que habilitan la visualización de consentimientos (dashboard y listas)
+const CONSENT_VIEW_PERMISSIONS = [
+  "view_all_consents",
+  "view_consents",
+  "view_consent_status",
+  "view_lab_consents",
+  "view_own_consents"
+];
+
+// Secciones del dashboard y los permisos que las habilitan
+const DASHBOARD_SECTIONS: { name: string; detail: string }[] = [
+  { name: 'Tarjeta "Total" y KPIs', detail: "Resumen: Total, Hoy, Semana, Mes, Firmados y Pendientes" },
+  { name: "Validación administrativa", detail: "Total con desglose mensual, por EPS y por especialidad" },
+  { name: "Producción mensual", detail: "Consentimientos agrupados por mes" },
+  { name: "Por tipo de consentimiento", detail: "Distribución según el tipo de procedimiento" },
+  { name: "Por especialidad", detail: "Consentimientos agrupados por especialidad médica" },
+  { name: "Por sede / centro de salud", detail: "Distribución según el centro donde se generó" },
+  { name: "Por médico", detail: "Totales por profesional que generó el consentimiento" },
+  { name: "Por EPS / EAPB", detail: "Distribución por entidad de salud del paciente" },
+  { name: "Consentimientos Creados (lista)", detail: "Página de gestión con el detalle de cada consentimiento" }
+];
+
 export function RoleManagement() {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -113,6 +135,8 @@ export function RoleManagement() {
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
   const [isAddPermissionDialogOpen, setIsAddPermissionDialogOpen] = useState(false);
   const [newPermission, setNewPermission] = useState({ key: "", label: "" });
+  // Mapa de permisos habilitados por rol: { role: Set<permission_key> }
+  const [enabledPermissionsByRole, setEnabledPermissionsByRole] = useState<Record<string, Set<string>>>({});
 
   // Dynamic roles management state
   const [dynamicRoles, setDynamicRoles] = useState<DynamicRole[]>([]);
@@ -124,6 +148,7 @@ export function RoleManagement() {
   useEffect(() => {
     loadUsers();
     loadDynamicRoles();
+    loadEnabledPermissionsByRole();
   }, []);
 
   useEffect(() => {
@@ -144,6 +169,33 @@ export function RoleManagement() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadEnabledPermissionsByRole = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('role_permissions')
+        .select('role, permission_key, is_enabled')
+        .eq('is_enabled', true);
+
+      if (error) throw error;
+
+      const map: Record<string, Set<string>> = {};
+      (data || []).forEach((row: { role: string; permission_key: string }) => {
+        if (!map[row.role]) map[row.role] = new Set<string>();
+        map[row.role].add(row.permission_key);
+      });
+      setEnabledPermissionsByRole(map);
+    } catch (error: any) {
+      console.error('Error loading permissions matrix:', error);
+    }
+  };
+
+  const roleCanViewConsents = (role: string) => {
+    if (role === 'admin') return true;
+    const enabled = enabledPermissionsByRole[role];
+    if (!enabled) return false;
+    return CONSENT_VIEW_PERMISSIONS.some((key) => enabled.has(key));
   };
 
   const loadRolePermissions = async (role: AppRole) => {
@@ -311,6 +363,7 @@ export function RoleManagement() {
 
       toast.success("Permiso actualizado");
       loadRolePermissions(selectedRoleForPermissions);
+      loadEnabledPermissionsByRole();
     } catch (error: any) {
       console.error('Error updating permission:', error);
       toast.error("Error al actualizar permiso: " + error.message);
@@ -344,6 +397,7 @@ export function RoleManagement() {
       setIsAddPermissionDialogOpen(false);
       setNewPermission({ key: "", label: "" });
       loadRolePermissions(selectedRoleForPermissions);
+      loadEnabledPermissionsByRole();
     } catch (error: any) {
       console.error('Error adding permission:', error);
       toast.error("Error al agregar permiso: " + error.message);
@@ -363,6 +417,7 @@ export function RoleManagement() {
 
       toast.success("Permiso eliminado");
       loadRolePermissions(selectedRoleForPermissions);
+      loadEnabledPermissionsByRole();
     } catch (error: any) {
       console.error('Error deleting permission:', error);
       toast.error("Error al eliminar permiso: " + error.message);
@@ -579,6 +634,52 @@ export function RoleManagement() {
                     {ROLE_DEFINITIONS.find(r => r.role === selectedRoleForPermissions)?.description}
                   </p>
                 </div>
+              </div>
+
+              {/* Guía: qué rol ve cada sección del Dashboard */}
+              <div className="mb-6 rounded-lg border border-medical-blue/30 bg-medical-blue/5 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Info className="h-5 w-5 text-medical-blue" />
+                  <h4 className="font-semibold text-foreground">¿Qué rol necesita para ver cada sección del Dashboard?</h4>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Todas las secciones del Dashboard (incluida la tarjeta <strong>“Total”</strong>) y la lista de
+                  <strong> Consentimientos Creados</strong> requieren que el rol tenga activo al menos <strong>uno</strong> de
+                  estos permisos. El rol <strong>Administrador</strong> siempre ve todo.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {CONSENT_VIEW_PERMISSIONS.map((key) => (
+                    <Badge key={key} variant="outline" className="font-mono text-xs">{key}</Badge>
+                  ))}
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Sección del Dashboard</TableHead>
+                      <TableHead>Qué muestra</TableHead>
+                      <TableHead>Roles con acceso actualmente</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {DASHBOARD_SECTIONS.map((section) => (
+                      <TableRow key={section.name}>
+                        <TableCell className="font-medium">{section.name}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{section.detail}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {ROLE_DEFINITIONS.filter((r) => roleCanViewConsents(r.role)).map((r) => (
+                              <Badge key={r.role} className={r.color}>{r.label}</Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <p className="text-xs text-muted-foreground">
+                  Si un usuario no ve el “Total” ni las demás secciones, active uno de los permisos anteriores
+                  en su rol desde la tabla de abajo y vuelva a cargar el Dashboard.
+                </p>
               </div>
 
               {/* Permissions List */}
