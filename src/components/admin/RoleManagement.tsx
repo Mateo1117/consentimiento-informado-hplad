@@ -397,6 +397,7 @@ export function RoleManagement() {
       setIsAddPermissionDialogOpen(false);
       setNewPermission({ key: "", label: "" });
       loadRolePermissions(selectedRoleForPermissions);
+      loadEnabledPermissionsByRole();
     } catch (error: any) {
       console.error('Error adding permission:', error);
       toast.error("Error al agregar permiso: " + error.message);
@@ -416,6 +417,7 @@ export function RoleManagement() {
 
       toast.success("Permiso eliminado");
       loadRolePermissions(selectedRoleForPermissions);
+      loadEnabledPermissionsByRole();
     } catch (error: any) {
       console.error('Error deleting permission:', error);
       toast.error("Error al eliminar permiso: " + error.message);
