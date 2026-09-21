@@ -100,6 +100,28 @@ const ROLE_DEFINITIONS: RoleDefinition[] = [
   }
 ];
 
+// Permisos que habilitan la visualización de consentimientos (dashboard y listas)
+const CONSENT_VIEW_PERMISSIONS = [
+  "view_all_consents",
+  "view_consents",
+  "view_consent_status",
+  "view_lab_consents",
+  "view_own_consents"
+];
+
+// Secciones del dashboard y los permisos que las habilitan
+const DASHBOARD_SECTIONS: { name: string; detail: string }[] = [
+  { name: 'Tarjeta "Total" y KPIs', detail: "Resumen: Total, Hoy, Semana, Mes, Firmados y Pendientes" },
+  { name: "Validación administrativa", detail: "Total con desglose mensual, por EPS y por especialidad" },
+  { name: "Producción mensual", detail: "Consentimientos agrupados por mes" },
+  { name: "Por tipo de consentimiento", detail: "Distribución según el tipo de procedimiento" },
+  { name: "Por especialidad", detail: "Consentimientos agrupados por especialidad médica" },
+  { name: "Por sede / centro de salud", detail: "Distribución según el centro donde se generó" },
+  { name: "Por médico", detail: "Totales por profesional que generó el consentimiento" },
+  { name: "Por EPS / EAPB", detail: "Distribución por entidad de salud del paciente" },
+  { name: "Consentimientos Creados (lista)", detail: "Página de gestión con el detalle de cada consentimiento" }
+];
+
 export function RoleManagement() {
   const [users, setUsers] = useState<UserWithRole[]>([]);
   const [isLoading, setIsLoading] = useState(true);
