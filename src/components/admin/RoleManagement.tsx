@@ -148,6 +148,7 @@ export function RoleManagement() {
   useEffect(() => {
     loadUsers();
     loadDynamicRoles();
+    loadEnabledPermissionsByRole();
   }, []);
 
   useEffect(() => {
@@ -168,6 +169,33 @@ export function RoleManagement() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const loadEnabledPermissionsByRole = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('role_permissions')
+        .select('role, permission_key, is_enabled')
+        .eq('is_enabled', true);
+
+      if (error) throw error;
+
+      const map: Record<string, Set<string>> = {};
+      (data || []).forEach((row: { role: string; permission_key: string }) => {
+        if (!map[row.role]) map[row.role] = new Set<string>();
+        map[row.role].add(row.permission_key);
+      });
+      setEnabledPermissionsByRole(map);
+    } catch (error: any) {
+      console.error('Error loading permissions matrix:', error);
+    }
+  };
+
+  const roleCanViewConsents = (role: string) => {
+    if (role === 'admin') return true;
+    const enabled = enabledPermissionsByRole[role];
+    if (!enabled) return false;
+    return CONSENT_VIEW_PERMISSIONS.some((key) => enabled.has(key));
   };
 
   const loadRolePermissions = async (role: AppRole) => {
