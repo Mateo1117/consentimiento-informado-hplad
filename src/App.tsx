@@ -15,7 +15,6 @@ import AdminPanel from "./pages/AdminPanel";
 import Auth from "./pages/Auth";
 import DoctorRegistration from "./pages/DoctorRegistration";
 import { PublicConsentSigning } from "./pages/PublicConsentSigning";
-import OAuthConsent from "./pages/OAuthConsent";
 
 const queryClient = new QueryClient();
 
@@ -64,7 +63,6 @@ const App = () => (
               </ProtectedRoute>
             } />
             <Route path="/firmar/:token" element={<PublicConsentSigning />} />
-            <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

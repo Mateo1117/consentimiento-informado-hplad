@@ -99,8 +99,8 @@ class Logger {
 }
 
 // Create singleton instance with development vs production configs
-const isDevelopment = window.location.hostname === 'localhost' || 
-                     window.location.hostname.includes('lovable');
+const isDevelopment = import.meta.env.DEV ||
+                     window.location.hostname === 'localhost';
 
 export const logger = new Logger({
   level: isDevelopment ? 'debug' : 'error',
