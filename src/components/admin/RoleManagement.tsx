@@ -135,6 +135,8 @@ export function RoleManagement() {
   const [isLoadingPermissions, setIsLoadingPermissions] = useState(false);
   const [isAddPermissionDialogOpen, setIsAddPermissionDialogOpen] = useState(false);
   const [newPermission, setNewPermission] = useState({ key: "", label: "" });
+  // Mapa de permisos habilitados por rol: { role: Set<permission_key> }
+  const [enabledPermissionsByRole, setEnabledPermissionsByRole] = useState<Record<string, Set<string>>>({});
 
   // Dynamic roles management state
   const [dynamicRoles, setDynamicRoles] = useState<DynamicRole[]>([]);
