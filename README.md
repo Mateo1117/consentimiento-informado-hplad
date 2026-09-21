@@ -8,17 +8,50 @@ Originalmente construida en Lovable; exportada y ahora autónoma.
 
 ## Consentimientos disponibles
 
-| Clave | Consentimiento | Especialidad |
-|---|---|---|
-| `venopuncion` | Venopunción | Laboratorio Clínico |
-| `carga_glucosa` | Curva de Tolerancia a la Glucosa | Laboratorio Clínico |
-| `vih` (alias `hiv`) | Prueba de VIH | Laboratorio Clínico |
-| `frotis_vaginal` | Frotis Vaginal | Ginecología / Laboratorio |
-| `hemocomponentes` | Transfusión de Hemocomponentes | Banco de Sangre / Medicina Transfusional |
+Cada consentimiento corresponde a **un formato aprobado del hospital**, y su PDF
+estampa el código y la versión de ese formato (definidos en el `documentMeta` de
+su generador, en `src/utils/pdfGenerator<Tipo>.ts`).
 
-El texto de cada uno (descripción, propósito, procedimientos, beneficios, riesgos y
-alternativas) vive en `src/data/procedureInfo.ts`. Las etiquetas y los alias de tipo
-se normalizan en `src/utils/consentTypeNormalizer.ts`.
+| Clave | Consentimiento | Formato | Versión | Aprobación |
+|---|---|---|---|---|
+| `venopuncion` | Toma de muestras por venopunción | `SC-M-09.37` | 02 | 28-12-2022 |
+| `carga_glucosa` | Carga de glucosa | `SC-M-09.119` | 01 | 20-10-2024 |
+| `vih` (alias `hiv`) | Prueba presuntiva de VIH | `SC-M-09.39` | 02 | 28-12-2022 |
+| `frotis_vaginal` | Frotis vaginal | `SC-M-09.319` | 01 | 16-06-2022 |
+| `hemocomponentes` | Transfusión de hemocomponentes | `SC-M-09.320` | 01 | 15-03-2023 |
+| `radiografia` | Toma de radiografía | `SC-F-09.31` | 0.3 | 11-09-2026 |
+| `rx_gestante` | Radiografía para gestante | `SC-M-09.32` | 03 | 11-09-2026 |
+| `mamografia` | Toma de mamografía | `SC-M-09.33` | 03 | 11-09-2026 |
+| `ultrasonido` | Ultrasonido | `SC-F-09.34` | 0.3 | 11-09-2026 |
+| `eco_tv` | Ultrasonido transvaginal | `SC-F-09.35` | 0.3 | 11-09-2026 |
+| `tac` | Tomografía axial computarizada | `SC-F-09.36` | 0.3 | 11-09-2026 |
+
+El texto que ve el paciente al firmar por enlace vive en `src/data/procedureInfo.ts`.
+Las etiquetas y los alias de tipo se normalizan en `src/utils/consentTypeNormalizer.ts`.
+
+### Añadir un consentimiento nuevo
+
+Un formato aprobado por separado es un consentimiento separado, aunque lo preste
+el mismo servicio. El código y la versión se leen de la cabecera del .docx y se
+llevan al PDF tal cual; si el formato no trae alguna sección, se omite la fila.
+
+No hay formulario genérico: cada tipo es un clon. Lo probado es copiar el par
+(formulario + generador) del tipo más parecido y luego actualizar los mapas:
+
+1. `src/utils/pdfGenerator<Tipo>.ts` — `documentMeta` y las filas del documento
+2. `src/components/ConsentForm<Tipo>.tsx` — envuelto en `ConsentFormWrapper`
+3. `src/pages/Index.tsx` — import, `consentTypes`, unión de tipos del `useState` y
+   `case` en `renderConsentForm`
+4. `src/pages/EnviarConsentimiento.tsx` — la misma entrada, para el envío remoto
+5. `src/utils/consentTypeNormalizer.ts` — alias, etiqueta y especialidad
+6. `src/data/procedureInfo.ts` — ficha que ve el paciente
+7. `src/components/PendingConsentsPanel.tsx` — etiqueta
+8. `src/pages/ConsentManagement.tsx` — etiqueta
+9. `src/services/signedConsentPdfService.ts` — nombre para mostrar y del procedimiento
+10. `src/services/appConsentService.ts` — alias y ambos nombres
+
+`src/components/InformedConsentApp.tsx` tiene su propio catálogo pero ningún router
+lo referencia: es código muerto, no hay que actualizarlo.
 
 ## Stack
 
