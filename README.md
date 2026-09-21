@@ -87,6 +87,32 @@ docker build -t consentimientos-hplad .
 docker run -p 8080:80 consentimientos-hplad
 ```
 
+### Despliegue en el VPS (EasyPanel)
+
+Mismo esquema que el sistema de Funza, que corre en el VPS `149.130.184.133`
+dentro del proyecto `consentimientos_informados`. La Mesa necesita **su propio
+servicio** en ese proyecto; no comparte el de Funza (`consentimiento_inf_hnsmf`).
+
+Pasos para dejarlo montado la primera vez:
+
+1. En EasyPanel, crear un servicio de tipo **App** dentro del proyecto
+   `consentimientos_informados`.
+2. Origen: este repositorio, rama `main`. Método de compilación: **Dockerfile**
+   (el de la raíz; no hace falta configurar buildpacks).
+3. Puerto expuesto: **80** — es el que publica nginx en la imagen.
+4. Dominio: `consentimientohplad.mcmasociados.tech`, con certificado gestionado
+   por EasyPanel.
+5. Variables de entorno de build, si se quieren distintas a los valores por
+   defecto de `src/integrations/supabase/client.ts`:
+   `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` y `VITE_PUBLIC_APP_URL`.
+
+A partir de ahí, desplegar es: `push` a `main` y pulsar **Implementar** en
+EasyPanel.
+
+> El dominio `consentimientohplad.mcmasociados.tech` apunta hoy a Lovable. Al
+> cortar, hay que repuntar el DNS al VPS; hasta entonces el servicio de EasyPanel
+> se puede probar con el subdominio temporal que asigna el panel.
+
 ## Configuración
 
 Las credenciales de Supabase están embebidas por defecto en
