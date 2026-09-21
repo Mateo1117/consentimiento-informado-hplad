@@ -9,6 +9,7 @@ import { TabConsentsBySource } from "@/components/dashboard/TabConsentsBySource"
 import { TabConsentsByDoctor } from "@/components/dashboard/TabConsentsByDoctor";
 import { TabConsentsMonthly } from "@/components/dashboard/TabConsentsMonthly";
 import { TabConsentsByEPS } from "@/components/dashboard/TabConsentsByEPS";
+import { TabAdminValidation } from "@/components/dashboard/TabAdminValidation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from "recharts";
@@ -276,6 +277,7 @@ const Dashboard = () => {
         )}
 
         {activeTab === "tipo" && <TabConsentsByType {...dateRangeProps} />}
+        {activeTab === "validacion" && <TabAdminValidation {...dateRangeProps} />}
         {activeTab === "mensual" && <TabConsentsMonthly {...dateRangeProps} />}
         {activeTab === "especialidad" && <TabConsentsBySpecialty {...dateRangeProps} />}
         {activeTab === "sede" && <TabConsentsBySource {...dateRangeProps} />}

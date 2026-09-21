@@ -1,5 +1,5 @@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { BarChart3, Clock, Stethoscope, Building2, UserCircle, CalendarRange, HeartHandshake } from "lucide-react";
+import { BarChart3, Clock, Stethoscope, Building2, UserCircle, CalendarRange, HeartHandshake, ClipboardCheck } from "lucide-react";
 
 interface DashboardTabsProps {
   activeTab: string;
@@ -9,6 +9,7 @@ interface DashboardTabsProps {
 export function DashboardTabs({ activeTab, onTabChange }: DashboardTabsProps) {
   const tabs = [
     { id: "resumen", label: "Resumen", icon: BarChart3 },
+    { id: "validacion", label: "Validación", icon: ClipboardCheck },
     { id: "mensual", label: "Mensual", icon: CalendarRange },
     { id: "tipo", label: "Por Tipo", icon: Clock },
     { id: "especialidad", label: "Especialidad", icon: Stethoscope },
@@ -20,7 +21,7 @@ export function DashboardTabs({ activeTab, onTabChange }: DashboardTabsProps) {
   return (
     <div className="mb-6 overflow-x-auto pb-1">
       <Tabs value={activeTab} onValueChange={onTabChange} className="w-full">
-        <TabsList className="h-12 min-w-[860px] w-full bg-card border border-border p-1 grid grid-cols-7">
+        <TabsList className="h-12 min-w-[960px] w-full bg-card border border-border p-1 grid grid-cols-8">
           {tabs.map((tab) => (
             <TabsTrigger
               key={tab.id}
