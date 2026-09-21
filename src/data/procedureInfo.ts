@@ -9,6 +9,9 @@ export interface ProcedureInfo {
   benefits: string[];
   risks: string[];
   alternatives: string[];
+  implications?: { heading: string; items: string[] }[];
+  unavoidableEffects?: string[];
+  refusalConsequences?: string[];
 }
 
 export const procedureInfoByType: Record<string, ProcedureInfo> = {
@@ -159,24 +162,54 @@ export const procedureInfoByType: Record<string, ProcedureInfo> = {
       { name: "Toma De Radiografía", description: "La toma de radiografía convencional es un estudio no invasivo de diagnóstico por imágenes que utiliza dosis controladas de radiación ionizante (rayos X) para la evaluación de estructuras anatómicas internas, principalmente el sistema osteoarticular, el tórax y el abdomen." }
     ],
     benefits: [
-      "Obtención inmediata de imágenes diagnósticas para la toma de decisiones clínicas oportunas en urgencias y consulta externa",
-      "Método de elección para la evaluación de la densidad, integridad y alineación del sistema esquelético",
-      "Procedimiento indoloro que no requiere recuperación posterior",
+      "1. Obtención inmediata de imágenes diagnósticas para la toma de decisiones clínicas oportunas en urgencias y consulta externa.",
+      "2. Método de elección para la evaluación de la densidad, integridad y alineación del sistema esquelético.",
+      "3. Procedimiento indoloro que no requiere recuperación posterior.",
     ],
     risks: [
-      "Exposición a una dosis baja de rayos X",
-      "Aunque la dosis de una radiografía simple es mínima, existe un riesgo estocástico teórico proporcional a la exposición acumulada a lo largo de la vida",
-      "Limitación diagnóstica por superposición de estructuras Alteración en la interpretación radiológica por movimiento involuntario del paciente o presencia de elementos radiopacos (botones, cierres, joyas, material quirúrgico)",
-      "Incremento del dolor o riesgo de desplazamiento en fracturas inestables al movilizar o posicionar la extremidad o zona afectada",
-      "Diaforesis o hipotensión transitoria desencadenada por dolor agudo o bipedestación prolongada en pacientes debilitados",
-      "Escoriación superficial o molestia por fricción directa con los bordes del chasis o la mesa en pacientes con extrema fragilidad capilar o atrofia cutánea",
+      "Son Riesgos:",
+      "1. Exposición a una dosis baja de rayos X. Aunque la dosis de una radiografía simple es mínima, existe un riesgo estocástico teórico proporcional a la exposición acumulada a lo largo de la vida.",
+      "2. Limitación diagnóstica por superposición de estructuras.",
+      "3. Alteración en la interpretación radiológica por movimiento involuntario del paciente o presencia de elementos radiopacos (botones, cierres, joyas, material quirúrgico).",
+      "Son Complicaciones:",
+      "1. Incremento del dolor o riesgo de desplazamiento en fracturas inestables al movilizar o posicionar la extremidad o zona afectada.",
+      "2. Diaforesis o hipotensión transitoria desencadenada por dolor agudo o bipedestación prolongada en pacientes debilitados.",
+      "3. Escoriación superficial o molestia por fricción directa con los bordes del chasis o la mesa en pacientes con extrema fragilidad capilar o atrofia cutánea.",
     ],
     alternatives: [
-      "Ecografía (Ultrasonido)",
-      "Evaluador de elección para tejidos blandos, tendones y colecciones líquidas; no utiliza radiación ionizante",
-      "Tomografía Computarizada (TAC), Indicada cuando se requiere reconstrucción 501652-2571616165850-305410Código SC-F-09.31 Versión 0.3 Fecha 11-09-2026 Código SC-F-09.31 Versión 0.3 Fecha 11-09-2026 CONSENTIMIENTO INFORMADO PARA TOMA DE RADIOGRAFÍA tridimensional o mayor detalle anatómico en fracturas complejas o patología visceral. - Resonancia Magnética (RM)",
-      "Excelente caracterización de ligamentos, cartílagos, médula ósea y tejido blando sin uso de radiación ionizante (No disponible)",
-    ]
+      "- Ecografía (Ultrasonido). Evaluador de elección para tejidos blandos, tendones y colecciones líquidas; no utiliza radiación ionizante.",
+      "- Tomografía Computarizada (TAC). Indicada cuando se requiere reconstrucción tridimensional o mayor detalle anatómico en fracturas complejas o patología visceral.",
+      "- Resonancia Magnética (RM). Excelente caracterización de ligamentos, cartílagos, médula ósea y tejido blando sin uso de radiación ionizante (no disponible).",
+    ],
+    implications: [
+      {
+        heading: "Requisitos previos (Pre-examen):",
+        items: [
+          "Retirar obligatoriamente objetos metálicos, joyas, piercings, cierres, botones o prendas con adornos en la zona anatómica a evaluar para evitar artefactos en la imagen.",
+          "Informar obligatoriamente al personal de salud sobre la posibilidad o confirmación de embarazo para aplicar medidas de protección radiológica especial (blindaje plomado) o reevaluar la necesidad del examen.",
+        ],
+      },
+      {
+        heading: "Compromisos durante el examen (Trans-examen):",
+        items: [
+          "Mantener la posición corporal indicada y permanecer completamente inmóvil durante la emisión de la radiación.",
+          "Seguir las instrucciones verbales de contener la respiración (apnea) cuando se le solicite (en estudios de tórax o abdomen).",
+        ],
+      },
+      {
+        heading: "Aspectos posteriores (Post-examen):",
+        items: [
+          "No requiere reposo ni periodo de observación; el paciente puede reincorporarse de inmediato a sus actividades cotidianas.",
+          "Reclamar y presentar el resultado radiológico al médico tratante para la correlación clínica correspondiente.",
+        ],
+      },
+    ],
+    unavoidableEffects: ["Molestia o rigidez postural.", "Sensación de frío."],
+    refusalConsequences: [
+      "Imposibilidad de confirmar o descartar fracturas, consolidaciones viciosas, neumonías u otras patologías relevantes.",
+      "Riesgo de inmovilizar o intervenir quirúrgicamente de forma errónea por falta de correlación anatómica objetiva.",
+      "Retraso en el inicio del tratamiento que puede derivar en secuelas funcionales, deformidad o complicaciones sistémicas.",
+    ],
   },
   rx_gestante: {
     name: "RX para Gestante",
@@ -361,6 +394,9 @@ export const formatProcedureInfoForPayload = (consentType: string) => {
     procedures: info.procedures,
     benefits: info.benefits,
     risks: info.risks,
-    alternatives: info.alternatives
+    alternatives: info.alternatives,
+    implications: info.implications,
+    unavoidableEffects: info.unavoidableEffects,
+    refusalConsequences: info.refusalConsequences
   };
 };

@@ -52,27 +52,27 @@ const RX_GESTANTE_PROCEDURE_DATA: BasePDFProcedureItem[] = [
   },
   {
     label: 'BENEFICIOS ESPERADOS',
-    value: '1. Diagnóstico materno oportuno. Permite descartar o confirmar cuadros patológicos graves o de urgencia en la gestante para iniciar un manejo terapéutico inmediato. 2. Relación beneficio-riesgo favorable: Aporta información clínica decisiva para la vida materna utilizando dosis de radiación muy inferiores al umbral de riesgo teratogénico fetal demostrado.'
+    value: '1. Diagnóstico materno oportuno. Permite descartar o confirmar cuadros patológicos graves o de urgencia en la gestante para iniciar un manejo terapéutico inmediato.\n2. Relación beneficio-riesgo favorable: Aporta información clínica decisiva para la vida materna utilizando dosis de radiación muy inferiores al umbral de riesgo teratogénico fetal demostrado.'
   },
   {
     label: 'RIESGOS Y POSIBLES COMPLICACIONES',
-    value: 'Son Riesgos: 1. Riesgo teórico de exposición fetal a radiación dispersa. Posibilidad de que una fracción mínima de radiación secundaria alcance al feto. Las dosis diagnósticas convencionales (menores a 50 mGy) no superan los umbrales asociados a malformaciones estructurales o muerte fetal. 2. Riesgo teórico y acumulativo extremadamente bajo de inducción de neoplasias o leucemia en la infancia tardía del recién nacido. 3. Posible disminución de la nitidez diagnóstica por el uso de blindajes, la dificultad en el posicionamiento materno o el intento de reducir la dosis al mínimo (principio ALARA). Son Complicaciones : 1. Mareo, diaforesis o hipotensión materna secundaria a la compresión de la vena cava inferior por el útero grávido al adoptar la posición de decúbito durante el estudio. 2. Incremento del dolor o desplazamiento de fracturas por maniobras inadecuadas al movilizar a una paciente traumatizada para lograr la proyección deseada. 3. Contusión o excoriación en la piel de la gestante por fricción con los chasis, el Bucky o la mesa rígida.'
+    value: 'Son Riesgos:\n1. Riesgo teórico de exposición fetal a radiación dispersa. Posibilidad de que una fracción mínima de radiación secundaria alcance al feto. Las dosis diagnósticas convencionales (menores a 50 mGy) no superan los umbrales asociados a malformaciones estructurales o muerte fetal.\n2. Riesgo teórico y acumulativo extremadamente bajo de inducción de neoplasias o leucemia en la infancia tardía del recién nacido.\n3. Posible disminución de la nitidez diagnóstica por el uso de blindajes, la dificultad en el posicionamiento materno o el intento de reducir la dosis al mínimo (principio ALARA).\n\nSon Complicaciones:\n1. Mareo, diaforesis o hipotensión materna secundaria a la compresión de la vena cava inferior por el útero grávido al adoptar la posición de decúbito durante el estudio.\n2. Incremento del dolor o desplazamiento de fracturas por maniobras inadecuadas al movilizar a una paciente traumatizada para lograr la proyección deseada.\n3. Contusión o excoriación en la piel de la gestante por fricción con los chasis, el Bucky o la mesa rígida.'
   },
   {
     label: 'IMPLICACIONES',
-    value: 'Requerimiento de colaboración activa del paciente en el posicionamiento e inmovilización momentánea para evitar la repetición de tomas. 2. Uso obligatorio de elementos de protección plomada (delantal/protector pélvico) sobre las zonas no objeto de estudio para la salvaguarda fetal. 3. Aceptación razonada de que el beneficio diagnóstico materno justifica el riesgo teórico mínimo de la radiación ionizante aplicada.'
+    value: '1. Requerimiento de colaboración activa del paciente en el posicionamiento e inmovilización momentánea para evitar la repetición de tomas.\n2. Uso obligatorio de elementos de protección plomada (delantal/protector pélvico) sobre las zonas no objeto de estudio para la salvaguarda fetal.\n3. Aceptación razonada de que el beneficio diagnóstico materno justifica el riesgo teórico mínimo de la radiación ionizante aplicada.'
   },
   {
     label: 'EFECTOS INEVITABLES',
-    value: '1. Molestia postural 2. Miedo o ansiedad materna'
+    value: '1. Molestia postural\n2. Miedo o ansiedad materna'
   },
   {
     label: 'ALTERNATIVAS RAZONABLES A ESTE PROCEDIMIENTO',
-    value: '- Ultrasonido (Ecografía). Método de primera elección, totalmente libre de radiación ionizante - Resonancia Magnética (sin contraste). Opción diagnóstica de alta resolución para tejidos blandos y caracterización compleja que no utiliza radiación ionizante (no disponible).'
+    value: '- Ultrasonido (Ecografía). Método de primera elección, totalmente libre de radiación ionizante\n- Resonancia Magnética (sin contraste). Opción diagnóstica de alta resolución para tejidos blandos y caracterización compleja que no utiliza radiación ionizante (no disponible).'
   },
   {
     label: 'POSIBLES CONSECUENCIAS EN CASO QUE DECIDA NO ACEPTAR EL PROCEDIMIENTO',
-    value: '- Omisión de patología materna grave - Efectos secundarios indirectos en el feto - Necesidad de procedimientos invasivos alternativos'
+    value: '- Omisión de patología materna grave\n- Efectos secundarios indirectos en el feto\n- Necesidad de procedimientos invasivos alternativos'
   },
   {
     label: 'RIESGOS EN FUNCIÓN DE LA SITUACIÓN CLÍNICA DEL PACIENTE',

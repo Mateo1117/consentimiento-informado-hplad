@@ -382,9 +382,11 @@ export const ConsentFormRadiografia = ({ patientData, onBack }: ConsentFormProps
                           <CheckCircle className="h-4 w-4 text-green-600" />
                           <h5 className="font-semibold text-green-800">Beneficios Esperados:</h5>
                         </div>
-                        <p className="text-sm text-gray-700">
-                          Obtención inmediata de imágenes diagnósticas para la toma de decisiones clínicas oportunas en urgencias y consulta externa. Método de elección para la evaluación de la densidad, integridad y alineación del sistema esquelético. Procedimiento indoloro que no requiere recuperación posterior.
-                        </p>
+                        <ol className="list-decimal space-y-1 pl-5 text-sm text-foreground">
+                          <li>Obtención inmediata de imágenes diagnósticas para la toma de decisiones clínicas oportunas en urgencias y consulta externa.</li>
+                          <li>Método de elección para la evaluación de la densidad, integridad y alineación del sistema esquelético.</li>
+                          <li>Procedimiento indoloro que no requiere recuperación posterior.</li>
+                        </ol>
                       </div>
 
                       {/* Riesgos */}
@@ -393,9 +395,24 @@ export const ConsentFormRadiografia = ({ patientData, onBack }: ConsentFormProps
                           <AlertCircle className="h-4 w-4 text-red-600" />
                           <h5 className="font-semibold text-red-800">Riesgos y posibles complicaciones:</h5>
                         </div>
-                        <p className="text-sm text-gray-700">
-                          Son Riesgos: Exposición a una dosis baja de rayos X. Aunque la dosis de una radiografía simple es mínima, existe un riesgo estocástico teórico proporcional a la exposición acumulada a lo largo de la vida. Limitación diagnóstica por superposición de estructuras Alteración en la interpretación radiológica por movimiento involuntario del paciente o presencia de elementos radiopacos (botones, cierres, joyas, material quirúrgico). Son Complicaciones: Incremento del dolor o riesgo de desplazamiento en fracturas inestables al movilizar o posicionar la extremidad o zona afectada. Diaforesis o hipotensión transitoria desencadenada por dolor agudo o bipedestación prolongada en pacientes debilitados. Escoriación superficial o molestia por fricción directa con los bordes del chasis o la mesa en pacientes con extrema fragilidad capilar o atrofia cutánea. .
-                        </p>
+                        <div className="space-y-3 text-sm text-foreground">
+                          <div>
+                            <p className="font-semibold">Son Riesgos:</p>
+                            <ol className="list-decimal space-y-1 pl-5">
+                              <li>Exposición a una dosis baja de rayos X. Aunque la dosis de una radiografía simple es mínima, existe un riesgo estocástico teórico proporcional a la exposición acumulada a lo largo de la vida.</li>
+                              <li>Limitación diagnóstica por superposición de estructuras.</li>
+                              <li>Alteración en la interpretación radiológica por movimiento involuntario del paciente o presencia de elementos radiopacos (botones, cierres, joyas, material quirúrgico).</li>
+                            </ol>
+                          </div>
+                          <div>
+                            <p className="font-semibold">Son Complicaciones:</p>
+                            <ol className="list-decimal space-y-1 pl-5">
+                              <li>Incremento del dolor o riesgo de desplazamiento en fracturas inestables al movilizar o posicionar la extremidad o zona afectada.</li>
+                              <li>Diaforesis o hipotensión transitoria desencadenada por dolor agudo o bipedestación prolongada en pacientes debilitados.</li>
+                              <li>Escoriación superficial o molestia por fricción directa con los bordes del chasis o la mesa en pacientes con extrema fragilidad capilar o atrofia cutánea.</li>
+                            </ol>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Alternativas */}
@@ -404,9 +421,11 @@ export const ConsentFormRadiografia = ({ patientData, onBack }: ConsentFormProps
                           <span className="text-purple-600">🔄</span>
                           <h5 className="font-semibold text-purple-800">Alternativas Razonables:</h5>
                         </div>
-                        <p className="text-sm text-gray-700">
-                          Ecografía (Ultrasonido). Evaluador de elección para tejidos blandos, tendones y colecciones líquidas; no utiliza radiación ionizante. Tomografía Computarizada (TAC), Indicada cuando se requiere reconstrucción 501652-2571616165850-305410Código SC-F-09.31 Versión 0.3 Fecha 11-09-2026 Código SC-F-09.31 Versión 0.3 Fecha 11-09-2026 CONSENTIMIENTO INFORMADO PARA TOMA DE RADIOGRAFÍA tridimensional o mayor detalle anatómico en fracturas complejas o patología visceral. - Resonancia Magnética (RM). Excelente caracterización de ligamentos, cartílagos, médula ósea y tejido blando sin uso de radiación ionizante (No disponible)
-                        </p>
+                        <ul className="list-disc space-y-1 pl-5 text-sm text-foreground">
+                          <li>Ecografía (Ultrasonido). Evaluador de elección para tejidos blandos, tendones y colecciones líquidas; no utiliza radiación ionizante.</li>
+                          <li>Tomografía Computarizada (TAC). Indicada cuando se requiere reconstrucción tridimensional o mayor detalle anatómico en fracturas complejas o patología visceral.</li>
+                          <li>Resonancia Magnética (RM). Excelente caracterización de ligamentos, cartílagos, médula ósea y tejido blando sin uso de radiación ionizante (no disponible).</li>
+                        </ul>
                       </div>
 
                       {/* Implicaciones */}
@@ -415,9 +434,29 @@ export const ConsentFormRadiografia = ({ patientData, onBack }: ConsentFormProps
                           <span className="text-orange-600">🕐</span>
                           <h5 className="font-semibold text-orange-800">Implicaciones:</h5>
                         </div>
-                        <p className="text-sm text-gray-700">
-                          Requisitos previos (Pre-examen): Retirar obligatoriamente objetos metálicos, joyas, piercings, cierres, botones o prendas con adornos en la zona anatómica a evaluar para evitar artefactos en la imagen. Informar obligatoriamente al personal de salud sobre la posibilidad o confirmación de embarazo para aplicar medidas de protección radiológica especial (blindaje plomado) o reevaluar la necesidad del examen. Compromisos durante el examen (Trans-examen): Mantener la posición corporal indicada y permanecer completamente inmóvil durante la emisión de la radiación. Seguir las instrucciones verbales de contener la respiración (apnea) cuando se le solicite (en estudios de tórax o abdomen). Aspectos posteriores (Post-examen): No requiere reposo ni periodo de observación; el paciente puede reincorporarse de inmediato a sus actividades cotidianas. Reclamar y presentar el resultado radiológico al médico tratante para la correlación clínica correspondiente.
-                        </p>
+                        <div className="space-y-3 text-sm text-foreground">
+                          <div>
+                            <p className="font-semibold">Requisitos previos (Pre-examen):</p>
+                            <ul className="list-disc space-y-1 pl-5">
+                              <li>Retirar obligatoriamente objetos metálicos, joyas, piercings, cierres, botones o prendas con adornos en la zona anatómica a evaluar para evitar artefactos en la imagen.</li>
+                              <li>Informar obligatoriamente al personal de salud sobre la posibilidad o confirmación de embarazo para aplicar medidas de protección radiológica especial (blindaje plomado) o reevaluar la necesidad del examen.</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <p className="font-semibold">Compromisos durante el examen (Trans-examen):</p>
+                            <ul className="list-disc space-y-1 pl-5">
+                              <li>Mantener la posición corporal indicada y permanecer completamente inmóvil durante la emisión de la radiación.</li>
+                              <li>Seguir las instrucciones verbales de contener la respiración (apnea) cuando se le solicite (en estudios de tórax o abdomen).</li>
+                            </ul>
+                          </div>
+                          <div>
+                            <p className="font-semibold">Aspectos posteriores (Post-examen):</p>
+                            <ul className="list-disc space-y-1 pl-5">
+                              <li>No requiere reposo ni periodo de observación; el paciente puede reincorporarse de inmediato a sus actividades cotidianas.</li>
+                              <li>Reclamar y presentar el resultado radiológico al médico tratante para la correlación clínica correspondiente.</li>
+                            </ul>
+                          </div>
+                        </div>
                       </div>
 
                       {/* Efectos Inevitables */}
@@ -426,9 +465,10 @@ export const ConsentFormRadiografia = ({ patientData, onBack }: ConsentFormProps
                           <span className="text-yellow-600">⚠️</span>
                           <h5 className="font-semibold text-yellow-800">Efectos Inevitables:</h5>
                         </div>
-                        <p className="text-sm text-gray-700">
-                          Molestia o rigidez postural Sensación de frío
-                        </p>
+                        <ul className="list-disc space-y-1 pl-5 text-sm text-foreground">
+                          <li>Molestia o rigidez postural.</li>
+                          <li>Sensación de frío.</li>
+                        </ul>
                       </div>
 
                       {/* Posibles Consecuencias */}
@@ -437,9 +477,11 @@ export const ConsentFormRadiografia = ({ patientData, onBack }: ConsentFormProps
                           <span className="text-gray-600">ℹ️</span>
                           <h5 className="font-semibold text-gray-800">Posibles consecuencias en caso que decida no aceptar el procedimiento:</h5>
                         </div>
-                        <p className="text-sm text-gray-700">
-                          Imposibilidad de confirmar o descartar fracturas, consolidaciones viciosas, neumonías u otras patologías relevantes. Riesgo de inmovilizar o intervenir quirúrgicamente de forma errónea por falta de correlación anatómica objetiva. Retraso en el inicio del tratamiento que puede derivar en secuelas funcionales, deformidad o complicaciones sistémicas.
-                        </p>
+                        <ul className="list-disc space-y-1 pl-5 text-sm text-foreground">
+                          <li>Imposibilidad de confirmar o descartar fracturas, consolidaciones viciosas, neumonías u otras patologías relevantes.</li>
+                          <li>Riesgo de inmovilizar o intervenir quirúrgicamente de forma errónea por falta de correlación anatómica objetiva.</li>
+                          <li>Retraso en el inicio del tratamiento que puede derivar en secuelas funcionales, deformidad o complicaciones sistémicas.</li>
+                        </ul>
                       </div>
 
                       {/* Riesgos en función de la situación clínica */}

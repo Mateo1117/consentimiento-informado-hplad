@@ -240,6 +240,27 @@ export const InlinePendingConsentSigning: React.FC<InlinePendingConsentSigningPr
                 {payload.benefits?.length > 0 && (
                   <InfoList title="Beneficios" items={payload.benefits} />
                 )}
+                {payload.alternatives?.length > 0 && (
+                  <InfoList title="Alternativas" items={payload.alternatives} />
+                )}
+                {payload.unavoidableEffects?.length > 0 && (
+                  <InfoList title="Efectos Inevitables" items={payload.unavoidableEffects} />
+                )}
+                {payload.implications?.length > 0 && (
+                  <div className="bg-muted/50 p-3 rounded-lg border text-sm">
+                    <p className="font-semibold mb-2">Implicaciones</p>
+                    <div className="space-y-2">
+                      {payload.implications.map((section: { heading: string; items: string[] }, index: number) => (
+                        <div key={index}>
+                          <p className="font-semibold">{section.heading}</p>
+                          <ul className="list-disc pl-5 space-y-1">
+                            {section.items.map((item, itemIndex) => <li key={itemIndex}>{item}</li>)}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </section>
           )}

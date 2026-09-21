@@ -258,6 +258,27 @@ export const PublicConsentSigning: React.FC = () => {
                 {payload.alternatives && payload.alternatives.length > 0 && (
                   <InfoList title="Alternativas" items={payload.alternatives} color="purple" />
                 )}
+                {payload.unavoidableEffects?.length > 0 && (
+                  <InfoList title="Efectos Inevitables" items={payload.unavoidableEffects} color="yellow" />
+                )}
+                {payload.implications?.length > 0 && (
+                  <div className="bg-muted/50 p-4 rounded-lg border text-sm text-foreground">
+                    <h4 className="font-semibold mb-3">Implicaciones</h4>
+                    <div className="space-y-3">
+                      {payload.implications.map((section: { heading: string; items: string[] }, index: number) => (
+                        <div key={index}>
+                          <p className="font-semibold">{section.heading}</p>
+                          <ul className="list-disc space-y-1 pl-6">
+                            {section.items.map((item, itemIndex) => <li key={itemIndex}>{item}</li>)}
+                          </ul>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {payload.refusalConsequences?.length > 0 && (
+                  <InfoList title="Posibles consecuencias en caso que decida no aceptar el procedimiento" items={payload.refusalConsequences} color="yellow" />
+                )}
 
                 <div className="bg-muted/50 p-4 rounded-lg border text-sm text-foreground leading-relaxed">
                   <strong>Al firmar este consentimiento declaro que:</strong> He sido informado(a) sobre el
@@ -366,14 +387,15 @@ const InfoList: React.FC<{ title: string; items: string[]; color: 'green' | 'yel
       <h4 className={`font-semibold mb-2 ${c.title} text-sm flex items-center gap-2`}>
         {icon}{title}
       </h4>
-      <ul className="space-y-1">
+      <div className="space-y-1">
         {items.map((item, i) => (
-          <li key={i} className="flex items-start gap-2">
-            <span className={`w-2 h-2 ${c.dot} rounded-full mt-1.5 shrink-0`} />
-            <span className={`text-sm ${c.text}`}>{item}</span>
-          </li>
+          item.endsWith(':') ? (
+            <p key={i} className={`pt-2 first:pt-0 text-sm font-semibold ${c.title}`}>{item}</p>
+          ) : (
+            <p key={i} className={`text-sm ${c.text}`}>{item}</p>
+          )
         ))}
-      </ul>
+      </div>
     </div>
   );
 };

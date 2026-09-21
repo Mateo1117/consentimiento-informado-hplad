@@ -44,7 +44,7 @@ const TAC_PROCEDURE_DATA: BasePDFProcedureItem[] = [
   },
   {
     label: 'DESCRIPCIÓN DEL PROCEDIMIENTO',
-    value: 'La Tomografía Axial Computarizada (TAC) es un método de diagnóstico por imágenes que utiliza radiación ionizante (rayos X) y procesamiento informático avanzado para obtener cortes transversales detallados de la anatomía interna. Durante la exploración, el paciente debe permanecer en decúbito sobre la mesa del tomógrafo, la cual se desplazará gradualmente a través del gantry (gantry del escáner). Es imprescindible mantener la inmovilidad estricta y seguir las instrucciones verbales de apnea (suspensión momentánea de la respiración) para evitar artefactos por movimiento. La duración del procedimiento oscila entre 10 y 30 minutos. Administración de medios de contraste: Según la indicación clínica, puede requerirse la administración intravenosa de un medio de contraste iodado para la opacificación y delimitación de estructuras vasculares y parenquimatosas. En estudios abdominopélvicos, puede indicarse adicionalmente la administración oral de contraste hidrosoluble o sulfato de bario diluido para la opacificación y distensión del tracto digestivo'
+    value: 'La Tomografía Axial Computarizada (TAC) es un método de diagnóstico por imágenes que utiliza radiación ionizante (rayos X) y procesamiento informático avanzado para obtener cortes transversales detallados de la anatomía interna. Durante la exploración, el paciente debe permanecer en decúbito sobre la mesa del tomógrafo, la cual se desplazará gradualmente a través del gantry (gantry del escáner). Es imprescindible mantener la inmovilidad estricta y seguir las instrucciones verbales de apnea (suspensión momentánea de la respiración) para evitar artefactos por movimiento. La duración del procedimiento oscila entre 10 y 30 minutos.\n\nAdministración de medios de contraste:\nSegún la indicación clínica, puede requerirse la administración intravenosa de un medio de contraste iodado para la opacificación y delimitación de estructuras vasculares y parenquimatosas. En estudios abdominopélvicos, puede indicarse adicionalmente la administración oral de contraste hidrosoluble o sulfato de bario diluido para la opacificación y distensión del tracto digestivo'
   },
   {
     label: 'PROPÓSITO',
@@ -52,11 +52,11 @@ const TAC_PROCEDURE_DATA: BasePDFProcedureItem[] = [
   },
   {
     label: 'BENEFICIOS ESPERADOS',
-    value: '1.Obtención de imágenes anatómicas tridimensionales de alta precisión en corto tiempo. 2.Capacidad de diferenciar densidades tisulares finas (hueso, partes blandas, fluidos, vascularización). 3.Guía fundamental para la toma de decisiones quirúrgicas o terapéuticas oportunas.'
+    value: '1. Obtención de imágenes anatómicas tridimensionales de alta precisión en corto tiempo.\n2. Capacidad de diferenciar densidades tisulares finas (hueso, partes blandas, fluidos, vascularización).\n3. Guía fundamental para la toma de decisiones quirúrgicas o terapéuticas oportunas.'
   },
   {
     label: 'RIESGOS Y POSIBLES COMPLICACIONES',
-    value: 'Son Riesgos: 1. Nefrotoxicidad inducida por contraste, si aplica: Deterioro de la función renal secundario a la excreción del medio de contraste iodado, especialmente en pacientes con insuficiencia renal previa, diabetes o deshidratación. 2. Reacciones adversas al medio de contraste. Reacciones de tipo idiosincrásico o alérgico que varían desde leves (eritema, urticaria, náuseas) hasta graves (broncoespasmo, edema laríngeo, choque anafiláctico). 3. Exposición a radiación ionizante acumulativa: Exposición a dosis de radiación superior a la de la radiografía convencional Son Complicaciones: 1. Extravasación de medio de contraste: Fuga del líquido al tejido subcutáneo adyacente al sitio de punción venosa, pudiendo ocasionar edema, dolor localizado, necrosis tisular o síndrome compartimental en casos severos. 2. Incapacidad de completar el estudio por claustrofobia o agitación 3. Aspiración bronquial o emesis. Emesis (vómito) inducida por la infusión rápida del contraste iodado o la ingesta del contraste oral, con riesgo de broncoaspiración en pacientes debilitados o sin el ayuno requerido.'
+    value: 'Son Riesgos:\n1. Nefrotoxicidad inducida por contraste, si aplica: Deterioro de la función renal secundario a la excreción del medio de contraste iodado, especialmente en pacientes con insuficiencia renal previa, diabetes o deshidratación.\n2. Reacciones adversas al medio de contraste. Reacciones de tipo idiosincrásico o alérgico que varían desde leves (eritema, urticaria, náuseas) hasta graves (broncoespasmo, edema laríngeo, choque anafiláctico).\n3. Exposición a radiación ionizante acumulativa: Exposición a dosis de radiación superior a la de la radiografía convencional.\n\nSon Complicaciones:\n1. Extravasación de medio de contraste: Fuga del líquido al tejido subcutáneo adyacente al sitio de punción venosa, pudiendo ocasionar edema, dolor localizado, necrosis tisular o síndrome compartimental en casos severos.\n2. Incapacidad de completar el estudio por claustrofobia o agitación.\n3. Aspiración bronquial o emesis. Emesis (vómito) inducida por la infusión rápida del contraste iodado o la ingesta del contraste oral, con riesgo de broncoaspiración en pacientes debilitados o sin el ayuno requerido.'
   },
   {
     label: 'IMPLICACIONES',
@@ -64,15 +64,15 @@ const TAC_PROCEDURE_DATA: BasePDFProcedureItem[] = [
   },
   {
     label: 'EFECTOS INEVITABLES',
-    value: 'Sensación de rigidez, presión o disconfort postural derivado de la inmovilidad prolongada en decúbito sobre la mesa de exploración. Percepción de baja temperatura corporal debido a la climatización ambiental controlada, requerida para el funcionamiento y estabilidad de los componentes electrónicos del tomógrafo.'
+    value: 'Sensación de rigidez, presión o disconfort postural derivado de la inmovilidad prolongada en decúbito sobre la mesa de exploración.\nPercepción de baja temperatura corporal debido a la climatización ambiental controlada, requerida para el funcionamiento y estabilidad de los componentes electrónicos del tomógrafo.'
   },
   {
     label: 'ALTERNATIVAS RAZONABLES A ESTE PROCEDIMIENTO',
-    value: 'Resonancia Magnética (RM): Excelente resolución de tejidos blandos sin uso de radiación ionizante. Ecografía / Ultrasonido, método no invasivo e inocuo (sin radiación), limitado en evaluación ósea o por interposición de gas intestinal'
+    value: 'Resonancia Magnética (RM): Excelente resolución de tejidos blandos sin uso de radiación ionizante.\nEcografía / Ultrasonido, método no invasivo e inocuo (sin radiación), limitado en evaluación ósea o por interposición de gas intestinal'
   },
   {
     label: 'POSIBLES CONSECUENCIAS EN CASO QUE DECIDA NO ACEPTAR EL PROCEDIMIENTO',
-    value: '1. Retraso o imprecisión en el diagnóstico de patologías agudas o crónicas. 2. Imposibilidad de planificar adecuadamente procedimientos quirúrgicos u oncológicos. 3. Riesgo de progresión de la enfermedad no detectada a estadios avanzados o de mayor morbimortalidad.'
+    value: '1. Retraso o imprecisión en el diagnóstico de patologías agudas o crónicas.\n2. Imposibilidad de planificar adecuadamente procedimientos quirúrgicos u oncológicos.\n3. Riesgo de progresión de la enfermedad no detectada a estadios avanzados o de mayor morbimortalidad.'
   },
   {
     label: 'RIESGOS EN FUNCIÓN DE LA SITUACIÓN CLÍNICA DEL PACIENTE',

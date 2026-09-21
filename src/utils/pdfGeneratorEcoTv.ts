@@ -52,15 +52,15 @@ const ECO_TV_PROCEDURE_DATA: BasePDFProcedureItem[] = [
   },
   {
     label: 'BENEFICIOS ESPERADOS',
-    value: '1. Definición anatómica superior de la mucosa endometrial, reserva folicular y vascularización pélvica mediante Doppler. 2. Examen completamente inocuo para la paciente y, en caso de embarazo temprano, para el embrión. 3. Diagnóstico inmediato sin requerir preparación con vejiga llena'
+    value: '1. Definición anatómica superior de la mucosa endometrial, reserva folicular y vascularización pélvica mediante Doppler.\n2. Examen completamente inocuo para la paciente y, en caso de embarazo temprano, para el embrión.\n3. Diagnóstico inmediato sin requerir preparación con vejiga llena'
   },
   {
     label: 'RIESGOS Y POSIBLES COMPLICACIONES',
-    value: 'Son riesgos: Limitación técnica por presencia de gas o masa exofítica 2. Reacción de hipersensibilidad al látex o gel. Alergia local (eritema, prurito, ardor) al material de la cubierta del transductor o a los componentes del gel lubricante. 3. Riesgo de sobrediagnóstico o falta de detección de patología infiltrativa compleja (como endometriosis profunda), requiriendo estudios complementarios como la Resonancia Magnética. Son Complicaciones: 1. Respuesta neurogénica transitoria (mareo, diaforesis, hipotensión) secundaria al dolor o la ansiedad durante el posicionamiento del transductor. 2. Excoriación superficial o sangrado escaso en pacientes con atrofia vaginal severa, estenosis vaginal o estadios post-radioterapia pélvica. 3. Incremento temporal del dolor en procesos inflamatorios/infecciosos pélvicos agudos'
+    value: 'Son Riesgos:\n1. Limitación técnica por presencia de gas o masa exofítica.\n2. Reacción de hipersensibilidad al látex o gel. Alergia local (eritema, prurito, ardor) al material de la cubierta del transductor o a los componentes del gel lubricante.\n3. Riesgo de sobrediagnóstico o falta de detección de patología infiltrativa compleja (como endometriosis profunda), requiriendo estudios complementarios como la Resonancia Magnética.\n\nSon Complicaciones:\n1. Respuesta neurogénica transitoria (mareo, diaforesis, hipotensión) secundaria al dolor o la ansiedad durante el posicionamiento del transductor.\n2. Excoriación superficial o sangrado escaso en pacientes con atrofia vaginal severa, estenosis vaginal o estadios post-radioterapia pélvica.\n3. Incremento temporal del dolor en procesos inflamatorios/infecciosos pélvicos agudos'
   },
   {
     label: 'IMPLICACIONES',
-    value: 'Puede generar incomodidad, ansiedad, pudor o dolor; la paciente puede informar estas sensaciones Pueden identificarse hallazgos incidentales o indeterminados que requieran seguimiento, valoración médica o estudios adicionales; el ultrasonido por sí solo no siempre establece un diagnóstico definitivo'
+    value: 'Puede generar incomodidad, ansiedad, pudor o dolor; la paciente puede informar estas sensaciones.\nPueden identificarse hallazgos incidentales o indeterminados que requieran seguimiento, valoración médica o estudios adicionales; el ultrasonido por sí solo no siempre establece un diagnóstico definitivo.'
   },
   {
     label: 'EFECTOS INEVITABLES',
@@ -72,7 +72,7 @@ const ECO_TV_PROCEDURE_DATA: BasePDFProcedureItem[] = [
   },
   {
     label: 'POSIBLES CONSECUENCIAS EN CASO QUE DECIDA NO ACEPTAR EL PROCEDIMIENTO',
-    value: '- Diagnóstico impreciso o tardío - Retraso en la detección de complicaciones de embarazo inicial - Progresión de patologías pélvicas'
+    value: '- Diagnóstico impreciso o tardío\n- Retraso en la detección de complicaciones de embarazo inicial\n- Progresión de patologías pélvicas'
   },
   {
     label: 'RIESGOS EN FUNCIÓN DE LA SITUACIÓN CLÍNICA DEL PACIENTE',

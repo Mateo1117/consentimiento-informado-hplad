@@ -52,11 +52,11 @@ const ULTRASONIDO_PROCEDURE_DATA: BasePDFProcedureItem[] = [
   },
   {
     label: 'BENEFICIOS ESPERADOS',
-    value: '1. Inocuidad. Ausencia total de radiación ionizante, lo que permite su uso seguro y repetido en gestantes, población pediátrica y controles evolutivos. 2. Evaluación dinámica y en tiempo real. Capacidad de valorar movimiento de estructuras, flujo sanguíneo y respuesta a la compresión durante la misma maniobra. 3. Procedimiento indoloro, rápido y de alta accesibilidad.'
+    value: '1. Inocuidad. Ausencia total de radiación ionizante, lo que permite su uso seguro y repetido en gestantes, población pediátrica y controles evolutivos.\n2. Evaluación dinámica y en tiempo real. Capacidad de valorar movimiento de estructuras, flujo sanguíneo y respuesta a la compresión durante la misma maniobra.\n3. Procedimiento indoloro, rápido y de alta accesibilidad.'
   },
   {
     label: 'RIESGOS Y POSIBLES COMPLICACIONES',
-    value: 'Son Riesgos: 1. Limitación por ventana acústica deficiente. Atenuación o bloqueo del haz de ultrasonido por interposición de gas intestinal, tejido adiposo abundante o estructuras óseas. 2. Probabilidad de sobreestimar o pasar por alto lesiones dependiendo de la resolución del equipo, las características anatómicas del paciente o la dependencia de la pericia del operador. 3. Reacción de hipersensibilidad al gel (manifestación cutánea leve o a los componentes del gel. Son complicaciones: 1. Incremento temporal del dolor preexistente al presionar el transductor directamente sobre zonas inflamadas, traumatizadas o con procesos agudos (p. ej., apendicitis, colecistitis). 2. Reacción neurogénica: Mareo o hipotensión transitoria desencadenada por dolor agudo en zonas inflamadas o por compresión prolongada de la vena cava en pacientes gestantes en decúbito supino. 3. Escoriación o eritema secundario al roce del transductor en pacientes con fragilidad capilar extrema, dermatitis activa o piel atrófica.'
+    value: 'Son Riesgos:\n1. Limitación por ventana acústica deficiente. Atenuación o bloqueo del haz de ultrasonido por interposición de gas intestinal, tejido adiposo abundante o estructuras óseas.\n2. Probabilidad de sobreestimar o pasar por alto lesiones dependiendo de la resolución del equipo, las características anatómicas del paciente o la dependencia de la pericia del operador.\n3. Reacción de hipersensibilidad al gel (manifestación cutánea leve o a los componentes del gel.\n\nSon Complicaciones:\n1. Incremento temporal del dolor preexistente al presionar el transductor directamente sobre zonas inflamadas, traumatizadas o con procesos agudos (p. ej., apendicitis, colecistitis).\n2. Reacción neurogénica: Mareo o hipotensión transitoria desencadenada por dolor agudo en zonas inflamadas o por compresión prolongada de la vena cava en pacientes gestantes en decúbito supino.\n3. Escoriación o eritema secundario al roce del transductor en pacientes con fragilidad capilar extrema, dermatitis activa o piel atrófica.'
   },
   {
     label: 'IMPLICACIONES',
@@ -64,15 +64,15 @@ const ULTRASONIDO_PROCEDURE_DATA: BasePDFProcedureItem[] = [
   },
   {
     label: 'EFECTOS INEVITABLES',
-    value: '- Sensación de frío y humedad - Presión mecánica sobre la zona examinada'
+    value: '- Sensación de frío y humedad\n- Presión mecánica sobre la zona examinada'
   },
   {
     label: 'ALTERNATIVAS RAZONABLES A ESTE PROCEDIMIENTO',
-    value: '1. Tomografía Axial Computarizada (TAC). Se indica cuando se requiere evaluar estructuras óseas, retroperitoneo o cuando el gas intestinal invalida el ultrasonido. Utiliza radiación ionizante. 2. Resonancia Magnética (RM): Alternativa para una caracterización tisular de mayor definición en tejidos blandos y articulaciones, sin uso de radiación ionizante pero de menor disponibilidad inmediata. 3. Radiografía convencional.'
+    value: '1. Tomografía Axial Computarizada (TAC). Se indica cuando se requiere evaluar estructuras óseas, retroperitoneo o cuando el gas intestinal invalida el ultrasonido. Utiliza radiación ionizante.\n2. Resonancia Magnética (RM): Alternativa para una caracterización tisular de mayor definición en tejidos blandos y articulaciones, sin uso de radiación ionizante pero de menor disponibilidad inmediata.\n3. Radiografía convencional.'
   },
   {
     label: 'POSIBLES CONSECUENCIAS EN CASO QUE DECIDA NO ACEPTAR EL PROCEDIMIENTO',
-    value: '- Omisión o retraso diagnóstico - Progresión de cuadros agudos: Riesgo de evolución hacia complicaciones mayores - Requerimiento diferido de estudios invasivos'
+    value: '- Omisión o retraso diagnóstico\n- Progresión de cuadros agudos: Riesgo de evolución hacia complicaciones mayores\n- Requerimiento diferido de estudios invasivos'
   },
   {
     label: 'RIESGOS EN FUNCIÓN DE LA SITUACIÓN CLÍNICA DEL PACIENTE',

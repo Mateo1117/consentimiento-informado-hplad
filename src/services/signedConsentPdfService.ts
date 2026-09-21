@@ -118,10 +118,27 @@ function buildPdfData(consent: any, signatureData: string, fingerprintData: stri
         ? [{ label: "DESCRIPCIÓN", value: payload.procedureDescription }]
         : []),
       ...(payload.risks?.length
-        ? [{ label: "RIESGOS", value: (payload.risks as string[]).join(", ") }]
+        ? [{ label: "RIESGOS Y POSIBLES COMPLICACIONES", value: (payload.risks as string[]).join("\n") }]
         : []),
       ...(payload.benefits?.length
-        ? [{ label: "BENEFICIOS", value: (payload.benefits as string[]).join(", ") }]
+        ? [{ label: "BENEFICIOS ESPERADOS", value: (payload.benefits as string[]).join("\n") }]
+        : []),
+      ...(payload.unavoidableEffects?.length
+        ? [{ label: "EFECTOS INEVITABLES", value: (payload.unavoidableEffects as string[]).map((item) => `- ${item}`).join("\n") }]
+        : []),
+      ...(payload.implications?.length
+        ? [{
+            label: "IMPLICACIONES",
+            value: (payload.implications as Array<{ heading: string; items: string[] }>)
+              .map((section) => `${section.heading}\n${section.items.map((item) => `• ${item}`).join("\n")}`)
+              .join("\n\n"),
+          }]
+        : []),
+      ...(payload.alternatives?.length
+        ? [{ label: "ALTERNATIVAS RAZONABLES A ESTE PROCEDIMIENTO", value: (payload.alternatives as string[]).join("\n") }]
+        : []),
+      ...(payload.refusalConsequences?.length
+        ? [{ label: "POSIBLES CONSECUENCIAS EN CASO QUE DECIDA NO ACEPTAR EL PROCEDIMIENTO", value: (payload.refusalConsequences as string[]).map((item) => `- ${item}`).join("\n") }]
         : []),
     ],
     professionalData: {
