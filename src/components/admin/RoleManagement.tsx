@@ -636,6 +636,52 @@ export function RoleManagement() {
                 </div>
               </div>
 
+              {/* Guía: qué rol ve cada sección del Dashboard */}
+              <div className="mb-6 rounded-lg border border-medical-blue/30 bg-medical-blue/5 p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Info className="h-5 w-5 text-medical-blue" />
+                  <h4 className="font-semibold text-foreground">¿Qué rol necesita para ver cada sección del Dashboard?</h4>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Todas las secciones del Dashboard (incluida la tarjeta <strong>“Total”</strong>) y la lista de
+                  <strong> Consentimientos Creados</strong> requieren que el rol tenga activo al menos <strong>uno</strong> de
+                  estos permisos. El rol <strong>Administrador</strong> siempre ve todo.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {CONSENT_VIEW_PERMISSIONS.map((key) => (
+                    <Badge key={key} variant="outline" className="font-mono text-xs">{key}</Badge>
+                  ))}
+                </div>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Sección del Dashboard</TableHead>
+                      <TableHead>Qué muestra</TableHead>
+                      <TableHead>Roles con acceso actualmente</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {DASHBOARD_SECTIONS.map((section) => (
+                      <TableRow key={section.name}>
+                        <TableCell className="font-medium">{section.name}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm">{section.detail}</TableCell>
+                        <TableCell>
+                          <div className="flex flex-wrap gap-1">
+                            {ROLE_DEFINITIONS.filter((r) => roleCanViewConsents(r.role)).map((r) => (
+                              <Badge key={r.role} className={r.color}>{r.label}</Badge>
+                            ))}
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+                <p className="text-xs text-muted-foreground">
+                  Si un usuario no ve el “Total” ni las demás secciones, active uno de los permisos anteriores
+                  en su rol desde la tabla de abajo y vuelva a cargar el Dashboard.
+                </p>
+              </div>
+
               {/* Permissions List */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
