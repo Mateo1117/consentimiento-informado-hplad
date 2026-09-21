@@ -30,6 +30,13 @@ import {
   Syringe,
   FlaskConical,
   CheckCircle2
+,
+  Baby,
+  Bone,
+  HeartPulse,
+  Radar,
+  ScanLine,
+  Waves
 } from "lucide-react";
 import { useState, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -74,6 +81,54 @@ const consentTypes = [
     icon: Syringe,
     iconBgColor: 'bg-orange-100',
     iconColor: 'text-orange-600'
+  },
+  {
+    id: 'radiografia',
+    title: 'Toma de Radiografía',
+    code: 'SC-F-09.31',
+    icon: Bone,
+    iconBgColor: 'bg-slate-100',
+    iconColor: 'text-slate-600'
+  },
+  {
+    id: 'rx_gestante',
+    title: 'RX para Gestante',
+    code: 'SC-M-09.32',
+    icon: Baby,
+    iconBgColor: 'bg-rose-100',
+    iconColor: 'text-rose-600'
+  },
+  {
+    id: 'mamografia',
+    title: 'Mamografía',
+    code: 'SC-M-09.33',
+    icon: HeartPulse,
+    iconBgColor: 'bg-pink-100',
+    iconColor: 'text-pink-600'
+  },
+  {
+    id: 'ultrasonido',
+    title: 'Ultrasonido',
+    code: 'SC-F-09.34',
+    icon: Waves,
+    iconBgColor: 'bg-sky-100',
+    iconColor: 'text-sky-600'
+  },
+  {
+    id: 'eco_tv',
+    title: 'Ultrasonido Transvaginal',
+    code: 'SC-F-09.35',
+    icon: Radar,
+    iconBgColor: 'bg-fuchsia-100',
+    iconColor: 'text-fuchsia-600'
+  },
+  {
+    id: 'tac',
+    title: 'TAC con o sin Contraste',
+    code: 'SC-F-09.36',
+    icon: ScanLine,
+    iconBgColor: 'bg-indigo-100',
+    iconColor: 'text-indigo-600'
   },
 ];
 

@@ -4,6 +4,12 @@ import { ConsentFormHIV } from "@/components/ConsentFormHIV";
 import { ConsentFormFrotisVaginal } from "@/components/ConsentFormFrotisVaginal";
 import { ConsentFormCargaGlucosa } from "@/components/ConsentFormCargaGlucosa";
 import { ConsentFormVenopuncion } from "@/components/ConsentFormVenopuncion";
+import { ConsentFormRadiografia } from "@/components/ConsentFormRadiografia";
+import { ConsentFormRxGestante } from "@/components/ConsentFormRxGestante";
+import { ConsentFormMamografia } from "@/components/ConsentFormMamografia";
+import { ConsentFormUltrasonido } from "@/components/ConsentFormUltrasonido";
+import { ConsentFormEcoTv } from "@/components/ConsentFormEcoTv";
+import { ConsentFormTac } from "@/components/ConsentFormTac";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { StepIndicator } from "@/components/consent/StepIndicator";
 import { ConsentTypeCard } from "@/components/consent/ConsentTypeCard";
@@ -21,6 +27,13 @@ import {
   FlaskConical,
   ArrowLeft,
   User
+,
+  Baby,
+  Bone,
+  HeartPulse,
+  Radar,
+  ScanLine,
+  Waves
 } from "lucide-react";
 
 interface PatientData {
@@ -73,6 +86,54 @@ const consentTypes = [
     iconBgColor: 'bg-orange-100',
     iconColor: 'text-orange-600'
   },
+  {
+    id: 'radiografia',
+    title: 'Toma de Radiografía',
+    code: 'SC-F-09.31',
+    icon: Bone,
+    iconBgColor: 'bg-slate-100',
+    iconColor: 'text-slate-600'
+  },
+  {
+    id: 'rx_gestante',
+    title: 'RX para Gestante',
+    code: 'SC-M-09.32',
+    icon: Baby,
+    iconBgColor: 'bg-rose-100',
+    iconColor: 'text-rose-600'
+  },
+  {
+    id: 'mamografia',
+    title: 'Mamografía',
+    code: 'SC-M-09.33',
+    icon: HeartPulse,
+    iconBgColor: 'bg-pink-100',
+    iconColor: 'text-pink-600'
+  },
+  {
+    id: 'ultrasonido',
+    title: 'Ultrasonido',
+    code: 'SC-F-09.34',
+    icon: Waves,
+    iconBgColor: 'bg-sky-100',
+    iconColor: 'text-sky-600'
+  },
+  {
+    id: 'eco_tv',
+    title: 'Ultrasonido Transvaginal',
+    code: 'SC-F-09.35',
+    icon: Radar,
+    iconBgColor: 'bg-fuchsia-100',
+    iconColor: 'text-fuchsia-600'
+  },
+  {
+    id: 'tac',
+    title: 'TAC con o sin Contraste',
+    code: 'SC-F-09.36',
+    icon: ScanLine,
+    iconBgColor: 'bg-indigo-100',
+    iconColor: 'text-indigo-600'
+  },
 ];
 
 const steps = [
@@ -84,7 +145,7 @@ const steps = [
 const Index = () => {
   const [currentStep, setCurrentStep] = useState<'search' | 'select' | 'consent' | 'sign-pending'>('search');
   const [selectedPatient, setSelectedPatient] = useState<PatientData | null>(null);
-  const [consentType, setConsentType] = useState<'hiv' | 'frotis_vaginal' | 'carga_glucosa' | 'venopuncion' | null>(null);
+  const [consentType, setConsentType] = useState<'hiv' | 'frotis_vaginal' | 'carga_glucosa' | 'venopuncion' | 'radiografia' | 'rx_gestante' | 'mamografia' | 'ultrasonido' | 'eco_tv' | 'tac' | null>(null);
   const [searchFilter, setSearchFilter] = useState('');
   const [pendingToken, setPendingToken] = useState<string | null>(null);
 
@@ -132,6 +193,18 @@ const Index = () => {
         return <ConsentFormCargaGlucosa patientData={selectedPatient} onBack={handleBackToSelect} />;
       case 'venopuncion':
         return <ConsentFormVenopuncion patientData={selectedPatient} onBack={handleBackToSelect} />;
+      case 'radiografia':
+        return <ConsentFormRadiografia patientData={selectedPatient} onBack={handleBackToSelect} />;
+      case 'rx_gestante':
+        return <ConsentFormRxGestante patientData={selectedPatient} onBack={handleBackToSelect} />;
+      case 'mamografia':
+        return <ConsentFormMamografia patientData={selectedPatient} onBack={handleBackToSelect} />;
+      case 'ultrasonido':
+        return <ConsentFormUltrasonido patientData={selectedPatient} onBack={handleBackToSelect} />;
+      case 'eco_tv':
+        return <ConsentFormEcoTv patientData={selectedPatient} onBack={handleBackToSelect} />;
+      case 'tac':
+        return <ConsentFormTac patientData={selectedPatient} onBack={handleBackToSelect} />;
       default:
         return null;
     }

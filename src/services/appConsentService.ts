@@ -489,6 +489,12 @@ class AppConsentService {
       frotis_vaginal: 'frotis_vaginal',
       hemocomponentes: 'hemocomponentes',
       hemocomponentes_sanguineos: 'hemocomponentes',
+      radiografia: 'radiografia',
+      rx_gestante: 'rx_gestante',
+      mamografia: 'mamografia',
+      ultrasonido: 'ultrasonido',
+      eco_tv: 'eco_tv',
+      tac: 'tac',
     };
 
     return aliases[cleaned] || cleaned;
@@ -550,7 +556,13 @@ class AppConsentService {
       venopuncion: 'VENOPUNCION', 
       carga_glucosa: 'GLUCOSA',
       frotis_vaginal: 'FROTIS VAGINAL',
-      hemocomponentes: 'HEMOCOMPONENTES'
+      hemocomponentes: 'HEMOCOMPONENTES',
+      radiografia: 'TOMA DE RADIOGRAFÍA',
+      rx_gestante: 'RX PARA GESTANTE',
+      mamografia: 'MAMOGRAFÍA',
+      ultrasonido: 'ULTRASONIDO',
+      eco_tv: 'ULTRASONIDO TRANSVAGINAL',
+      tac: 'TAC CON O SIN CONTRASTE',
     };
     
     const result = displayNames[key] || key.toUpperCase().replace(/_/g, ' ');
@@ -568,7 +580,13 @@ class AppConsentService {
       hiv: 'Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)',
       hemocomponentes: 'Transfusión de Hemocomponentes Sanguíneos',
       carga_glucosa: 'Administración oral de carga de glucosa (Dextrosa Anhidra)',
-      frotis_vaginal: 'Toma de Muestra para Frotis Vaginal - Cultivo Recto-Vaginal'
+      frotis_vaginal: 'Toma de Muestra para Frotis Vaginal - Cultivo Recto-Vaginal',
+      radiografia: 'Toma De Radiografía',
+      rx_gestante: 'Toma De Radiografía Para Gestante',
+      mamografia: 'Toma De Mamografía',
+      ultrasonido: 'Ultrasonido',
+      eco_tv: 'Ultrasonido Transvaginal',
+      tac: 'Tomografía Axial Computarizada Con O Sin Contraste (Tac)',
     };
     return procedureNames[key] || key;
   }

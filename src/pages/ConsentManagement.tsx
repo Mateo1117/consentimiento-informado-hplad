@@ -328,6 +328,12 @@ export default function ConsentManagement() {
     frotis_vaginal: 'Frotis Vaginal',
     carga_glucosa: 'Carga de Glucosa',
     hemocomponentes: 'Hemocomponentes',
+    radiografia: 'Toma de Radiografía',
+    rx_gestante: 'RX para Gestante',
+    mamografia: 'Mamografía',
+    ultrasonido: 'Ultrasonido',
+    eco_tv: 'Ultrasonido Transvaginal',
+    tac: 'TAC con o sin Contraste',
   }
 
   const getConsentLabel = (type: string) => {

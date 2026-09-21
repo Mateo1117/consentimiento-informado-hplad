@@ -32,6 +32,12 @@ const CONSENT_TYPE_LABELS: Record<string, string> = {
   frotis_vaginal: 'Frotis Vaginal',
   carga_glucosa: 'Carga de Glucosa',
   hemocomponentes: 'Hemocomponentes',
+  radiografia: 'Toma de Radiografía',
+  rx_gestante: 'RX para Gestante',
+  mamografia: 'Mamografía',
+  ultrasonido: 'Ultrasonido',
+  eco_tv: 'Ultrasonido Transvaginal',
+  tac: 'TAC con o sin Contraste',
 };
 
 function getConsentLabel(type: string) {
