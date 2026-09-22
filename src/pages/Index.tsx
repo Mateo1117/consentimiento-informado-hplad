@@ -13,6 +13,8 @@ import { ConsentFormTac } from "@/components/ConsentFormTac";
 import { MainLayout } from "@/components/layout/MainLayout";
 import { StepIndicator } from "@/components/consent/StepIndicator";
 import { ConsentTypeCard } from "@/components/consent/ConsentTypeCard";
+import { ConsentServiceHeader } from "@/components/consent/ConsentServiceHeader";
+import { groupConsentTypesByService } from "@/utils/consentTypeNormalizer";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -24,7 +26,6 @@ import {
   Heart, 
   TestTube2, 
   Syringe,
-  FlaskConical,
   ArrowLeft,
   User
 ,
@@ -177,10 +178,12 @@ const Index = () => {
     setCurrentStep('sign-pending');
   };
 
-  const filteredConsentTypes = consentTypes.filter(type => 
+  const filteredConsentTypes = consentTypes.filter(type =>
     type.title.toLowerCase().includes(searchFilter.toLowerCase()) ||
     type.code?.toLowerCase().includes(searchFilter.toLowerCase())
   );
+
+  const groupedConsentTypes = groupConsentTypesByService(filteredConsentTypes);
 
   const renderConsentForm = () => {
     if (!selectedPatient || !consentType) return null;
@@ -322,33 +325,32 @@ const Index = () => {
                   />
                 </div>
 
-                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
-                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                    <FlaskConical className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-foreground">Laboratorio</p>
-                    <p className="text-xs text-muted-foreground">{filteredConsentTypes.length} consentimientos</p>
-                  </div>
-                  <span className="text-sm font-medium text-muted-foreground bg-muted px-2 py-1 rounded-full">
-                    {filteredConsentTypes.length}
-                  </span>
-                </div>
+                {groupedConsentTypes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-6">
+                    Ningún consentimiento coincide con la búsqueda.
+                  </p>
+                ) : (
+                  groupedConsentTypes.map(({ service, types }) => (
+                    <div key={service} className="space-y-3">
+                      <ConsentServiceHeader service={service} count={types.length} />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3">
-                  {filteredConsentTypes.map((type) => (
-                    <ConsentTypeCard
-                      key={type.id}
-                      icon={type.icon}
-                      title={type.title}
-                      code={type.code}
-                      isActive={consentType === type.id}
-                      onClick={() => handleConsentTypeSelect(type.id as typeof consentType)}
-                      iconBgColor={type.iconBgColor}
-                      iconColor={type.iconColor}
-                    />
-                  ))}
-                </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3">
+                        {types.map((type) => (
+                          <ConsentTypeCard
+                            key={type.id}
+                            icon={type.icon}
+                            title={type.title}
+                            code={type.code}
+                            isActive={consentType === type.id}
+                            onClick={() => handleConsentTypeSelect(type.id as typeof consentType)}
+                            iconBgColor={type.iconBgColor}
+                            iconColor={type.iconColor}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
               </CardContent>
             </Card>
           </div>

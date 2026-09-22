@@ -53,3 +53,48 @@ export function consentTypeLabel(raw: string | null | undefined): string {
   const normalized = normalizeConsentType(raw);
   return CONSENT_TYPE_LABELS[normalized] || normalized;
 }
+
+/** Returns the service a consent type belongs to */
+export function consentTypeSpecialty(raw: string | null | undefined): string {
+  const normalized = normalizeConsentType(raw);
+  return CONSENT_TYPE_SPECIALTY[normalized] || "Otros";
+}
+
+/**
+ * Orden en que se muestran los servicios. Los que no estén aquí van al final,
+ * alfabéticamente, para que un tipo nuevo nunca desaparezca de la pantalla.
+ */
+export const CONSENT_SERVICE_ORDER: string[] = [
+  "Laboratorio Clínico",
+  "Ginecología / Laboratorio",
+  "Imágenes Diagnósticas",
+  "Banco de Sangre / Medicina Transfusional",
+];
+
+/**
+ * Agrupa una lista de tipos de consentimiento por el servicio al que pertenecen,
+ * respetando CONSENT_SERVICE_ORDER. Los grupos vacíos no se devuelven, de modo
+ * que al filtrar por búsqueda solo aparecen los servicios con resultados.
+ */
+export function groupConsentTypesByService<T extends { id: string }>(
+  types: T[],
+): { service: string; types: T[] }[] {
+  const grupos = new Map<string, T[]>();
+  for (const type of types) {
+    const service = consentTypeSpecialty(type.id);
+    const actual = grupos.get(service);
+    if (actual) actual.push(type);
+    else grupos.set(service, [type]);
+  }
+
+  return [...grupos.entries()]
+    .sort(([a], [b]) => {
+      const ia = CONSENT_SERVICE_ORDER.indexOf(a);
+      const ib = CONSENT_SERVICE_ORDER.indexOf(b);
+      if (ia !== -1 && ib !== -1) return ia - ib;
+      if (ia !== -1) return -1;
+      if (ib !== -1) return 1;
+      return a.localeCompare(b, "es");
+    })
+    .map(([service, types]) => ({ service, types }));
+}
