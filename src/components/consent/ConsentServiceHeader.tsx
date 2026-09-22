@@ -1,4 +1,4 @@
-import { Droplet, FlaskConical, HeartPulse, LucideIcon, ScanLine, Stethoscope } from "lucide-react";
+import { Droplet, FlaskConical, LucideIcon, ScanLine, Stethoscope } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 /**
@@ -7,7 +7,6 @@ import { cn } from "@/lib/utils";
  */
 const SERVICE_STYLE: Record<string, { icon: LucideIcon; bg: string; fg: string }> = {
   "Laboratorio Clínico": { icon: FlaskConical, bg: "bg-primary/10", fg: "text-primary" },
-  "Ginecología / Laboratorio": { icon: HeartPulse, bg: "bg-pink-100", fg: "text-pink-600" },
   "Imágenes Diagnósticas": { icon: ScanLine, bg: "bg-indigo-100", fg: "text-indigo-600" },
   "Banco de Sangre / Medicina Transfusional": { icon: Droplet, bg: "bg-red-100", fg: "text-red-600" },
 };
