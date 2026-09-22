@@ -32,7 +32,7 @@ export const CONSENT_TYPE_SPECIALTY: Record<string, string> = {
   vih: "Laboratorio Clínico",
   venopuncion: "Laboratorio Clínico",
   carga_glucosa: "Laboratorio Clínico",
-  frotis_vaginal: "Ginecología / Laboratorio",
+  frotis_vaginal: "Laboratorio Clínico",
   hemocomponentes: "Banco de Sangre / Medicina Transfusional",
   radiografia: "Imágenes Diagnósticas",
   rx_gestante: "Imágenes Diagnósticas",
@@ -66,7 +66,6 @@ export function consentTypeSpecialty(raw: string | null | undefined): string {
  */
 export const CONSENT_SERVICE_ORDER: string[] = [
   "Laboratorio Clínico",
-  "Ginecología / Laboratorio",
   "Imágenes Diagnósticas",
   "Banco de Sangre / Medicina Transfusional",
 ];
