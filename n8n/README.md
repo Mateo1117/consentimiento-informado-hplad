@@ -85,6 +85,27 @@ subía un PDF con el texto "Sin informacion" en `hcpacfir` / `hcrepfir`. Eso
 guardaba consentimientos con una "firma" que no era una firma. Ahora, si falta
 la firma del paciente no se llama a la API y se responde 422 explicando por qué.
 
+**Se aceptaba la primera plantilla de la lista.** `/plantillas-consentimiento`
+y `/medicos` tratan `filtro` como una sugerencia: si no acierta, responden con
+el catálogo entero y un `200`. El flujo se quedaba con `data[0].oid` sin mirar
+el nombre, así que cualquier filtro fallido caía sobre la **primera plantilla
+del catálogo**.
+
+No es hipotético: el **22/09/2026** se crearon 51 consentimientos de
+laboratorio (OID 40050–40100) sobre `CI rx TOMA DE RADIOGRAFIA` (oid 32) por
+esta vía. El disparador fue un filtro escrito a mano en el nodo del flujo viejo
+(`filtro = "radiografia"` en vez de la expresión), pero lo que convirtió un
+filtro equivocado en 51 documentos firmados mal fue aceptar `[0]` sin
+comprobar.
+
+Ahora `elegirOid()` compara lo pedido con el nombre de cada registro
+(`hclnombre` / `gmenomcom`), ignorando tildes, mayúsculas y separadores, y
+tolerando los prefijos del hospital (`CI lab `, `CI rx `). Devuelve el OID sólo
+si hay **una** coincidencia inequívoca; con cero o con varias responde 422
+listando lo que devolvió la API. Un consentimiento no creado se arregla
+volviéndolo a mandar; uno firmado sobre la plantilla equivocada hay que
+corregirlo a mano en el HIS.
+
 **Los errores no llegaban a la app.** Sólo existía `Responder OK` con 200 fijo,
 así que la Edge Function veía éxito pasara lo que pasara. Ahora
 `Code in JavaScript2` arma un cuerpo con `ok`, `errores`, `respuesta_api` y

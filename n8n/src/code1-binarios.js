@@ -102,27 +102,94 @@ const binHuella = await resolver(
   () => $('Bajar Huella').first(), 'data', body.paciente_foto, 'huella_paciente.png');
 
 // ── Datos maestros de la API ─────────────────────────────────────────────────
-function oidDe(leerRespuesta) {
-  try {
-    const res = leerRespuesta();
-    // Con onError=continueRegularOutput un fallo HTTP no detiene el flujo: el
-    // item llega con { error }. Eso NO es "no existe", es "no se pudo consultar",
-    // y confundirlos manda a corregir lo que no está roto.
-    if (res && res.error) {
-      const e = res.error;
-      const detalle = typeof e === 'string' ? e : (e.message || JSON.stringify(e));
-      return { leido: true, fallo: detalle, oid: null, total: 0 };
-    }
-    const lista = res && (res.data || res.results) ? (res.data || res.results) : (Array.isArray(res) ? res : []);
-    const total = lista ? lista.length : 0;
-    return { leido: true, fallo: null, oid: total > 0 ? (lista[0].oid ?? null) : null, total };
-  } catch (e) {
-    return { leido: false, fallo: null, oid: null, total: 0 };
-  }
+// `filtro` es una sugerencia, no una garantía: /plantillas-consentimiento y
+// /medicos responden con lo que encuentran, y cuando el filtro no acierta
+// devuelven el catálogo entero. Quedarse con `lista[0].oid` sin mirar el nombre
+// significa aceptar la PRIMERA plantilla del catálogo como si fuera la pedida.
+// Eso fue exactamente lo que pasó el 22/09/2026: 51 consentimientos de
+// laboratorio quedaron sobre "CI rx TOMA DE RADIOGRAFIA" (oid 32), la primera
+// de la lista. Aquí se comprueba que lo devuelto es lo pedido, y si no coincide
+// se falla con 422 en vez de guardar un documento firmado sobre otra plantilla.
+
+// Comparación tolerante a tildes, mayúsculas y separadores: el hospital escribe
+// "CI lab TOMA DE MUESTRAS VENOPUNCION  ESTE ACT" y nosotros pedimos
+// "VENOPUNCION".
+function normalizarNombre(texto) {
+  return String(texto == null ? '' : texto)
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, ' ')
+    .trim();
 }
 
-const medico = oidDe(() => $('Consultar Medicos').first().json);
-const plantilla = oidDe(() => $('Consultar Plantillas').first().json);
+function nombreDe(registro, campos) {
+  for (const c of campos) {
+    if (registro && typeof registro[c] === 'string' && registro[c].trim()) return registro[c];
+  }
+  return '';
+}
+
+// Devuelve el OID SÓLO si hay una coincidencia inequívoca con `buscado`.
+function elegirOid(leerRespuesta, buscado, campos) {
+  let res;
+  try {
+    res = leerRespuesta();
+  } catch (e) {
+    return { leido: false, fallo: null, oid: null, total: 0, candidatos: [] };
+  }
+
+  // Con onError=continueRegularOutput un fallo HTTP no detiene el flujo: el
+  // item llega con { error }. Eso NO es "no existe", es "no se pudo consultar",
+  // y confundirlos manda a corregir lo que no está roto.
+  if (res && res.error) {
+    const e = res.error;
+    const detalle = typeof e === 'string' ? e : (e.message || JSON.stringify(e));
+    return { leido: true, fallo: detalle, oid: null, total: 0, candidatos: [] };
+  }
+
+  const lista = res && (res.data || res.results) ? (res.data || res.results) : (Array.isArray(res) ? res : []);
+  const total = Array.isArray(lista) ? lista.length : 0;
+  const base = { leido: true, fallo: null, oid: null, total, candidatos: [] };
+
+  const objetivo = normalizarNombre(buscado);
+  if (!objetivo) return Object.assign(base, { sinBuscado: true });
+  if (total === 0) return base;
+
+  const vistos = lista.map((r) => ({
+    oid: r && r.oid != null ? r.oid : null,
+    nombre: nombreDe(r, campos),
+  }));
+
+  const exactos = vistos.filter((v) => normalizarNombre(v.nombre) === objetivo);
+  // El nombre del hospital lleva prefijos ("CI lab ", "CI rx ") y sufijos, así
+  // que también vale que contenga lo pedido como palabra completa.
+  const contienen = vistos.filter((v) => {
+    const n = normalizarNombre(v.nombre);
+    return n !== objetivo && (' ' + n + ' ').indexOf(' ' + objetivo + ' ') !== -1;
+  });
+
+  const elegidos = exactos.length > 0 ? exactos : contienen;
+  if (elegidos.length === 1 && elegidos[0].oid != null) {
+    return Object.assign(base, { oid: elegidos[0].oid, elegido: elegidos[0].nombre });
+  }
+
+  // Ni una coincidencia (0) ni una sola clara (>1): no se adivina.
+  return Object.assign(base, {
+    ambiguo: elegidos.length > 1,
+    candidatos: (elegidos.length > 1 ? elegidos : vistos).slice(0, 10).map((v) => v.nombre || ('oid ' + v.oid)),
+  });
+}
+
+const medico = elegirOid(
+  () => $('Consultar Medicos').first().json,
+  body.profesional_nombre_completo,
+  ['gmenomcom', 'nombre', 'descripcion'],
+);
+const plantilla = elegirOid(
+  () => $('Consultar Plantillas').first().json,
+  body.nombre_consentimiento,
+  ['hclnombre', 'nombre', 'descripcion'],
+);
 
 // ══ Composición firma + huella en una sola imagen ════════════════════════════
 // La API sólo tiene un campo para la firma del paciente (hcpacfir), así que
@@ -452,28 +519,47 @@ if (clasificacion.tiene_firma_acudiente && !binFirmaAcudiente) {
   );
 }
 
+function detalleBusqueda(r) {
+  if (r.ambiguo) {
+    return ' La búsqueda devolvió varias coincidencias y ninguna es inequívoca: '
+      + r.candidatos.join(' | ') + '.';
+  }
+  if (r.total > 0) {
+    return ' La búsqueda devolvió ' + r.total + ' registro(s), ninguno con ese nombre: '
+      + r.candidatos.join(' | ') + '.';
+  }
+  return '';
+}
+
 if (medico.fallo) {
   errores.push('No se pudo consultar /medicos del hospital: ' + medico.fallo);
-} else if (medico.leido && !medico.oid) {
-  errores.push(
-    'El profesional "' + (body.profesional_nombre_completo || '(vacío)')
-    + '" no existe en /medicos del hospital. Verifique que el consentimiento se '
-    + 'esté generando a nombre del profesional que atendió y que ese nombre esté '
-    + 'registrado en el hospital tal cual.'
-  );
 } else if (!medico.leido) {
   errores.push('No se pudo leer la respuesta de la búsqueda de médicos.');
+} else if (medico.sinBuscado) {
+  errores.push('El consentimiento no trae profesional_nombre_completo, así que no se puede resolver el médico.');
+} else if (!medico.oid) {
+  errores.push(
+    'El profesional "' + (body.profesional_nombre_completo || '(vacío)')
+    + '" no se pudo identificar en /medicos del hospital. Verifique que el '
+    + 'consentimiento se esté generando a nombre del profesional que atendió y '
+    + 'que ese nombre esté registrado en el hospital tal cual.'
+    + detalleBusqueda(medico)
+  );
 }
 
 if (plantilla.fallo) {
   errores.push('No se pudo consultar /plantillas-consentimiento del hospital: ' + plantilla.fallo);
-} else if (plantilla.leido && !plantilla.oid) {
-  errores.push(
-    'No existe la plantilla de consentimiento "' + (body.nombre_consentimiento || '(vacío)')
-    + '" en /plantillas-consentimiento.'
-  );
 } else if (!plantilla.leido) {
   errores.push('No se pudo leer la respuesta de la búsqueda de plantillas.');
+} else if (plantilla.sinBuscado) {
+  errores.push('El consentimiento no trae nombre_consentimiento, así que no se puede resolver la plantilla.');
+} else if (!plantilla.oid) {
+  errores.push(
+    'No se pudo identificar la plantilla "' + (body.nombre_consentimiento || '(vacío)')
+    + '" en /plantillas-consentimiento. NO se crea el consentimiento: antes se '
+    + 'tomaba la primera de la lista y quedaba firmado sobre otra plantilla.'
+    + detalleBusqueda(plantilla)
+  );
 }
 
 // ── Salida ───────────────────────────────────────────────────────────────────
@@ -502,8 +588,15 @@ return [{
       firma_acudiente: binFirmaAcudiente ? binFirmaAcudiente.origen : 'ausente',
       huella: binHuella ? binHuella.origen : 'ausente',
       busquedas: {
-        medicos: { encontrados: medico.total, fallo: medico.fallo },
-        plantillas: { encontrados: plantilla.total, fallo: plantilla.fallo },
+        medicos: {
+          encontrados: medico.total, fallo: medico.fallo,
+          elegido: medico.elegido || null, oid: medico.oid, ambiguo: !!medico.ambiguo,
+        },
+        plantillas: {
+          pedida: body.nombre_consentimiento || null,
+          encontrados: plantilla.total, fallo: plantilla.fallo,
+          elegida: plantilla.elegido || null, oid: plantilla.oid, ambiguo: !!plantilla.ambiguo,
+        },
       },
       composicion,
       entrada: clasificacion.diagnostico_entrada,

@@ -121,8 +121,8 @@ const binDescargado = (contenido) => ({
 
 async function correr(body, {
   descargaFirma, descargaAcudiente, descargaHuella,
-  medicos = { data: [{ oid: 4321 }] },
-  plantillas = { data: [{ oid: 99 }] },
+  medicos = { data: [{ oid: 4321, gmenomcom: 'COLLAZOS QUINTERO KAREN SOFIA ' }] },
+  plantillas = { data: [{ oid: 99, hclnombre: 'CI lab TOMA DE MUESTRAS VENOPUNCION  ESTE ACT' }] },
 } = {}) {
   const wh = { json: { body } };
   const clasif = (await ejecutar('Clasificar Imagenes', { nodos: { 'Recibir Consentimiento': wh }, entrada: wh }))[0];
@@ -217,6 +217,67 @@ console.log('\n6) La plantilla de consentimiento no existe');
   const r = await correr(body, { plantillas: { data: [] } });
   afirmar(r.bin.json.ok === false, 'no se manda el POST');
   afirmar(r.bin.json.errores.some((e) => e.includes('VENOPUNCION')), 'el error nombra la plantilla');
+}
+
+// El catálogo real del hospital, tal como responde /plantillas-consentimiento
+// cuando el `filtro` no acierta y devuelve todo.
+const CATALOGO = [
+  { oid: 32, hclnombre: 'CI rx TOMA DE RADIOGRAFIA' },
+  { oid: 45, hclnombre: 'CI rx TOMA DE MAMOGRAFIA' },
+  { oid: 93, hclnombre: 'CI lab TOMA DE MUESTRAS VENOPUNCION  ESTE ACT' },
+];
+
+console.log('\n6b) El filtro no acierta y la API devuelve el catálogo entero');
+{
+  // Es el incidente del 22/09/2026: con `data[0].oid` los 51 consentimientos de
+  // laboratorio quedaron sobre "CI rx TOMA DE RADIOGRAFIA", la primera de la
+  // lista. Ahora se busca la pedida dentro de lo devuelto.
+  const body = { ...bodyBase, paciente_firma: DATA_URI_FIRMA };
+  const r = await correr(body, { plantillas: { data: CATALOGO } });
+  afirmar(r.bin.json.ok === true, 'se resuelve igual aunque venga el catálogo entero');
+  afirmar(r.bin.json.plantilla_oid === 93, 'se elige VENOPUNCION (93), no la primera de la lista (32)');
+  afirmar(r.bin.json.diagnostico.busquedas.plantillas.elegida.includes('VENOPUNCION'), 'el diagnóstico deja constancia de cuál se eligió');
+}
+
+console.log('\n6c) Devuelve el catálogo entero y la plantilla pedida NO está');
+{
+  const body = { ...bodyBase, paciente_firma: DATA_URI_FIRMA, nombre_consentimiento: 'ULTRASONIDO TRANSVAGINAL' };
+  const r = await correr(body, { plantillas: { data: CATALOGO } });
+  afirmar(r.bin.json.ok === false, 'no se crea el consentimiento');
+  afirmar(r.bin.json.plantilla_oid === null, 'no se toma la primera de la lista');
+  afirmar(r.bin.json.errores.some((e) => e.includes('ULTRASONIDO TRANSVAGINAL')), 'el error nombra la plantilla pedida');
+  afirmar(r.bin.json.errores.some((e) => e.includes('CI rx TOMA DE RADIOGRAFIA')), 'el error lista lo que sí devolvió la API');
+}
+
+console.log('\n6d) Varias plantillas coinciden con lo pedido');
+{
+  const body = { ...bodyBase, paciente_firma: DATA_URI_FIRMA };
+  const r = await correr(body, { plantillas: { data: [
+    { oid: 93, hclnombre: 'CI lab TOMA DE MUESTRAS VENOPUNCION  ESTE ACT' },
+    { oid: 94, hclnombre: 'CI lab VENOPUNCION pediatrica' },
+  ] } });
+  afirmar(r.bin.json.ok === false, 'ante la duda no se elige');
+  afirmar(r.bin.json.plantilla_oid === null, 'no se adivina');
+  afirmar(r.bin.json.diagnostico.busquedas.plantillas.ambiguo === true, 'el diagnóstico la marca como ambigua');
+}
+
+console.log('\n6e) /medicos devuelve varios y ninguno es el pedido');
+{
+  const body = { ...bodyBase, paciente_firma: DATA_URI_FIRMA, profesional_nombre_completo: 'MATEO LOPEZ' };
+  const r = await correr(body, { medicos: { data: [
+    { oid: 1125, gmenomcom: 'COLLAZOS QUINTERO KAREN SOFIA' },
+    { oid: 1126, gmenomcom: 'RAMIREZ SOTO JULIO' },
+  ] } });
+  afirmar(r.bin.json.ok === false, 'no se firma a nombre de otro profesional');
+  afirmar(r.bin.json.medico_oid === null, 'no se toma el primer médico de la lista');
+}
+
+console.log('\n6f) La tilde no debe impedir la coincidencia');
+{
+  const body = { ...bodyBase, paciente_firma: DATA_URI_FIRMA, nombre_consentimiento: 'TOMA DE RADIOGRAFÍA' };
+  const r = await correr(body, { plantillas: { data: CATALOGO } });
+  afirmar(r.bin.json.ok === true, 'la plantilla sin tilde del hospital coincide con la pedida con tilde');
+  afirmar(r.bin.json.plantilla_oid === 32, 'se elige la radiografía (32)');
 }
 
 console.log('\n7) Firma + huella se componen en una sola imagen');
