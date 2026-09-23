@@ -87,6 +87,40 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
   const [preDiligenciadoConsent, setPreDiligenciadoConsent] = useState<any>(null);
 
   /**
+   * Profesional que queda registrado en el consentimiento.
+   *
+   * Antes esto era SIEMPRE el usuario logueado, así que un consentimiento
+   * atendido por otro profesional salía a nombre de quien tenía la sesión
+   * abierta (y el webhook buscaba ese nombre en /medicos, no lo encontraba y
+   * el consentimiento no se podía crear). Ahora manda el profesional elegido
+   * en el formulario y el usuario logueado sólo es el respaldo.
+   */
+  const resolverProfesional = async (): Promise<
+    { professional_name: string; professional_document: string; signature_data: string } | null
+  > => {
+    if (professionalData?.name && professionalData?.document && professionalData?.signatureData) {
+      return {
+        professional_name: professionalData.name,
+        professional_document: professionalData.document,
+        signature_data: professionalData.signatureData,
+      };
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const { data: propia, error } = await supabase
+      .from('professional_signatures')
+      .select('signature_data, professional_name, professional_document')
+      .eq('created_by', user.id)
+      .maybeSingle();
+
+    if (error) throw error;
+    return propia?.signature_data ? propia : null;
+  };
+
+
+  /**
    * Guarda el consentimiento pre-diligenciado por el médico (con su firma) pero en estado
    * "sent" para que el paciente solo añada foto, huella y firma después.
    */
@@ -96,15 +130,8 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Usuario no autenticado');
 
-      // SIEMPRE usar la firma profesional del usuario logueado.
-      // Cada profesional solo puede generar consentimientos a su propio nombre.
-      const { data: profSig, error: profSigError } = await supabase
-        .from('professional_signatures')
-        .select('signature_data, professional_name, professional_document')
-        .eq('created_by', user.id)
-        .maybeSingle();
-
-      if (profSigError) throw profSigError;
+      // Profesional del formulario y, si no hay ninguno elegido, el del usuario logueado.
+      const profSig = await resolverProfesional();
 
       if (!profSig?.signature_data) {
         toast.error('Falta la firma del profesional', {
@@ -220,17 +247,14 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
         return;
       }
 
-      // 2. Validar firma del profesional (OBLIGATORIA siempre para consentimiento completo)
-      // SIEMPRE usar la firma del usuario logueado: cada profesional solo puede generar
-      // consentimientos a su propio nombre.
-      const { data: ownProfSig, error: ownProfSigError } = await supabase
-        .from('professional_signatures')
-        .select('signature_data, professional_name, professional_document')
-        .eq('created_by', user.id)
-        .maybeSingle();
-
-      if (ownProfSigError) {
-        toast.error(`Error al validar firma profesional: ${ownProfSigError.message}`);
+      // 2. Validar firma del profesional (OBLIGATORIA siempre para consentimiento completo).
+      // Es el profesional elegido en el formulario; si no se eligió ninguno, el logueado.
+      let ownProfSig: Awaited<ReturnType<typeof resolverProfesional>>;
+      try {
+        ownProfSig = await resolverProfesional();
+      } catch (errorFirma) {
+        const detalle = errorFirma instanceof Error ? errorFirma.message : 'error desconocido';
+        toast.error(`Error al validar firma profesional: ${detalle}`);
         return;
       }
 
@@ -302,7 +326,7 @@ export const ConsentFormWrapper: React.FC<ConsentFormWrapperProps> = ({
           clinicalRiskNotes: clinicalRiskNotes || undefined,
           generatedAt: new Date().toISOString()
         }),
-        // Forzar siempre los datos del profesional logueado
+        // Datos del profesional que realmente atiende (el elegido en el formulario)
         professionalName: ownProfSig.professional_name,
         professionalDocument: ownProfSig.professional_document,
         professionalSignatureData: ownProfSig.signature_data,
