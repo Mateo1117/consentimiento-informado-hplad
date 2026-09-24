@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/utils/logger";
 import { BasePDFGenerator, BasePDFData } from "@/utils/pdfGeneratorBase";
 import {
-  getConsentTemplateName,
+  getConsentDisplayName,
   getProcedureName,
 } from "../../supabase/functions/_shared/consentCatalog.ts";
 
@@ -38,7 +38,7 @@ function buildPdfData(consent: any, signatureData: string, fingerprintData: stri
   const consentDecision: "aprobar" | "disentir" = decisionRaw === "disentir" ? "disentir" : "aprobar";
 
   const procedureName = payload.procedureName || getProcedureName(consent.consent_type);
-  const consentName = getConsentTemplateName(consent.consent_type);
+  const consentName = getConsentDisplayName(consent.consent_type);
 
   const now = new Date();
   const fechaHora = now.toLocaleString("es-CO", { timeZone: "America/Bogota" });

@@ -85,10 +85,10 @@ const ALIASES: Record<string, ConsentKey> = {
 };
 
 /**
- * `nombre_consentimiento` que viaja al webhook y que n8n usa como filtro
- * contra /plantillas-consentimiento del hospital.
+ * Nombre legible del consentimiento: títulos de PDF, pantallas, códigos.
+ * NO es lo que se manda al hospital — para eso está TEMPLATE_NAMES.
  */
-const TEMPLATE_NAMES: Record<ConsentKey, string> = {
+const DISPLAY_NAMES: Record<ConsentKey, string> = {
   hiv: "VIH",
   venopuncion: "VENOPUNCION",
   carga_glucosa: "GLUCOSA",
@@ -100,6 +100,57 @@ const TEMPLATE_NAMES: Record<ConsentKey, string> = {
   ultrasonido: "ULTRASONIDO",
   eco_tv: "ULTRASONIDO TRANSVAGINAL",
   tac: "TAC CON O SIN CONTRASTE",
+};
+
+/**
+ * `nombre_consentimiento`: el filtro con el que n8n busca la plantilla en
+ * /plantillas-consentimiento del HIS.
+ *
+ * Verificado contra el catálogo real del hospital (93 plantillas, consultado el
+ * 24/09/2026). No es un nombre bonito: tiene que resolver a UNA sola plantilla.
+ * Dos de estos valores NO son el nombre legible, y no es un descuido:
+ *
+ *   rx_gestante  "RX PARA GESTANTE" no existe → la plantilla es "CI rx RX GESTANTE"
+ *   eco_tv       "ULTRASONIDO TRANSVAGINAL" no existe → es "CI rx ECO TV"
+ *
+ * Con los nombres legibles, esos dos consentimientos no pueden encontrar su
+ * plantilla en el hospital.
+ */
+const TEMPLATE_NAMES: Record<ConsentKey, string> = {
+  hiv: "VIH",
+  venopuncion: "VENOPUNCION",
+  carga_glucosa: "GLUCOSA",
+  frotis_vaginal: "FROTIS VAGINAL",
+  hemocomponentes: "HEMOCOMPONENTES",
+  radiografia: "TOMA DE RADIOGRAFÍA",
+  rx_gestante: "RX GESTANTE",
+  mamografia: "MAMOGRAFÍA",
+  ultrasonido: "ULTRASONIDO",
+  eco_tv: "ECO TV",
+  tac: "TAC CON O SIN CONTRASTE",
+};
+
+/**
+ * OID de la plantilla en el HIS al que resuelve cada consentimiento, tal como
+ * se comprobó el 24/09/2026 contra /plantillas-consentimiento.
+ *
+ * No se envía a ninguna parte: está aquí para que la próxima vez que algo caiga
+ * sobre la plantilla equivocada se pueda comprobar de un vistazo qué OID
+ * debería haber salido. Los OID son del HIS, no nuestros: si el hospital
+ * reorganiza su catálogo, esto queda obsoleto y manda TEMPLATE_NAMES.
+ */
+export const HIS_TEMPLATE_OID: Record<ConsentKey, number> = {
+  hiv: 40, // CI lab PRUEBA PRESUNTIVA VIH
+  venopuncion: 93, // CI lab TOMA DE MUESTRAS VENOPUNCION  ESTE ACT
+  carga_glucosa: 92, // CI lab SUMINISTROS DE CARGA DE GLUCOSA
+  frotis_vaginal: 91, // CI lab FROTIS VAGINAL Y CULTIVO RECTOVAGINAL
+  hemocomponentes: 39, // CI lab TRANSFUSIÓN HEMOCOMPONENTES
+  radiografia: 32, // CI rx TOMA DE RADIOGRAFIA
+  rx_gestante: 33, // CI rx RX GESTANTE
+  mamografia: 34, // CI rx MAMOGRAFIA
+  ultrasonido: 35, // CI rx ULTRASONIDO
+  eco_tv: 36, // CI rx ECO TV
+  tac: 37, // CI rx TAC con o sin contraste
 };
 
 /** Nombre largo del procedimiento, para el PDF y para `hcaproced`. */
@@ -150,11 +201,18 @@ export function getConsentTemplateName(consentType: string): string {
   return TEMPLATE_NAMES[key as ConsentKey] || key.toUpperCase().replace(/_/g, " ");
 }
 
+/** Nombre legible, para PDF y pantallas. */
+export function getConsentDisplayName(consentType: string): string {
+  const key = normalizeConsentType(consentType);
+  return DISPLAY_NAMES[key as ConsentKey] || key.toUpperCase().replace(/_/g, " ");
+}
+
 /** Nombre largo del procedimiento. */
 export function getProcedureName(consentType: string): string {
   const key = normalizeConsentType(consentType);
   return PROCEDURE_NAMES[key as ConsentKey] || consentType;
 }
 
-/** El catálogo completo, para diagnóstico y pruebas. */
+/** Los catálogos completos, para diagnóstico y pruebas. */
 export const CONSENT_CATALOG = TEMPLATE_NAMES;
+export const CONSENT_DISPLAY_CATALOG = DISPLAY_NAMES;
