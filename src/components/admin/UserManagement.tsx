@@ -59,6 +59,7 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
   doctor: "Médico",
   lab_technician: "Técnico de Laboratorio",
+  radiology_technician: "Técnico de Radiología",
   receptionist: "Recepcionista",
   viewer: "Visualizador"
 };
@@ -67,6 +68,7 @@ const ROLE_COLORS: Record<string, string> = {
   admin: "bg-red-100 text-red-800 border-red-200",
   doctor: "bg-blue-100 text-blue-800 border-blue-200",
   lab_technician: "bg-green-100 text-green-800 border-green-200",
+  radiology_technician: "bg-cyan-100 text-cyan-800 border-cyan-200",
   receptionist: "bg-purple-100 text-purple-800 border-purple-200",
   viewer: "bg-gray-100 text-gray-800 border-gray-200"
 };
@@ -629,6 +631,7 @@ export function UserManagement() {
                             <SelectItem value="admin">Administrador</SelectItem>
                             <SelectItem value="doctor">Médico</SelectItem>
                             <SelectItem value="lab_technician">Técnico de Laboratorio</SelectItem>
+                            <SelectItem value="radiology_technician">Técnico de Radiología</SelectItem>
                             <SelectItem value="receptionist">Recepcionista</SelectItem>
                             <SelectItem value="viewer">Visualizador</SelectItem>
                           </SelectContent>

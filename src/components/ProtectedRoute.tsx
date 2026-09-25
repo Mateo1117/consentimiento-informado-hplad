@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, ShieldAlert, ArrowLeft } from "lucide-react";
 
-type AppRole = 'admin' | 'doctor' | 'lab_technician' | 'receptionist' | 'viewer';
+type AppRole = 'admin' | 'doctor' | 'lab_technician' | 'radiology_technician' | 'receptionist' | 'viewer';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -58,6 +58,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
                       admin: 'Administrador',
                       doctor: 'Médico',
                       lab_technician: 'Técnico de Laboratorio',
+                      radiology_technician: 'Técnico de Radiología',
                       receptionist: 'Recepcionista',
                       viewer: 'Visualizador'
                     };
@@ -70,6 +71,7 @@ export function ProtectedRoute({ children, requiredRole }: ProtectedRouteProps) 
                       admin: 'Administrador',
                       doctor: 'Médico',
                       lab_technician: 'Técnico de Laboratorio',
+                      radiology_technician: 'Técnico de Radiología',
                       receptionist: 'Recepcionista',
                       viewer: 'Visualizador'
                     };

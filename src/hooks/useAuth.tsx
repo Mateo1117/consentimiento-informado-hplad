@@ -3,7 +3,7 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
-type AppRole = 'admin' | 'doctor' | 'lab_technician' | 'receptionist' | 'viewer';
+type AppRole = 'admin' | 'doctor' | 'lab_technician' | 'radiology_technician' | 'receptionist' | 'viewer';
 
 interface AuthContextType {
   user: User | null;

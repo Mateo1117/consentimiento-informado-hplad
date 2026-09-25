@@ -20,6 +20,7 @@ export function AuthenticatedHeader() {
     if (roles.includes('admin')) return 'Administrador';
     if (roles.includes('doctor')) return 'Médico';
     if (roles.includes('lab_technician')) return 'Técnico de Laboratorio';
+    if (roles.includes('radiology_technician')) return 'Técnico de Radiología';
     if (roles.includes('receptionist')) return 'Recepcionista';
     if (roles.includes('viewer')) return 'Visualizador';
     return 'Usuario';
@@ -37,6 +38,10 @@ export function AuthenticatedHeader() {
       lab_technician: {
         label: "Técnico Lab",
         className: "bg-green-100 text-green-800"
+      },
+      radiology_technician: {
+        label: "Técnico Rx",
+        className: "bg-cyan-100 text-cyan-800"
       },
       receptionist: {
         label: "Recepcionista",
