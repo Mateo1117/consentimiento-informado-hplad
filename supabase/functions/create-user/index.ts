@@ -95,8 +95,20 @@ Deno.serve(async (req) => {
 
     const newUserId = newUserData.user.id
 
-    // Create profile
-    await supabaseAdmin.from('profiles').upsert({
+    // Si algo falla después de crear la cuenta, se borra: una cuenta sin perfil
+    // completo o sin rol no sirve y ocuparía el documento para el reintento.
+    const deshacer = async (motivo: string) => {
+      await supabaseAdmin.auth.admin.deleteUser(newUserId)
+      return new Response(JSON.stringify({ error: motivo }), {
+        status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // El trigger on_auth_user_created ya insertó el perfil con el nombre. El
+    // conflicto tiene que ser por user_id: sin onConflict, PostgREST lo busca por
+    // la clave primaria (id), intenta un INSERT, choca con UNIQUE(user_id) y el
+    // perfil se quedaba sin documento, tipo, teléfono ni cargo.
+    const { error: profileError } = await supabaseAdmin.from('profiles').upsert({
       user_id: newUserId,
       full_name,
       document_type: document_type || null,
@@ -105,15 +117,17 @@ Deno.serve(async (req) => {
       department: department || null,
       job_title: job_title || null,
       is_active: true
-    })
+    }, { onConflict: 'user_id' })
+    if (profileError) return await deshacer('No se pudo guardar el perfil: ' + profileError.message)
 
     // Assign role
     if (role) {
-      await supabaseAdmin.from('user_roles').insert({
+      const { error: roleError } = await supabaseAdmin.from('user_roles').insert({
         user_id: newUserId,
         role,
         created_by: callerUser.id
       })
+      if (roleError) return await deshacer('No se pudo asignar el rol: ' + roleError.message)
     }
 
     // Save signature if provided
