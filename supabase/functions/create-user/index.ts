@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { documentToLoginEmail, isValidDocument, normalizeDocument } from '../_shared/documentLogin.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -43,25 +44,52 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json()
-    const { email, password, full_name, document_type, document_number, phone, department, job_title, role, signature_data } = body
+    const { password, full_name, document_type, phone, department, job_title, role, signature_data } = body
 
-    if (!email || !password || !full_name) {
-      return new Response(JSON.stringify({ error: 'Email, contraseña y nombre son requeridos' }), {
+    // El usuario inicia sesión con su número de documento: ya no se pide correo.
+    // Auth exige un email, así que se deriva uno interno del documento
+    // (ver _shared/documentLogin.ts).
+    const document_number = normalizeDocument(body.document_number)
+
+    if (!document_number || !password || !full_name) {
+      return new Response(JSON.stringify({ error: 'Número de documento, contraseña y nombre son requeridos' }), {
         status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    if (!isValidDocument(document_number)) {
+      return new Response(JSON.stringify({ error: 'El número de documento debe tener entre 4 y 20 letras o números' }), {
+        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      })
+    }
+
+    // Una persona, un usuario. Los perfiles antiguos guardan el documento con
+    // puntos o espacios, así que se compara normalizado.
+    const { data: perfiles } = await supabaseAdmin
+      .from('profiles')
+      .select('full_name, document_number')
+      .not('document_number', 'is', null)
+    const repetido = (perfiles || []).find((p) => normalizeDocument(p.document_number) === document_number)
+    if (repetido) {
+      return new Response(JSON.stringify({ error: `Ya existe un usuario con el documento ${document_number} (${repetido.full_name || 'sin nombre'})` }), {
+        status: 409, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
     // Create user with admin API (bypasses rate limits and email confirmation)
     const { data: newUserData, error: createError } = await supabaseAdmin.auth.admin.createUser({
-      email,
+      email: documentToLoginEmail(document_number),
       password,
       email_confirm: true,
-      user_metadata: { full_name }
+      user_metadata: { full_name, document_number, login: 'documento' }
     })
 
     if (createError) {
-      return new Response(JSON.stringify({ error: createError.message }), {
-        status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+      const yaExiste = /already (been )?registered|already exists/i.test(createError.message)
+      return new Response(JSON.stringify({
+        error: yaExiste ? `Ya existe un usuario con el documento ${document_number}` : createError.message
+      }), {
+        status: yaExiste ? 409 : 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
 
@@ -72,7 +100,7 @@ Deno.serve(async (req) => {
       user_id: newUserId,
       full_name,
       document_type: document_type || null,
-      document_number: document_number || null,
+      document_number,
       phone: phone || null,
       department: department || null,
       job_title: job_title || null,
@@ -92,7 +120,7 @@ Deno.serve(async (req) => {
     if (signature_data) {
       await supabaseAdmin.from('professional_signatures').insert({
         professional_name: full_name,
-        professional_document: document_number || '',
+        professional_document: document_number,
         signature_data,
         created_by: newUserId
       })

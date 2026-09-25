@@ -5,6 +5,7 @@ import { Settings, Database, User, LogOut, Shield, UserPlus } from "lucide-react
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import logoHospital from "@/assets/logo_hospital_transparent.png";
+import { loginLabel } from "../../supabase/functions/_shared/documentLogin.ts";
 
 export function AuthenticatedHeader() {
   const {
@@ -110,7 +111,7 @@ export function AuthenticatedHeader() {
                       {user?.user_metadata?.full_name || 'Usuario'}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {user?.email}
+                      {loginLabel(user?.email)}
                     </p>
                     <div className="mt-1">
                       {getRoleBadge()}

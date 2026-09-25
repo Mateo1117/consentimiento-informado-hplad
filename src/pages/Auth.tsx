@@ -11,6 +11,7 @@ import { useNavigate } from "react-router-dom";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import logoHospital from "@/assets/logo_hospital.png";
+import { loginIdentifierToEmail } from "../../supabase/functions/_shared/documentLogin.ts";
 
 export default function Auth() {
   const navigate = useNavigate();
@@ -74,14 +75,16 @@ export default function Auth() {
         // Continue even if this fails
       }
 
+      // Se entra con el número de documento; los usuarios antiguos, con su
+      // correo. Lo que no lleva "@" se traduce al email interno del documento.
       const { data, error } = await supabase.auth.signInWithPassword({
-        email: signInEmail,
+        email: loginIdentifierToEmail(signInEmail),
         password: signInPassword,
       });
 
       if (error) {
         if (error.message.includes('Invalid login credentials')) {
-          toast.error("Credenciales incorrectas. Verifique su email y contraseña.");
+          toast.error("Credenciales incorrectas. Verifique su documento y contraseña.");
         } else if (error.message.includes('Email not confirmed')) {
           toast.error("Por favor confirme su email antes de iniciar sesión.");
         } else {
@@ -203,11 +206,12 @@ export default function Auth() {
               <TabsContent value="signin" className="space-y-4">
                 <form onSubmit={handleSignIn} className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email Institucional</Label>
+                    <Label htmlFor="signin-email">Número de documento</Label>
                     <Input
                       id="signin-email"
-                      type="email"
-                      placeholder="doctor@santamatilde.gov.co"
+                      type="text"
+                      autoComplete="username"
+                      placeholder="1234567890 (o su correo, si entra con correo)"
                       value={signInEmail}
                       onChange={(e) => setSignInEmail(e.target.value)}
                       disabled={isLoading}

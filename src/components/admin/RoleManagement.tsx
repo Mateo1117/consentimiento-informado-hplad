@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import { loginLabel } from "../../../supabase/functions/_shared/documentLogin.ts";
 import { toast } from "sonner";
 import { 
   Shield, 
@@ -821,7 +822,7 @@ export function RoleManagement() {
                         <TableCell className="font-medium">
                           {user.full_name || 'Sin nombre'}
                         </TableCell>
-                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{loginLabel(user.email)}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
                             {user.roles && user.roles.length > 0 ? (
