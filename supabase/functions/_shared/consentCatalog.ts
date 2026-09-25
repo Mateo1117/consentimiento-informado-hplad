@@ -106,15 +106,16 @@ const DISPLAY_NAMES: Record<ConsentKey, string> = {
  * `nombre_consentimiento`: el filtro con el que n8n busca la plantilla en
  * /plantillas-consentimiento del HIS.
  *
- * Verificado contra el catálogo real del hospital (93 plantillas, consultado el
- * 24/09/2026). No es un nombre bonito: tiene que resolver a UNA sola plantilla.
- * Dos de estos valores NO son el nombre legible, y no es un descuido:
+ * Verificado contra el filtro real del HIS el 25/09/2026: cada valor devuelve
+ * exactamente UNA plantilla, la correcta. No es un nombre bonito:
  *
  *   rx_gestante  "RX PARA GESTANTE" no existe → la plantilla es "CI rx RX GESTANTE"
  *   eco_tv       "ULTRASONIDO TRANSVAGINAL" no existe → es "CI rx ECO TV"
  *
- * Con los nombres legibles, esos dos consentimientos no pueden encontrar su
- * plantilla en el hospital.
+ * Y SIN TILDES: el filtro de /plantillas-consentimiento distingue tildes y el
+ * catálogo del hospital no las lleva. "TOMA DE RADIOGRAFÍA" y "MAMOGRAFÍA"
+ * devuelven cero plantillas; "TOMA DE RADIOGRAFIA" y "MAMOGRAFIA", la suya.
+ * getConsentTemplateName() las quita igualmente por si se añade un nombre nuevo.
  */
 const TEMPLATE_NAMES: Record<ConsentKey, string> = {
   hiv: "VIH",
@@ -122,9 +123,9 @@ const TEMPLATE_NAMES: Record<ConsentKey, string> = {
   carga_glucosa: "GLUCOSA",
   frotis_vaginal: "FROTIS VAGINAL",
   hemocomponentes: "HEMOCOMPONENTES",
-  radiografia: "TOMA DE RADIOGRAFÍA",
+  radiografia: "TOMA DE RADIOGRAFIA",
   rx_gestante: "RX GESTANTE",
-  mamografia: "MAMOGRAFÍA",
+  mamografia: "MAMOGRAFIA",
   ultrasonido: "ULTRASONIDO",
   eco_tv: "ECO TV",
   tac: "TAC CON O SIN CONTRASTE",
@@ -198,7 +199,9 @@ export function isKnownConsentType(consentType: string): boolean {
  */
 export function getConsentTemplateName(consentType: string): string {
   const key = normalizeConsentType(consentType);
-  return TEMPLATE_NAMES[key as ConsentKey] || key.toUpperCase().replace(/_/g, " ");
+  const nombre = TEMPLATE_NAMES[key as ConsentKey] || key.toUpperCase().replace(/_/g, " ");
+  // El filtro del HIS distingue tildes y sus plantillas no las llevan.
+  return nombre.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 }
 
 /** Nombre legible, para PDF y pantallas. */
