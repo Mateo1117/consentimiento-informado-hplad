@@ -10,7 +10,13 @@ export const useAppConsent = () => {
     try {
       const result = await appConsentService.saveAppConsent(consentData);
       
-      if (result.success) {
+      if (result.success && result.hisRegistered === false) {
+        // Firmado y guardado aquí, pero NO en la historia clínica: que se note.
+        toast.warning('Consentimiento firmado y guardado, pero NO quedó registrado en la historia clínica (HIS)', {
+          description: result.hisError,
+          duration: 30000,
+        });
+      } else if (result.success) {
         toast.success(result.message);
       } else {
         toast.error(result.message || 'Error al guardar el consentimiento');

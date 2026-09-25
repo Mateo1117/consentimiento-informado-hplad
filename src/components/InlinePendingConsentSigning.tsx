@@ -93,6 +93,16 @@ export const InlinePendingConsentSigning: React.FC<InlinePendingConsentSigningPr
 
       toast.success('¡Consentimiento firmado exitosamente!');
 
+      // public-sign-consent no falla la firma si n8n/el HIS fallan: lo reporta
+      // en data.webhook. Aquí firma el personal, que sí puede resolverlo.
+      if (data?.webhook && data.webhook.ok === false) {
+        const r = data.webhook.response || {};
+        toast.warning('El consentimiento quedó firmado, pero NO se registró en la historia clínica (HIS)', {
+          description: [r.error, r.sugerencia].filter(Boolean).join(' ') || `El HIS respondió ${data.webhook.status}`,
+          duration: 30000,
+        });
+      }
+
       // Generar PDF automáticamente con firma + huella, guardarlo y actualizar pdf_url
       const consentForPdf = data?.consentData || {
         ...consent,

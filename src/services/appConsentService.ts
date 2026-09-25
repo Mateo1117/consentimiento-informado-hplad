@@ -40,6 +40,13 @@ export interface SavedConsentResult {
   pdfUrl?: string;
   success: boolean;
   message: string;
+  /**
+   * false si el consentimiento quedó firmado y guardado aquí pero el HIS no lo
+   * registró (paciente sin folio, plantilla que no coincide, firma ilegible...).
+   * El motivo viene en hisError. undefined si no se llegó a intentar.
+   */
+  hisRegistered?: boolean;
+  hisError?: string;
 }
 
 class AppConsentService {
@@ -190,7 +197,9 @@ class AppConsentService {
         hasPdf: !!pdfUrl 
       });
 
-      // Enviar datos al webhook externo
+      // Enviar datos al webhook externo (n8n → HIS)
+      let hisRegistered: boolean | undefined;
+      let hisError: string | undefined;
       try {
         // Log detallado para debugging
         logger.info('Datos para webhook:', {
@@ -228,9 +237,13 @@ class AppConsentService {
           guardianSignature: guardianSignatureForDb || undefined // Usar URL en lugar de base64
         });
         logger.info('Webhook de consentimiento enviado exitosamente');
+        hisRegistered = true;
       } catch (webhookError) {
-        // No fallar si el webhook falla
-        logger.error('Error al enviar webhook de consentimiento (no crítico):', webhookError);
+        // El consentimiento ya está firmado y guardado: no se deshace. Pero hay
+        // que decirlo, porque si no llegó al HIS alguien tiene que reenviarlo.
+        logger.error('El HIS no registró el consentimiento:', webhookError);
+        hisRegistered = false;
+        hisError = (webhookError instanceof Error && webhookError.message) || 'Error desconocido al enviar al HIS';
       }
 
       // Trigger webhook automation for consent created event
@@ -263,7 +276,9 @@ class AppConsentService {
         id: consent.id,
         pdfUrl,
         success: true,
-        message: 'Consentimiento guardado exitosamente'
+        message: 'Consentimiento guardado exitosamente',
+        hisRegistered,
+        hisError
       };
     } catch (error) {
       logger.error('Error in saveAppConsent:', error);
@@ -467,6 +482,14 @@ class AppConsentService {
       }
 
       logger.info('Respuesta del webhook:', response);
+
+      // enviar-consentimiento contesta 200 aunque n8n/el HIS fallen, con
+      // success:false y la respuesta de n8n ({ ok:false, error, sugerencia }).
+      if (response && response.success === false) {
+        const n8n = response.webhookResponse || {};
+        const motivo = [n8n.error || response.error, n8n.sugerencia].filter(Boolean).join(' ');
+        throw new Error(motivo || 'El HIS no registró el consentimiento');
+      }
     } catch (error) {
       logger.error('Error enviando consentimiento al webhook:', error);
       throw error;
