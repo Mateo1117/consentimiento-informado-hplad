@@ -1,5 +1,10 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  getConsentTemplateName,
+  getProcedureName,
+  isKnownConsentType,
+} from "../_shared/consentCatalog.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,32 +39,6 @@ function randomName(prefix: string, extension: string) {
   const ts = new Date().toISOString().replace(/[:.]/g, "-");
   const rand = crypto.randomUUID().slice(0, 8);
   return `${prefix}_${ts}_${rand}.${extension}`;
-}
-
-function consentUpperName(consentType: string): string {
-  const key = (consentType || "").toLowerCase().replace(/[\s-]/g, "_");
-  const displayNames: Record<string, string> = {
-    hiv: "VIH",
-    vih: "VIH",
-    venopuncion: "VENOPUNCION",
-    carga_glucosa: "GLUCOSA",
-    frotis_vaginal: "FROTIS VAGINAL",
-    hemocomponentes: "HEMOCOMPONENTES",
-  };
-  return displayNames[key] || key.toUpperCase().replace(/_/g, " ");
-}
-
-function defaultProcedureName(consentType: string): string {
-  const key = (consentType || "").toLowerCase().replace(/[\s-]/g, "_");
-  const procedureNames: Record<string, string> = {
-    venopuncion: "Toma de Muestra por Venopunción",
-    hiv: "Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)",
-    vih: "Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)",
-    hemocomponentes: "Transfusión de Hemocomponentes Sanguíneos",
-    carga_glucosa: "Administración oral de carga de glucosa (Dextrosa Anhidra)",
-    frotis_vaginal: "Toma de Muestra para Frotis Vaginal - Cultivo Recto-Vaginal",
-  };
-  return procedureNames[key] || consentType;
 }
 
 async function toPublicUrl(
@@ -192,7 +171,19 @@ serve(async (req: Request) => {
     const decisionRaw = payload.decision || payload.consentDecision;
     const aceptacion = decisionRaw === "disentir" ? "Rechazado" : "Aceptado";
 
-    const procedureName = payload.procedureName || defaultProcedureName(consent.consent_type);
+    const procedureName = payload.procedureName || getProcedureName(consent.consent_type);
+
+    // `nombre_consentimiento` es el filtro con el que n8n busca la plantilla en
+    // /plantillas-consentimiento del hospital. Un nombre fuera del catálogo no
+    // coincide con ninguna plantilla real, así que se deja registrado en vez de
+    // enviarlo en silencio.
+    const templateName = getConsentTemplateName(consent.consent_type);
+    if (!isKnownConsentType(consent.consent_type)) {
+      console.error(
+        "⚠️ Tipo de consentimiento fuera del catálogo; el hospital no va a encontrar la plantilla:",
+        { consent_type: consent.consent_type, enviado: templateName },
+      );
+    }
 
     const guardianName = payload.guardianName || null;
     const guardianDocument = payload.guardianDocument || null;
@@ -230,7 +221,7 @@ serve(async (req: Request) => {
       tipo_procedimiento: procedureName,
       procedimiento_medico: procedureName,
       diagnostico: procedureName,
-      nombre_consentimiento: consentUpperName(consent.consent_type),
+      nombre_consentimiento: templateName,
       aceptacion_procedimiento: aceptacion,
       fecha_firma: new Date().toISOString(),
       fecha_documento: new Date().toISOString().split("T")[0],

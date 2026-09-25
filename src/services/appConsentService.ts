@@ -4,6 +4,12 @@ import { pdfStorageService } from "./pdfStorageService";
 import { automationService } from "./automationService";
 import { PhotoService } from "./photoService";
 import { sanitizeConsentPayload } from "@/utils/sanitizeConsentPayload";
+import {
+  getConsentTemplateName,
+  getProcedureName as catalogProcedureName,
+  isKnownConsentType,
+  normalizeConsentType,
+} from "../../supabase/functions/_shared/consentCatalog.ts";
 
 export interface AppConsentData {
   patientName: string;
@@ -414,9 +420,9 @@ class AppConsentService {
         consentType: data.consentType
       });
 
-      const normalizedConsentType = this.normalizeConsentType(data.consentType);
+      const normalizedConsentType = normalizeConsentType(data.consentType);
       const procedimientoMedico =
-        this.getProcedureNameFromPayload(data.payload) || this.getProcedureName(normalizedConsentType);
+        this.getProcedureNameFromPayload(data.payload) || catalogProcedureName(normalizedConsentType);
       const aceptacionProcedimiento = this.getAceptacionProcedimiento(data.payload);
 
       const { data: response, error } = await supabase.functions.invoke('enviar-consentimiento', {
@@ -441,7 +447,7 @@ class AppConsentService {
           tipo_procedimiento: procedimientoMedico,
           procedimiento_medico: procedimientoMedico,
           diagnostico: procedimientoMedico,
-          nombre_consentimiento: this.getConsentDisplayName(normalizedConsentType),
+          nombre_consentimiento: this.consentTemplateName(data.consentType),
           // Debe reflejar la decisión real del paciente (APROBAR/DISENTIR)
           aceptacion_procedimiento: aceptacionProcedimiento,
           fecha_firma: data.signedAt || new Date().toISOString(),
@@ -465,39 +471,6 @@ class AppConsentService {
       logger.error('Error enviando consentimiento al webhook:', error);
       throw error;
     }
-  }
-
-  /**
-   * Normaliza el tipo de consentimiento para usarlo como clave estable.
-   * Acepta valores como: "VENOPUNCION", "Venopunción", "Carga de Glucosa", etc.
-   */
-  private normalizeConsentType(consentType: string): string {
-    const raw = (consentType || '').toString().trim().toLowerCase();
-    const noAccents = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-    const cleaned = noAccents
-      .replace(/[^\w\s-]/g, '')
-      .replace(/[\s-]+/g, '_')
-      .replace(/^_+|_+$/g, '');
-
-    const aliases: Record<string, string> = {
-      vih: 'hiv',
-      prueba_vih: 'hiv',
-      venopuncion: 'venopuncion',
-      toma_de_muestra_por_venopuncion: 'venopuncion',
-      carga_de_glucosa: 'carga_glucosa',
-      carga_glucosa: 'carga_glucosa',
-      frotis_vaginal: 'frotis_vaginal',
-      hemocomponentes: 'hemocomponentes',
-      hemocomponentes_sanguineos: 'hemocomponentes',
-      radiografia: 'radiografia',
-      rx_gestante: 'rx_gestante',
-      mamografia: 'mamografia',
-      ultrasonido: 'ultrasonido',
-      eco_tv: 'eco_tv',
-      tac: 'tac',
-    };
-
-    return aliases[cleaned] || cleaned;
   }
 
   private getProcedureNameFromPayload(payload: any): string | null {
@@ -545,50 +518,20 @@ class AppConsentService {
   }
 
   /**
-   * Get display name for consent type - SIEMPRE en MAYÚSCULAS para el webhook
+   * Nombre con el que el hospital conoce la plantilla. Sale del catálogo
+   * compartido (supabase/functions/_shared/consentCatalog.ts), que es la única
+   * fuente: si esto no coincide con una plantilla real, n8n no puede resolver
+   * el OID correcto y el consentimiento termina sobre otra plantilla.
    */
-  private getConsentDisplayName(consentType: string): string {
-    const key = this.normalizeConsentType(consentType);
-    logger.info('getConsentDisplayName', { input: consentType, normalizedKey: key });
-    
-    const displayNames: Record<string, string> = {
-      hiv: 'VIH',
-      venopuncion: 'VENOPUNCION', 
-      carga_glucosa: 'GLUCOSA',
-      frotis_vaginal: 'FROTIS VAGINAL',
-      hemocomponentes: 'HEMOCOMPONENTES',
-      radiografia: 'TOMA DE RADIOGRAFÍA',
-      rx_gestante: 'RX PARA GESTANTE',
-      mamografia: 'MAMOGRAFÍA',
-      ultrasonido: 'ULTRASONIDO',
-      eco_tv: 'ULTRASONIDO TRANSVAGINAL',
-      tac: 'TAC CON O SIN CONTRASTE',
-    };
-    
-    const result = displayNames[key] || key.toUpperCase().replace(/_/g, ' ');
-    logger.info('getConsentDisplayName result', { result });
+  private consentTemplateName(consentType: string): string {
+    const result = getConsentTemplateName(consentType);
+    if (!isKnownConsentType(consentType)) {
+      logger.error(
+        'Tipo de consentimiento fuera del catálogo: el hospital no va a encontrar la plantilla',
+        { consentType, normalizedKey: normalizeConsentType(consentType), enviado: result },
+      );
+    }
     return result;
-  }
-
-  /**
-   * Get full procedure name for webhook
-   */
-  private getProcedureName(consentType: string): string {
-    const key = this.normalizeConsentType(consentType);
-    const procedureNames: Record<string, string> = {
-      venopuncion: 'Toma de Muestra por Venopunción',
-      hiv: 'Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)',
-      hemocomponentes: 'Transfusión de Hemocomponentes Sanguíneos',
-      carga_glucosa: 'Administración oral de carga de glucosa (Dextrosa Anhidra)',
-      frotis_vaginal: 'Toma de Muestra para Frotis Vaginal - Cultivo Recto-Vaginal',
-      radiografia: 'Toma De Radiografía',
-      rx_gestante: 'Toma De Radiografía Para Gestante',
-      mamografia: 'Toma De Mamografía',
-      ultrasonido: 'Ultrasonido',
-      eco_tv: 'Ultrasonido Transvaginal',
-      tac: 'Tomografía Axial Computarizada Con O Sin Contraste (Tac)',
-    };
-    return procedureNames[key] || key;
   }
 }
 

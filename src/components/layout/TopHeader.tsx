@@ -34,6 +34,10 @@ export function TopHeader({ onMenuClick }: TopHeaderProps) {
         label: "Técnico Lab",
         className: "bg-green-100 text-green-700 border-green-200"
       },
+      radiology_technician: {
+        label: "Técnico Rx",
+        className: "bg-cyan-100 text-cyan-700 border-cyan-200"
+      },
       receptionist: {
         label: "Recepcionista",
         className: "bg-orange-100 text-orange-700 border-orange-200"

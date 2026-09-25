@@ -13,6 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { supabase } from "@/integrations/supabase/client";
+import { loginLabel } from "../../../supabase/functions/_shared/documentLogin.ts";
 import { toast } from "sonner";
 import { 
   Shield, 
@@ -28,7 +29,7 @@ import {
   Lock
 } from "lucide-react";
 
-type AppRole = 'admin' | 'doctor' | 'lab_technician' | 'receptionist' | 'viewer';
+type AppRole = 'admin' | 'doctor' | 'lab_technician' | 'radiology_technician' | 'receptionist' | 'viewer';
 
 interface UserWithRole {
   user_id: string;
@@ -63,6 +64,7 @@ const ROLE_COLORS: Record<string, string> = {
   admin: "bg-red-100 text-red-800 border-red-200",
   doctor: "bg-blue-100 text-blue-800 border-blue-200",
   lab_technician: "bg-green-100 text-green-800 border-green-200",
+  radiology_technician: "bg-cyan-100 text-cyan-800 border-cyan-200",
   receptionist: "bg-purple-100 text-purple-800 border-purple-200",
   viewer: "bg-gray-100 text-gray-800 border-gray-200"
 };
@@ -87,6 +89,12 @@ const ROLE_DEFINITIONS: RoleDefinition[] = [
     color: "bg-green-100 text-green-800 border-green-200"
   },
   {
+    role: "radiology_technician",
+    label: "Técnico de Radiología",
+    description: "Puede crear y gestionar consentimientos de imágenes diagnósticas: radiografía, mamografía, ecografía y TAC.",
+    color: "bg-cyan-100 text-cyan-800 border-cyan-200"
+  },
+  {
     role: "receptionist",
     label: "Recepcionista",
     description: "Puede registrar pacientes y ver información básica.",
@@ -106,6 +114,7 @@ const CONSENT_VIEW_PERMISSIONS = [
   "view_consents",
   "view_consent_status",
   "view_lab_consents",
+  "view_imaging_consents",
   "view_own_consents"
 ];
 
@@ -821,7 +830,7 @@ export function RoleManagement() {
                         <TableCell className="font-medium">
                           {user.full_name || 'Sin nombre'}
                         </TableCell>
-                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{loginLabel(user.email)}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-1">
                             {user.roles && user.roles.length > 0 ? (

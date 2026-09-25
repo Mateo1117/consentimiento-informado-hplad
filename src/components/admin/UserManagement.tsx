@@ -34,6 +34,12 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
+import {
+  isValidDocument,
+  loginEmailToDocument,
+  loginLabel,
+  normalizeDocument,
+} from "../../../supabase/functions/_shared/documentLogin.ts";
 
 interface UserWithRole {
   user_id: string;
@@ -53,6 +59,7 @@ const ROLE_LABELS: Record<string, string> = {
   admin: "Administrador",
   doctor: "Médico",
   lab_technician: "Técnico de Laboratorio",
+  radiology_technician: "Técnico de Radiología",
   receptionist: "Recepcionista",
   viewer: "Visualizador"
 };
@@ -61,6 +68,7 @@ const ROLE_COLORS: Record<string, string> = {
   admin: "bg-red-100 text-red-800 border-red-200",
   doctor: "bg-blue-100 text-blue-800 border-blue-200",
   lab_technician: "bg-green-100 text-green-800 border-green-200",
+  radiology_technician: "bg-cyan-100 text-cyan-800 border-cyan-200",
   receptionist: "bg-purple-100 text-purple-800 border-purple-200",
   viewer: "bg-gray-100 text-gray-800 border-gray-200"
 };
@@ -88,7 +96,6 @@ export function UserManagement() {
   const [newUserSignaturePreview, setNewUserSignaturePreview] = useState<string | null>(null);
   
   const [newUser, setNewUser] = useState({
-    email: "",
     password: "",
     primer_apellido: "",
     segundo_apellido: "",
@@ -110,7 +117,7 @@ export function UserManagement() {
   useEffect(() => {
     if (searchTerm) {
       const filtered = users.filter(user => 
-        user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        loginLabel(user.email).toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         user.document_number?.toLowerCase().includes(searchTerm.toLowerCase())
       );
@@ -301,7 +308,6 @@ export function UserManagement() {
 
       const response = await supabase.functions.invoke('create-user', {
         body: {
-          email: newUser.email,
           password: newUser.password,
           full_name: newUser.full_name,
           document_type: newUser.document_type,
@@ -314,13 +320,23 @@ export function UserManagement() {
         }
       });
 
-      if (response.error) throw new Error(response.error.message || 'Error al crear usuario');
+      if (response.error) {
+        // Con un 4xx/5xx, invoke() sólo dice "non-2xx status code": el motivo
+        // (documento repetido, contraseña corta...) viene en el cuerpo.
+        let motivo = response.error.message || 'Error al crear usuario';
+        try {
+          const cuerpo = await response.error.context?.json?.();
+          if (cuerpo?.error) motivo = cuerpo.error;
+        } catch {
+          // cuerpo no JSON: se queda el mensaje genérico
+        }
+        throw new Error(motivo);
+      }
       if (response.data?.error) throw new Error(response.data.error);
 
-      toast.success("Usuario creado exitosamente");
+      toast.success(`Usuario creado. Inicia sesión con el documento ${normalizeDocument(newUser.document_number)}`);
       setIsCreateDialogOpen(false);
       setNewUser({
-        email: "",
         password: "",
         primer_apellido: "",
         segundo_apellido: "",
@@ -499,16 +515,7 @@ export function UserManagement() {
                   </DialogHeader>
                   <div className="grid gap-3 md:gap-4 py-3 md:py-4">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
-                      <div className="space-y-2">
-                        <Label>Correo Electrónico *</Label>
-                        <Input
-                          type="email"
-                          value={newUser.email}
-                          onChange={(e) => setNewUser({...newUser, email: e.target.value})}
-                          placeholder="correo@hospital.com"
-                        />
-                      </div>
-                      <div className="space-y-2">
+                      <div className="space-y-2 sm:col-span-2">
                         <Label>Contraseña *</Label>
                         <Input
                           type="password"
@@ -588,12 +595,18 @@ export function UserManagement() {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label>Número Documento</Label>
+                        <Label>Número Documento *</Label>
                         <Input
                           value={newUser.document_number}
                           onChange={(e) => setNewUser({...newUser, document_number: e.target.value})}
                           placeholder="1234567890"
+                          inputMode="numeric"
                         />
+                        <p className="text-xs text-muted-foreground">
+                          {newUser.document_number && !isValidDocument(newUser.document_number)
+                            ? "Entre 4 y 20 letras o números"
+                            : "Es el usuario con el que inicia sesión"}
+                        </p>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
@@ -618,6 +631,7 @@ export function UserManagement() {
                             <SelectItem value="admin">Administrador</SelectItem>
                             <SelectItem value="doctor">Médico</SelectItem>
                             <SelectItem value="lab_technician">Técnico de Laboratorio</SelectItem>
+                            <SelectItem value="radiology_technician">Técnico de Radiología</SelectItem>
                             <SelectItem value="receptionist">Recepcionista</SelectItem>
                             <SelectItem value="viewer">Visualizador</SelectItem>
                           </SelectContent>
@@ -698,7 +712,7 @@ export function UserManagement() {
                     </Button>
                     <Button 
                       onClick={handleCreateUser}
-                      disabled={!newUser.email || !newUser.password || !newUser.full_name}
+                      disabled={!isValidDocument(newUser.document_number) || !newUser.password || !newUser.full_name}
                       className="bg-medical-blue hover:bg-medical-blue/90"
                     >
                       Crear Usuario
@@ -734,7 +748,7 @@ export function UserManagement() {
                   <div className="flex items-start justify-between gap-3 mb-3">
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm truncate">{user.full_name || 'Sin nombre'}</p>
-                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
+                      <p className="text-xs text-muted-foreground truncate">{loginLabel(user.email)}</p>
                     </div>
                     <Badge className={user.is_active ? "bg-green-100 text-green-800 shrink-0" : "bg-gray-100 text-gray-800 shrink-0"}>
                       {user.is_active ? "Activo" : "Inactivo"}
@@ -822,7 +836,7 @@ export function UserManagement() {
                       <TableCell>
                         <div>
                           <p className="font-medium">{user.full_name || 'Sin nombre'}</p>
-                          <p className="text-sm text-muted-foreground">{user.email}</p>
+                          <p className="text-sm text-muted-foreground">{loginLabel(user.email)}</p>
                         </div>
                       </TableCell>
                       <TableCell>
@@ -922,8 +936,8 @@ export function UserManagement() {
           {selectedUser && (
             <div className="grid gap-4 py-4">
               <div className="space-y-2">
-                <Label>Correo Electrónico</Label>
-                <Input value={selectedUser.email} disabled className="bg-gray-50" />
+                <Label>{loginEmailToDocument(selectedUser.email) ? "Usuario (documento)" : "Correo Electrónico"}</Label>
+                <Input value={loginLabel(selectedUser.email)} disabled className="bg-gray-50" />
               </div>
               <div className="space-y-2">
                 <Label>Nombre Completo</Label>
@@ -954,6 +968,10 @@ export function UserManagement() {
                   <Input
                     value={selectedUser.document_number || ''}
                     onChange={(e) => setSelectedUser({...selectedUser, document_number: e.target.value})}
+                    // Si entra con el documento, cambiarlo aquí lo dejaría fuera:
+                    // el perfil diría un número y el acceso seguiría con el otro.
+                    disabled={!!loginEmailToDocument(selectedUser.email)}
+                    className={loginEmailToDocument(selectedUser.email) ? "bg-gray-50" : undefined}
                   />
                 </div>
               </div>

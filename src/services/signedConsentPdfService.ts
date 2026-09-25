@@ -8,6 +8,10 @@
 import { supabase } from "@/integrations/supabase/client";
 import { logger } from "@/utils/logger";
 import { BasePDFGenerator, BasePDFData } from "@/utils/pdfGeneratorBase";
+import {
+  getConsentDisplayName,
+  getProcedureName,
+} from "../../supabase/functions/_shared/consentCatalog.ts";
 
 const BUCKET = "consent-pdfs";
 
@@ -23,44 +27,6 @@ async function blobToBase64(blob: Blob): Promise<string> {
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
-function consentUpperName(consentType: string): string {
-  const key = (consentType || "").toLowerCase().replace(/[\s-]/g, "_");
-  const displayNames: Record<string, string> = {
-    hiv: "VIH",
-    vih: "VIH",
-    venopuncion: "VENOPUNCION",
-    carga_glucosa: "GLUCOSA",
-    frotis_vaginal: "FROTIS VAGINAL",
-    hemocomponentes: "HEMOCOMPONENTES",
-    radiografia: "TOMA DE RADIOGRAFÍA",
-    rx_gestante: "RX PARA GESTANTE",
-    mamografia: "MAMOGRAFÍA",
-    ultrasonido: "ULTRASONIDO",
-    eco_tv: "ULTRASONIDO TRANSVAGINAL",
-    tac: "TAC CON O SIN CONTRASTE",
-  };
-  return displayNames[key] || key.toUpperCase().replace(/_/g, " ");
-}
-
-function defaultProcedureName(consentType: string): string {
-  const key = (consentType || "").toLowerCase().replace(/[\s-]/g, "_");
-  const procedureNames: Record<string, string> = {
-    venopuncion: "Toma de Muestra por Venopunción",
-    hiv: "Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)",
-    vih: "Prueba Presuntiva de VIH (Virus de Inmunodeficiencia Humana)",
-    hemocomponentes: "Transfusión de Hemocomponentes Sanguíneos",
-    carga_glucosa: "Administración oral de carga de glucosa (Dextrosa Anhidra)",
-    frotis_vaginal: "Toma de Muestra para Frotis Vaginal - Cultivo Recto-Vaginal",
-    radiografia: "Toma De Radiografía",
-    rx_gestante: "Toma De Radiografía Para Gestante",
-    mamografia: "Toma De Mamografía",
-    ultrasonido: "Ultrasonido",
-    eco_tv: "Ultrasonido Transvaginal",
-    tac: "Tomografía Axial Computarizada Con O Sin Contraste (Tac)",
-  };
-  return procedureNames[key] || consentType;
-}
-
 function buildPdfData(consent: any, signatureData: string, fingerprintData: string | null): BasePDFData {
   const payload = consent.payload || {};
   const patientData = payload.patientData || {};
@@ -71,8 +37,8 @@ function buildPdfData(consent: any, signatureData: string, fingerprintData: stri
   const decisionRaw = payload.decision || payload.consentDecision || "aprobar";
   const consentDecision: "aprobar" | "disentir" = decisionRaw === "disentir" ? "disentir" : "aprobar";
 
-  const procedureName = payload.procedureName || defaultProcedureName(consent.consent_type);
-  const consentName = consentUpperName(consent.consent_type);
+  const procedureName = payload.procedureName || getProcedureName(consent.consent_type);
+  const consentName = getConsentDisplayName(consent.consent_type);
 
   const now = new Date();
   const fechaHora = now.toLocaleString("es-CO", { timeZone: "America/Bogota" });

@@ -5,6 +5,7 @@ import { Settings, Database, User, LogOut, Shield, UserPlus } from "lucide-react
 import { useAuth } from "@/hooks/useAuth";
 import { useNavigate } from "react-router-dom";
 import logoHospital from "@/assets/logo_hospital_transparent.png";
+import { loginLabel } from "../../supabase/functions/_shared/documentLogin.ts";
 
 export function AuthenticatedHeader() {
   const {
@@ -19,6 +20,7 @@ export function AuthenticatedHeader() {
     if (roles.includes('admin')) return 'Administrador';
     if (roles.includes('doctor')) return 'Médico';
     if (roles.includes('lab_technician')) return 'Técnico de Laboratorio';
+    if (roles.includes('radiology_technician')) return 'Técnico de Radiología';
     if (roles.includes('receptionist')) return 'Recepcionista';
     if (roles.includes('viewer')) return 'Visualizador';
     return 'Usuario';
@@ -36,6 +38,10 @@ export function AuthenticatedHeader() {
       lab_technician: {
         label: "Técnico Lab",
         className: "bg-green-100 text-green-800"
+      },
+      radiology_technician: {
+        label: "Técnico Rx",
+        className: "bg-cyan-100 text-cyan-800"
       },
       receptionist: {
         label: "Recepcionista",
@@ -110,7 +116,7 @@ export function AuthenticatedHeader() {
                       {user?.user_metadata?.full_name || 'Usuario'}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {user?.email}
+                      {loginLabel(user?.email)}
                     </p>
                     <div className="mt-1">
                       {getRoleBadge()}
